@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        x:Class="Kapture.Views.ContentViewerWindow"
+        Title="Kapture - Content Viewer"
+        Width="800" Height="600"
+        MinWidth="400" MinHeight="300"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource AppBgTertiary}" Padding="12,8"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock x:Name="AppNameText" FontWeight="SemiBold" FontSize="14"
+                                   Foreground="{DynamicResource InfoBrush}"/>
+                        <TextBlock x:Name="LanguageText" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="MetaText" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                </StackPanel>
+                <!-- Manual language selector (hidden for screenshots) -->
+                <StackPanel x:Name="LanguageSelectorPanel" Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="Language:" FontSize="11" Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="LanguageSelector" FontSize="11" Width="140"
+                              SelectionChanged="LanguageSelector_SelectionChanged"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Text content viewer (AvaloniaEdit) -->
+        <ae:TextEditor x:Name="ContentEditor" Grid.Row="1"
+                       IsReadOnly="True"
+                       ShowLineNumbers="True"
+                       WordWrap="True"
+                       FontFamily="Consolas, Courier New, monospace"
+                       FontSize="13"
+                       Background="{DynamicResource AppBgBrush}"
+                       Padding="4,4"/>
+
+        <!-- Screenshot image viewer -->
+        <ScrollViewer x:Name="ScreenshotViewer" Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      IsVisible="False"
+                      Background="{DynamicResource AppBgBrush}">
+            <Image x:Name="ScreenshotImage"
+                   Stretch="Uniform"
+                   Margin="8"/>
+        </ScrollViewer>
+    </Grid>
+</Window>

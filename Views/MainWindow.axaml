@@ -1,0 +1,448 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Kapture.ViewModels"
+        xmlns:m="using:Kapture.Models"
+        xmlns:v="using:Kapture.Views"
+        xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        xmlns:h="using:Kapture.Helpers"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
+        x:Class="Kapture.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/app.ico"
+        Title="KaptureVault"
+        Width="1100" Height="700"
+        MinWidth="900" MinHeight="500">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Row 0: Stats Bar -->
+        <Border Grid.Row="0" Background="{DynamicResource AppBgSecondary}" Padding="16,10"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1"
+                BoxShadow="{DynamicResource HeaderShadow}">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="20" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE8A5;" FontFamily="{StaticResource SymbolFont}" FontSize="12"
+                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding TotalEntries}" FontWeight="SemiBold" FontSize="13"
+                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="entries" Foreground="{DynamicResource AppTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE8C1;" FontFamily="{StaticResource SymbolFont}" FontSize="12"
+                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding TotalChars}" FontWeight="SemiBold" FontSize="13"
+                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="chars" Foreground="{DynamicResource AppTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE7C3;" FontFamily="{StaticResource SymbolFont}" FontSize="12"
+                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding DistinctApps}" FontWeight="SemiBold" FontSize="13"
+                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="apps" Foreground="{DynamicResource AppTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE77F;" FontFamily="{StaticResource SymbolFont}" FontSize="12"
+                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ClipboardEntries}" FontWeight="SemiBold" FontSize="13"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Foreground>
+                                <SolidColorBrush Color="{DynamicResource ProfilePurple}"/>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                        <TextBlock Text="clips" Foreground="{DynamicResource AppTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE722;" FontFamily="{StaticResource SymbolFont}" FontSize="12"
+                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ScreenshotEntries}" FontWeight="SemiBold" FontSize="13"
+                                   Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="screens" Foreground="{DynamicResource AppTextSecondary}" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Toolbar buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button Command="{Binding ToggleRecordingCommand}" Padding="10,5" CornerRadius="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8">
+                                <Ellipse.Fill>
+                                    <SolidColorBrush Color="{Binding IsRecording, Converter={x:Static vm:MainWindowViewModel.RecordingColorConverter}}"/>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <TextBlock Text="{Binding RecordingStatus}" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding ClearExpiredCommand}" Padding="10,5" FontSize="12">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="&#xE74D;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock Text="Expired" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding ToggleStartupCommand}" Content="{Binding StartupButtonText}" Padding="10,5" FontSize="12"/>
+                    <Button Padding="10,5" FontSize="12" Click="Settings_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="&#xE713;" FontFamily="{StaticResource SymbolFont}" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="Settings" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Row 1: Filter bar -->
+        <Border Grid.Row="1" Background="{DynamicResource AppBgSecondary}" Padding="12,6"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <!-- Type filter buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <Button Content="All" Command="{Binding SetTypeFilterCommand}" CommandParameter="All"
+                            Padding="8,5" FontSize="11"
+                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=All}"/>
+                    <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Keyboard"
+                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Keyboard}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="&#xE765;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Keyboard" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Clipboard"
+                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Clipboard}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="&#xE77F;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource ProfilePurpleBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Clipboard" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Screenshot"
+                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Screenshot}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="&#xE722;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Screenshot" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Search trigger button (opens overlay) -->
+                <Button Grid.Column="1" Command="{Binding ToggleSearchCommand}"
+                        Padding="10,6" CornerRadius="8"
+                        Background="{DynamicResource AppBgTertiary}"
+                        BorderBrush="{DynamicResource AppBorderBrush}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="&#xE721;" FontFamily="{StaticResource SymbolFont}" FontSize="13"
+                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Search..." FontSize="12"
+                                   Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                        <Border CornerRadius="4" Padding="5,2" Background="{DynamicResource AppBgBrush}">
+                            <TextBlock Text="Ctrl+K" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                        </Border>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Search overlay (floating, centered) -->
+        <Border Grid.Row="2" ZIndex="100"
+                VerticalAlignment="Top" HorizontalAlignment="Center"
+                Width="520" Margin="0,16,0,0"
+                IsVisible="{Binding IsSearchOpen}"
+                Classes="search-overlay">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Text="&#xE721;" FontFamily="{StaticResource SymbolFont}" FontSize="16"
+                           Foreground="{DynamicResource AccentBrush}" Opacity="0.7"
+                           VerticalAlignment="Center" Margin="12,0,8,0"/>
+                <TextBox x:Name="SearchOverlayBox" Grid.Column="1"
+                         Text="{Binding SearchText, Mode=TwoWay}"
+                         Watermark="Search entries..."
+                         FontSize="15" Padding="8,12"
+                         Background="Transparent" BorderThickness="0"
+                         KeyDown="SearchOverlay_KeyDown"/>
+                <Button Grid.Column="2" Command="{Binding CloseSearchCommand}"
+                        Classes="icon-btn" Margin="0,0,4,0" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE711;" FontFamily="{StaticResource SymbolFont}" FontSize="11"
+                               Foreground="{DynamicResource AppTextSecondary}"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Row 2: Vault three-column layout -->
+        <Grid Grid.Row="2" ColumnDefinitions="220,1,*,1,400">
+
+            <!-- Column 0: Sidebar (Apps + Tags) -->
+            <Border Grid.Column="0" Background="{DynamicResource AppBgSecondary}">
+                <Grid RowDefinitions="Auto,*,Auto,Auto,*">
+                    <TextBlock Grid.Row="0" Text="Applications" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource AppTextSecondary}"
+                               Margin="12,10,12,6"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding AppList}"
+                             SelectedItem="{Binding SelectedAppFilter}"
+                             Margin="6,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" FontSize="13" Padding="6,4"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Tags separator -->
+                    <Border Grid.Row="2" Height="1" Background="{DynamicResource AppBorderBrush}" Margin="12,4"/>
+
+                    <TextBlock Grid.Row="3" Text="Tags" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource AppTextSecondary}"
+                               Margin="12,6,12,6"/>
+                    <ListBox Grid.Row="4" ItemsSource="{Binding TagList}"
+                             SelectedItem="{Binding SelectedTagFilter}"
+                             Margin="6,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" FontSize="13" Padding="6,4"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- Separator -->
+            <Border Grid.Column="1" Classes="separator"/>
+
+            <!-- Column 2: Entry List -->
+            <Border Grid.Column="2" Background="{DynamicResource AppBgBrush}">
+                <ListBox ItemsSource="{Binding Entries}"
+                         SelectedItem="{Binding SelectedEntry}"
+                         Margin="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="m:CaptureEntry">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="8,4">
+                                <!-- Entry type badge -->
+                                <Border Grid.Column="0" CornerRadius="3" Padding="4,2" VerticalAlignment="Center" Margin="0,0,6,0"
+                                        Background="{Binding EntryType, Converter={x:Static vm:MainWindowViewModel.EntryTypeColorConverter}}"
+                                        Opacity="0.2">
+                                    <TextBlock Text="{Binding EntryType, Converter={x:Static vm:MainWindowViewModel.EntryTypeIconConverter}}"
+                                               FontSize="9" FontWeight="Bold"
+                                               Foreground="{Binding EntryType, Converter={x:Static vm:MainWindowViewModel.EntryTypeColorConverter}}"/>
+                                </Border>
+                                <!-- App pill -->
+                                <Border Classes="pill" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding AppName}" FontSize="11"
+                                               Foreground="{DynamicResource AccentBrush}"/>
+                                </Border>
+                                <!-- Content preview + date + language badge -->
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Text="{Binding Content, Converter={x:Static vm:MainWindowViewModel.PreviewConverter}}"
+                                               FontSize="12" TextTrimming="CharacterEllipsis" MaxLines="1"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding CapturedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                   FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                        <TextBlock Text="{Binding CharCount, StringFormat='{}{0} chars'}"
+                                                   FontSize="10" Foreground="{DynamicResource AppTextSecondary}"/>
+                                        <TextBlock Text="{Binding DetectedLanguage, Converter={x:Static vm:MainWindowViewModel.LanguageDisplayConverter}}"
+                                                   FontSize="10" Foreground="{DynamicResource InfoBrush}" FontWeight="SemiBold"
+                                                   IsVisible="{Binding DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                    </StackPanel>
+                                    <!-- Buffer fill indicator -->
+                                    <Grid Height="3" Margin="0,2,0,0">
+                                        <Border Background="{DynamicResource AppBgTertiary}" CornerRadius="1.5"/>
+                                        <Border CornerRadius="1.5" HorizontalAlignment="Left"
+                                                Background="{Binding CharCount, Converter={x:Static vm:MainWindowViewModel.BufferFillColorConverter}}"
+                                                Width="{Binding CharCount, Converter={x:Static vm:MainWindowViewModel.BufferFillWidthConverter}}"/>
+                                    </Grid>
+                                </StackPanel>
+                                <!-- Pin indicator -->
+                                <TextBlock Grid.Column="3" Text="&#xE718;" FontFamily="{StaticResource SymbolFont}"
+                                           FontSize="11" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           IsVisible="{Binding IsPinned}" Margin="6,0,0,0"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <!-- Separator -->
+            <Border Grid.Column="3" Classes="separator"/>
+
+            <!-- Column 4: Content Reader -->
+            <Border Grid.Column="4" Background="{DynamicResource AppBgBrush}">
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                    <!-- Header -->
+                    <Border Grid.Row="0" Classes="panel-header" Padding="12,10"
+                            IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border CornerRadius="3" Padding="5,2" VerticalAlignment="Center"
+                                        Background="{Binding SelectedEntry.EntryType, Converter={x:Static vm:MainWindowViewModel.EntryTypeColorConverter}}"
+                                        Opacity="0.25">
+                                    <TextBlock Text="{Binding SelectedEntry.EntryType, Converter={x:Static vm:MainWindowViewModel.EntryTypeIconConverter}}"
+                                               FontSize="10" FontWeight="Bold"
+                                               Foreground="{Binding SelectedEntry.EntryType, Converter={x:Static vm:MainWindowViewModel.EntryTypeColorConverter}}"/>
+                                </Border>
+                                <!-- Language badge -->
+                                <Border CornerRadius="3" Padding="5,2" VerticalAlignment="Center"
+                                        Background="{DynamicResource InfoBrush}" Opacity="0.2"
+                                        IsVisible="{Binding SelectedEntry.DetectedLanguage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <TextBlock Text="{Binding SelectedEntry.DetectedLanguage, Converter={x:Static vm:MainWindowViewModel.LanguageDisplayConverter}}"
+                                               FontSize="10" FontWeight="Bold" Foreground="{DynamicResource InfoBrush}"/>
+                                </Border>
+                                <TextBlock Text="{Binding SelectedEntry.AppName}" FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{DynamicResource AccentBrush}"/>
+                                <TextBlock Text="{Binding SelectedEntry.WindowTitle}" FontSize="12"
+                                           Foreground="{DynamicResource AppTextSecondary}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock FontSize="11" Foreground="{DynamicResource AppTextSecondary}"
+                                           Text="{Binding SelectedEntry.CharCount, StringFormat='{}{0} chars'}"
+                                           IsVisible="{Binding !SelectedEntry.IsScreenshot}"/>
+                                <TextBlock FontSize="11" Foreground="{DynamicResource AppTextSecondary}"
+                                           Text="{Binding SelectedEntry.CharCount, StringFormat='{}{0} KB'}"
+                                           IsVisible="{Binding SelectedEntry.IsScreenshot}"/>
+                                <TextBlock Text="{Binding SelectedEntry.CapturedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                                           FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tags bar -->
+                    <Border Grid.Row="1" Padding="8,6"
+                            Background="{DynamicResource AppBgTertiary}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1"
+                            IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <!-- Existing tags -->
+                            <ItemsControl ItemsSource="{Binding EntryTags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border CornerRadius="10" Padding="8,3" Margin="2" Background="{DynamicResource AppBgSecondary}"
+                                                BorderBrush="{DynamicResource InfoBrush}" BorderThickness="1">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="{Binding}" FontSize="11" Foreground="{DynamicResource InfoBrush}"
+                                                           VerticalAlignment="Center"/>
+                                                <Button Content="x" FontSize="9" Padding="3,0" CornerRadius="8"
+                                                        Background="Transparent" BorderThickness="0"
+                                                        Foreground="{DynamicResource AppTextSecondary}"
+                                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveTagCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- Add tag input -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                <TextBox Text="{Binding NewTagText, Mode=TwoWay}"
+                                         Watermark="Add tag..."
+                                         FontSize="11" Padding="6,3" Width="100"
+                                         KeyDown="TagInput_KeyDown"/>
+                                <Button Content="+" Command="{Binding AddTagCommand}"
+                                        Padding="6,3" FontSize="11"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Content preview -->
+                    <Border Grid.Row="2" Padding="12"
+                            IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Grid RowDefinitions="Auto,*">
+                            <Button Grid.Row="0" Content="View Full Content"
+                                    Click="ViewContent_Click"
+                                    HorizontalAlignment="Center"
+                                    Padding="16,8" FontSize="13" Margin="0,0,0,8"/>
+                            <!-- Screenshot image preview -->
+                            <ScrollViewer Grid.Row="1"
+                                          IsVisible="{Binding SelectedEntry.IsScreenshot}"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto">
+                                <Image Source="{Binding SelectedEntry.Content, Converter={x:Static vm:MainWindowViewModel.ScreenshotThumbnailConverter}}"
+                                       Stretch="Uniform"
+                                       MaxHeight="500"/>
+                            </ScrollViewer>
+                            <!-- Text content preview -->
+                            <TextBox Grid.Row="1"
+                                     Text="{Binding SelectedEntry.Content, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     FontSize="13"
+                                     Background="{DynamicResource AppBgBrush}"
+                                     Foreground="{DynamicResource AppTextPrimary}"
+                                     Padding="8"
+                                     BorderThickness="0"
+                                     IsVisible="{Binding !SelectedEntry.IsScreenshot}"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Empty state -->
+                    <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8"
+                                IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNull}}">
+                        <TextBlock Text="&#xE8A5;" FontFamily="{StaticResource SymbolFont}"
+                                   Classes="icon-lg"/>
+                        <TextBlock Text="Select an entry to view" Classes="empty-state"/>
+                    </StackPanel>
+
+                    <!-- Action buttons -->
+                    <Border Grid.Row="3" Classes="panel-footer"
+                            IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <Button Command="{Binding CopyEntryCommand}" Padding="10,5" FontSize="12">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="&#xE8C8;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Copy"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding SaveEntryToFileCommand}" Padding="10,5" FontSize="12">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="&#xE74E;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Save"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding TogglePinCommand}" Padding="10,5" FontSize="12">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="&#xE718;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding SelectedEntry.IsPinned, Converter={x:Static vm:MainWindowViewModel.PinLabelConverter}}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Padding="10,5" FontSize="12" Click="ExpiryButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="&#xE823;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Expiry"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="DeleteButton_Click" Padding="10,5" FontSize="12" Classes="danger">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <TextBlock Text="&#xE74D;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Delete"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Row 3: Toast -->
+        <Border Grid.Row="3" Background="{DynamicResource AppBgSecondary}"
+                Padding="12,8" IsVisible="{Binding IsToastVisible}"
+                BorderBrush="{DynamicResource AccentBrush}" BorderThickness="0,2,0,0"
+                BoxShadow="{DynamicResource FooterShadow}">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <TextBlock Text="&#xE73E;" FontFamily="{StaticResource SymbolFont}" FontSize="12"
+                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ToastMessage}" FontSize="12"
+                           FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

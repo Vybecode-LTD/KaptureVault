@@ -1,0 +1,198 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Kapture.ViewModels"
+        x:Class="Kapture.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Kapture Settings"
+        Width="520" Height="750"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        MinWidth="480" MinHeight="500">
+
+    <Grid RowDefinitions="*,Auto" Margin="0">
+        <!-- Scrollable settings content -->
+        <ScrollViewer Grid.Row="0" Padding="20,16,20,0">
+            <StackPanel Spacing="20" Margin="0,0,0,40">
+
+                <!-- Appearance -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Appearance" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Theme" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" Width="140" SelectedItem="{Binding SelectedTheme}">
+                                    <x:String>Dark</x:String>
+                                    <x:String>Light</x:String>
+                                    <x:String>Sunset</x:String>
+                                    <x:String>Dawn</x:String>
+                                    <x:String>Oceanic</x:String>
+                                    <x:String>Rose</x:String>
+                                </ComboBox>
+                            </Grid>
+                            <Button Content="Apply Theme" Click="ApplyTheme_Click"
+                                    HorizontalAlignment="Right" Padding="12,5" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Capture Settings -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Capture" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Buffer Size (characters)"/>
+                                    <TextBlock Text="Max chars before auto-flush" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="1" Width="120" Minimum="500" Maximum="50000" Increment="500"
+                                               Value="{Binding MaxBufferChars}" FormatString="N0"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Idle Flush (seconds)"/>
+                                    <TextBlock Text="Flush buffer after this idle time" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="1" Width="120" Minimum="5" Maximum="300" Increment="5"
+                                               Value="{Binding IdleFlushSeconds}" FormatString="N0"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Auto-Cleanup -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Auto-Cleanup" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Enable Auto-Cleanup"/>
+                                    <TextBlock Text="Automatically delete old entries" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoCleanupEnabled}" OnContent="" OffContent=""/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding AutoCleanupEnabled}"/>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoCleanupEnabled}">
+                                <TextBlock Text="Retention Period (days)" VerticalAlignment="Center"/>
+                                <NumericUpDown Grid.Column="1" Width="120" Minimum="1" Maximum="365" Increment="1"
+                                               Value="{Binding RetentionDays}" FormatString="N0"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding AutoCleanupEnabled}"/>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoCleanupEnabled}">
+                                <TextBlock Text="Exclude Pinned Entries" VerticalAlignment="Center"/>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ExcludePinnedFromCleanup}" OnContent="" OffContent=""/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Quick Paste -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Quick Paste" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Enable Quick Paste"/>
+                                    <TextBlock Text="Global hotkey to search and paste entries" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding QuickPasteEnabled}" OnContent="" OffContent=""/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding QuickPasteEnabled}"/>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding QuickPasteEnabled}">
+                                <TextBlock Text="Hotkey" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Width="140" Text="{Binding QuickPasteHotkey}" IsReadOnly="True"
+                                         Background="{DynamicResource AppBgTertiary}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Encryption -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Encryption" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="AES-256-GCM encryption protects all entry content at rest. A password is required to unlock the vault on startup."
+                                       FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="EnableEncryptionBtn" Content="Enable Encryption" Click="EnableEncryption_Click" Padding="12,6" FontSize="12"/>
+                                <Button x:Name="DisableEncryptionBtn" Content="Disable Encryption" Click="DisableEncryption_Click" Padding="12,6" FontSize="12"/>
+                            </StackPanel>
+                            <TextBlock x:Name="EncryptionStatusText" FontSize="11" FontStyle="Italic"
+                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Cloud Sync -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Cloud Sync" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Enable Cloud Sync"/>
+                                    <TextBlock Text="Sync database to cloud storage" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding CloudSyncEnabled}" OnContent="" OffContent=""/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding CloudSyncEnabled}"/>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CloudSyncEnabled}">
+                                <TextBlock Text="Sync Interval (minutes)" VerticalAlignment="Center"/>
+                                <NumericUpDown Grid.Column="1" Width="120" Minimum="5" Maximum="120" Increment="5"
+                                               Value="{Binding CloudSyncIntervalMinutes}" FormatString="N0"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding CloudSyncEnabled}"/>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CloudSyncEnabled}">
+                                <TextBlock Text="Sync on App Close" VerticalAlignment="Center"/>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding SyncOnClose}" OnContent="" OffContent=""/>
+                            </Grid>
+                            <!-- Provider connections -->
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding CloudSyncEnabled}"/>
+                            <StackPanel Spacing="8" IsVisible="{Binding CloudSyncEnabled}">
+                                <TextBlock Text="Cloud Providers" FontSize="12" FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="Google Drive" FontSize="12"/>
+                                        <TextBlock x:Name="GoogleStatusText" Text="Not connected" FontSize="11"
+                                                   Foreground="{DynamicResource AppTextSecondary}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                        <Button x:Name="GoogleConnectBtn" Content="Connect" Click="GoogleConnect_Click"
+                                                Padding="10,4" FontSize="11"/>
+                                        <Button x:Name="GoogleDisconnectBtn" Content="Disconnect" Click="GoogleDisconnect_Click"
+                                                Padding="10,4" FontSize="11" IsVisible="False"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="SyncNowBtn" Content="Sync Now" Click="SyncNow_Click"
+                                            Classes="accent" Padding="12,5" FontSize="11"/>
+                                    <TextBlock x:Name="SyncStatusText" Text="" FontSize="11"
+                                               Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Bottom action bar -->
+        <Border Grid.Row="1" Background="{DynamicResource AppBgSecondary}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                Padding="20,12">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button Content="Reset Defaults" Command="{Binding ResetDefaultsCommand}"/>
+                <Button Grid.Column="2" Content="Cancel" Margin="0,0,8,0" Click="Cancel_Click"/>
+                <Button Grid.Column="3" Content="Save" Classes="accent"
+                        Command="{Binding SaveSettingsCommand}" Click="Save_Click"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

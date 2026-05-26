@@ -1,0 +1,121 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Kapture.App"
+             xmlns:local="using:Kapture"
+             RequestedThemeVariant="Dark">
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://AvaloniaEdit/Themes/Base.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <!-- Surface hierarchy -->
+                    <SolidColorBrush x:Key="AppBgBrush"        Color="#0D1117"/>
+                    <SolidColorBrush x:Key="AppBgSecondary"    Color="#161B22"/>
+                    <SolidColorBrush x:Key="AppBgTertiary"     Color="#21262D"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"    Color="#30363D"/>
+
+                    <!-- Text -->
+                    <SolidColorBrush x:Key="AppTextPrimary"    Color="#E6EDF3"/>
+                    <SolidColorBrush x:Key="AppTextSecondary"  Color="#8B949E"/>
+
+                    <!-- Interactive states -->
+                    <SolidColorBrush x:Key="ButtonHoverBrush"  Color="#292E36"/>
+                    <SolidColorBrush x:Key="ItemHoverBrush"    Color="#1C2129"/>
+                    <SolidColorBrush x:Key="ItemSelectedBrush" Color="#1F2A3A"/>
+
+                    <!-- Scrollbar -->
+                    <SolidColorBrush x:Key="ScrollThumbBrush"      Color="#30363D"/>
+                    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#484F58"/>
+
+                    <!-- Shadows — multi-layer for depth -->
+                    <BoxShadows x:Key="CardShadow">0 2 8 0 #22000000, 0 0 1 0 #12000000</BoxShadows>
+                    <BoxShadows x:Key="CardShadowHover">0 8 24 0 #38000000, 0 2 6 0 #18000000</BoxShadows>
+                    <BoxShadows x:Key="DialogShadow">0 16 48 0 #60000000, 0 4 12 0 #30000000</BoxShadows>
+                    <BoxShadows x:Key="HeaderShadow">0 2 8 0 #18000000</BoxShadows>
+                    <BoxShadows x:Key="FooterShadow">0 -2 8 0 #14000000</BoxShadows>
+                    <BoxShadows x:Key="NavPillShadow">inset 0 1 4 0 #20000000</BoxShadows>
+                    <BoxShadows x:Key="InsetShadow">inset 0 1 3 0 #25000000</BoxShadows>
+                    <BoxShadows x:Key="AccentGlow">0 0 16 0 #35F0A500</BoxShadows>
+                    <BoxShadows x:Key="AccentGlowHover">0 0 24 0 #50F0A500</BoxShadows>
+                    <BoxShadows x:Key="SelectedItemShadow">0 1 4 0 #15000000</BoxShadows>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <!-- Surface hierarchy -->
+                    <SolidColorBrush x:Key="AppBgBrush"        Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppBgSecondary"    Color="#F6F8FA"/>
+                    <SolidColorBrush x:Key="AppBgTertiary"     Color="#E8ECF0"/>
+                    <SolidColorBrush x:Key="AppBorderBrush"    Color="#D0D7DE"/>
+
+                    <!-- Text -->
+                    <SolidColorBrush x:Key="AppTextPrimary"    Color="#1F2328"/>
+                    <SolidColorBrush x:Key="AppTextSecondary"  Color="#656D76"/>
+
+                    <!-- Interactive states -->
+                    <SolidColorBrush x:Key="ButtonHoverBrush"  Color="#DDE2E8"/>
+                    <SolidColorBrush x:Key="ItemHoverBrush"    Color="#EEF1F4"/>
+                    <SolidColorBrush x:Key="ItemSelectedBrush" Color="#DDE8F5"/>
+
+                    <!-- Scrollbar -->
+                    <SolidColorBrush x:Key="ScrollThumbBrush"      Color="#C8CDD3"/>
+                    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#A0A8B0"/>
+
+                    <!-- Shadows — multi-layer for depth -->
+                    <BoxShadows x:Key="CardShadow">0 2 8 0 #15000000, 0 0 1 0 #08000000</BoxShadows>
+                    <BoxShadows x:Key="CardShadowHover">0 8 24 0 #25000000, 0 2 6 0 #12000000</BoxShadows>
+                    <BoxShadows x:Key="DialogShadow">0 16 48 0 #40000000, 0 4 12 0 #20000000</BoxShadows>
+                    <BoxShadows x:Key="HeaderShadow">0 2 8 0 #10000000</BoxShadows>
+                    <BoxShadows x:Key="FooterShadow">0 -2 8 0 #08000000</BoxShadows>
+                    <BoxShadows x:Key="NavPillShadow">inset 0 1 4 0 #12000000</BoxShadows>
+                    <BoxShadows x:Key="InsetShadow">inset 0 1 3 0 #15000000</BoxShadows>
+                    <BoxShadows x:Key="AccentGlow">0 0 16 0 #20F0A500</BoxShadows>
+                    <BoxShadows x:Key="AccentGlowHover">0 0 24 0 #35F0A500</BoxShadows>
+                    <BoxShadows x:Key="SelectedItemShadow">0 1 4 0 #08000000</BoxShadows>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Theme-independent accent colors -->
+            <SolidColorBrush x:Key="AccentBrush" Color="#F0A500"/>
+            <SolidColorBrush x:Key="AccentHoverBrush" Color="#D4940A"/>
+            <SolidColorBrush x:Key="AccentDimBrush" Color="#7A5500"/>
+
+            <!-- Semantic colors -->
+            <SolidColorBrush x:Key="SuccessBrush" Color="#3FB950"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#D29922"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="#F85149"/>
+            <SolidColorBrush x:Key="InfoBrush" Color="#58A6FF"/>
+
+            <!-- Status colors (services, startup items, toggles) -->
+            <Color x:Key="StatusRunning">#3FB950</Color>
+            <Color x:Key="StatusStopped">#8B949E</Color>
+            <Color x:Key="StatusDisabled">#F85149</Color>
+            <Color x:Key="StatusWarning">#F0A500</Color>
+            <Color x:Key="StatusSecured">#3FB950</Color>
+            <Color x:Key="StatusExposed">#F85149</Color>
+
+            <!-- Profile colors -->
+            <Color x:Key="ProfileGaming">#F85149</Color>
+            <Color x:Key="ProfileWork">#58A6FF</Color>
+            <Color x:Key="ProfileBattery">#3FB950</Color>
+            <Color x:Key="ProfilePurple">#D2A8FF</Color>
+
+            <!-- Convenience brushes for profile colors -->
+            <SolidColorBrush x:Key="ProfilePurpleBrush" Color="#D2A8FF"/>
+
+            <!-- Icon font (Windows built-in) -->
+            <FontFamily x:Key="SymbolFont">Segoe MDL2 Assets</FontFamily>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://KaptureVault/Themes/AppTheme.axaml" />
+    </Application.Styles>
+</Application>
