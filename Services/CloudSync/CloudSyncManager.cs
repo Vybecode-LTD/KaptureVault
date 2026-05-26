@@ -7,12 +7,12 @@ public class CloudSyncManager : IDisposable
     private const string SyncFileName = "vault.db";
 
     private static readonly string DbPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".keystroke_vault", "vault.db");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KaptureVault", "vault.db");
 
     private static readonly string SyncMetaPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".kapture", "sync_meta.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KaptureVault", "sync_meta.json");
 
     private readonly IDatabaseService _db;
     private readonly Dictionary<string, ICloudStorageProvider> _providers = new();

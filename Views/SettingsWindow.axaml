@@ -3,7 +3,7 @@
         xmlns:vm="using:Kapture.ViewModels"
         x:Class="Kapture.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
-        Title="Kapture Settings"
+        Title="KaptureVault Settings"
         Width="520" Height="750"
         WindowStartupLocation="CenterOwner"
         CanResize="True"

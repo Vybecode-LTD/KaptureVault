@@ -10,11 +10,11 @@ public class ScreenshotService : IScreenshotService, IDisposable
 {
     private const int PollIntervalMs = 500;
     private const int CF_DIB = 8;
-    private const string SelfProcessName = "Kapture";
+    private const string SelfProcessName = "KaptureVault";
 
     private static readonly string ScreenshotDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".keystroke_vault", "screenshots");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KaptureVault", "screenshots");
 
     private readonly IDatabaseService _db;
     private readonly IActiveWindowService _windowService;

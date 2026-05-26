@@ -20,8 +20,8 @@ public class CloudTokens
 public static class CloudTokenStore
 {
     private static readonly string Dir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".kapture");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KaptureVault");
 
     private static string GetProtectedPath(string provider) =>
         Path.Combine(Dir, $"cloud_tokens_{provider.ToLowerInvariant()}.bin");

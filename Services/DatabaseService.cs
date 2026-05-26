@@ -21,8 +21,8 @@ public class DatabaseService : IDatabaseService
     {
         _encryption = encryption;
         var folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".keystroke_vault");
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "KaptureVault");
         Directory.CreateDirectory(folder);
         _dbPath = Path.Combine(folder, "vault.db");
         _connectionString = $"Data Source={_dbPath}";

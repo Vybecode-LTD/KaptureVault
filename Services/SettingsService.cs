@@ -7,8 +7,8 @@ namespace Kapture.Services;
 public class SettingsService : ISettingsService
 {
     private static readonly string SettingsDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".kapture");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KaptureVault");
 
     private static readonly string SettingsPath = Path.Combine(SettingsDir, "settings.json");
 

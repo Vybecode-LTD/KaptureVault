@@ -25,10 +25,6 @@ public class AppSettings
     [JsonPropertyName("quickPasteEnabled")]
     public bool QuickPasteEnabled { get; set; } = true;
 
-    // Encryption
-    [JsonPropertyName("encryptionEnabled")]
-    public bool EncryptionEnabled { get; set; } = false;
-
     // Cloud Sync
     [JsonPropertyName("cloudSyncProvider")]
     public string? CloudSyncProvider { get; set; }

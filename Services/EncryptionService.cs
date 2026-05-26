@@ -15,8 +15,8 @@ public class EncryptionService : IEncryptionService
     private const string EncryptedPrefix = "ENC:";
 
     private static readonly string MetaDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".kapture");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KaptureVault");
 
     private static readonly string MetaPath = Path.Combine(MetaDir, "encryption.json");
 
