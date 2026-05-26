@@ -1,0 +1,31 @@
+## Build outputs
+bin/
+obj/
+publish/
+
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+## Logs
+*.log
+Serilog*.txt
+logs/
+
+## Secrets & tokens
+*.json.bin
+cloud_tokens_*.bin
+cloud_tokens_*.json
+client_secret*.json
+
+## DB & user data
+*.db
+*.db-shm
+*.db-wal
+screenshots/
+
+## OS
+Thumbs.db
+.DS_Store
