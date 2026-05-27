@@ -58,7 +58,13 @@ WizardSmallImageFile=..\Assets\installer-banner.bmp
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 ; ── Platform ──────────────────────────────────────────────────────────────────
+; Admin is needed to write to Program Files — UAC is triggered automatically.
+; The app itself runs as the invoking user (asInvoker in app.manifest).
 PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=commandline dialog
+; HKCU is used intentionally for the per-user startup Run key — suppress the
+; "admin installer writing to HKCU" warning since this is the desired behaviour.
+UsedUserAreasWarning=no
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 
@@ -108,31 +114,30 @@ Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}";          Tas
 Name: "{autodesktop}\{#MyAppName}";     Filename: "{app}\{#MyAppExeName}";   Tasks: desktopicon
 
 ; ─────────────────────────────────────────────────────────────────────────────
-[Run]
-; Register a Task Scheduler job for startup.
-; /rl highest  — runs with the same elevation level as the logged-in user
-; /sc onlogon  — triggers on any user logon
-; /f           — force-overwrites if the task already exists
-Filename: "schtasks.exe"; \
-  Parameters: "/create /tn ""{#MyAppName}"" /tr """"""{app}\{#MyAppExeName}"""""" /sc onlogon /rl highest /f"; \
-  Flags: runhidden waituntilterminated; \
-  StatusMsg: "Registering startup task..."; \
+; Startup — registry Run key (correct for a non-elevated / asInvoker app).
+; Written to HKCU so no admin rights are needed at launch time.
+[Registry]
+Root: HKCU; \
+  Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
+  ValueType: string; \
+  ValueName: "{#MyAppName}"; \
+  ValueData: """{app}\{#MyAppExeName}"""; \
+  Flags: uninsdeletevalue; \
   Tasks: startup
 
-; Offer to launch KaptureVault immediately after install finishes
+; ─────────────────────────────────────────────────────────────────────────────
+[Run]
+; Offer to launch KaptureVault immediately after install finishes.
+; shellexec lets Windows handle the normal (non-elevated) launch correctly.
 Filename: "{app}\{#MyAppExeName}"; \
   Description: "Launch {#MyAppName} now"; \
-  Flags: nowait postinstall skipifsilent
+  Flags: nowait postinstall skipifsilent shellexec
 
 ; ─────────────────────────────────────────────────────────────────────────────
-[UninstallRun]
-; Remove the startup task when uninstalling
-Filename: "schtasks.exe"; \
-  Parameters: "/delete /tn ""{#MyAppName}"" /f"; \
-  Flags: runhidden; \
-  RunOnceId: "RemoveStartupTask"
-
-; ─────────────────────────────────────────────────────────────────────────────
+; The startup registry value is removed automatically on uninstall because of
+; the uninsdeletevalue flag on the [Registry] entry above — no [UninstallRun]
+; schtasks call needed.
+;
 ; User data lives in %LOCALAPPDATA%\KaptureVault\ — NOT removed automatically.
 ; The [Code] section below offers the user a choice during uninstallation.
 [UninstallDelete]

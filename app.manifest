@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="1.0.0.0" name="Kapture.Desktop"/>
+  <assemblyIdentity version="1.0.0.0" name="KaptureVault.Desktop"/>
 
-  <!-- Run as admin — required for service/registry tweaks -->
+  <!-- Run as the invoking user — no elevation needed.
+       KaptureVault uses only low-level keyboard hooks, clipboard monitoring,
+       screenshot capture, and %LOCALAPPDATA% writes, all of which work at
+       standard user integrity. Admin was only needed for the system-tweak
+       features that were removed in this fork. -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>
