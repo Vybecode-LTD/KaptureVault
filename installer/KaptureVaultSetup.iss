@@ -51,7 +51,10 @@ SolidCompression=yes
 
 ; ── UI ────────────────────────────────────────────────────────────────────────
 WizardStyle=modern
+; Wizard imagery — KV brand assets
 SetupIconFile=..\Assets\app.ico
+WizardImageFile=..\Assets\installer-wizard.bmp
+WizardSmallImageFile=..\Assets\installer-banner.bmp
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 ; ── Platform ──────────────────────────────────────────────────────────────────
