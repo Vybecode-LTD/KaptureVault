@@ -4,6 +4,7 @@
         x:Class="Kapture.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="KaptureVault Settings"
+        Icon="/Assets/app.ico"
         Width="520" Height="750"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
