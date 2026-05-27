@@ -60,6 +60,12 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; (e.g. e_sqlite3.dll, libSkiaSharp.dll) that cannot be bundled into the exe.
 ; recursesubdirs + createallsubdirs handles any nested runtime folders safely.
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Google OAuth credentials — bundled alongside the exe so LoadCredentials() finds them.
+; client_secret.json is gitignored; place it in the project root before running ISCC.
+#define CredFile "..\client_secret.json"
+#if FileExists(CredFile)
+Source: "{#CredFile}"; DestDir: "{app}"; Flags: ignoreversion
+#endif
 
 [Icons]
 ; Start Menu shortcut
