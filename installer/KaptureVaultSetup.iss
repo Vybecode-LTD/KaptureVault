@@ -133,7 +133,39 @@ Filename: "schtasks.exe"; \
   RunOnceId: "RemoveStartupTask"
 
 ; ─────────────────────────────────────────────────────────────────────────────
-; User data lives in %LOCALAPPDATA%\KaptureVault\ — intentionally NOT removed
-; on uninstall so no vault content is lost. Users can delete it manually.
+; User data lives in %LOCALAPPDATA%\KaptureVault\ — NOT removed automatically.
+; The [Code] section below offers the user a choice during uninstallation.
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+; ─────────────────────────────────────────────────────────────────────────────
+[Code]
+
+{ Called after the main uninstall step completes (files removed, shortcuts gone,
+  startup task deleted). The wizard is still open so the MsgBox sits cleanly over it. }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  DataDir  : String;
+  Response : Integer;
+begin
+  if CurUninstallStep <> usPostUninstall then Exit;
+
+  DataDir := ExpandConstant('{localappdata}\KaptureVault');
+  if not DirExists(DataDir) then Exit;
+
+  Response := MsgBox(
+    'KaptureVault has been removed.' + #13#10 + #13#10 +
+    'Would you also like to permanently delete all vault data?' + #13#10 + #13#10 +
+    'This includes:' + #13#10 +
+    '   - Captured keystrokes, clipboard history, and screenshots' + #13#10 +
+    '   - The encrypted vault database' + #13#10 +
+    '   - Encryption keys and Google Drive sync tokens' + #13#10 + #13#10 +
+    'Location: ' + DataDir + #13#10 + #13#10 +
+    'This cannot be undone. Click No to keep your data.',
+    mbConfirmation,
+    MB_YESNO or $100   { $100 = MB_DEFBUTTON2 — No is the safe default }
+  );
+
+  if Response = IDYES then
+    DelTree(DataDir, True, True, True);
+end;
