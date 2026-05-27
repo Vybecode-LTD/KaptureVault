@@ -1,94 +1,136 @@
-; KaptureVault Installer — Inno Setup Script
-; Requires Inno Setup 6+ (https://jrsoftware.org/isinfo.php)
+; KaptureVault Installer — Inno Setup 6+
 ;
-; Build steps:
-;   1. dotnet publish (see README section in this file)
+; Build:
+;   1. dotnet publish KaptureVault.csproj -c Release -r win-x64 --self-contained true
+;        -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+;        -o publish\win-x64
 ;   2. ISCC installer\KaptureVaultSetup.iss
-;      (or: "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\KaptureVaultSetup.iss)
 ;
 ; Output: installer\output\KaptureVaultSetup-1.0.0-x64.exe
 
 #define MyAppName      "KaptureVault"
 #define MyAppVersion   "1.0.0"
-#define MyAppPublisher "VybeCode"
-#define MyAppURL       "https://github.com/VybeCodeLTD"
+#define MyAppPublisher "Vybecode Ltd"
+#define MyAppURL       "https://kapture.tools"
 #define MyAppExeName   "KaptureVault.exe"
-; Path to dotnet publish output — relative to this .iss file location (installer\)
 #define PublishDir     "..\publish\win-x64"
 
+; ─────────────────────────────────────────────────────────────────────────────
 [Setup]
-; Fresh GUID — must not match the Kapture installer AppId
 AppId={{4F2A1D3E-7B8C-4E9F-A012-3B4C5D6E7F80}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
-; Install to Program Files\KaptureVault by default
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}
+
+; Default install location — user can change on the directory page
 DefaultDirName={autopf}\{#MyAppName}
+; Default Start Menu folder — user can change on the program group page
 DefaultGroupName={#MyAppName}
-; Don't show the "Select Start Menu Folder" page — we control it in [Icons]
-DisableProgramGroupPage=yes
-; Installer output
+
+; ── Wizard pages ──────────────────────────────────────────────────────────────
+; All three suppression flags are off so every page shows:
+;   Welcome → License → Select Destination → Select Components → Ready → Installing → Finish
+DisableWelcomePage=no
+DisableDirPage=no
+DisableProgramGroupPage=no
+DisableReadyPage=no
+DisableFinishedPage=no
+; Show the chosen install path on the Ready to Install summary page
+AlwaysShowDirOnReadyPage=yes
+AlwaysShowGroupOnReadyPage=yes
+
+; ── Output ────────────────────────────────────────────────────────────────────
 OutputDir=output
 OutputBaseFilename=KaptureVaultSetup-{#MyAppVersion}-x64
-; Compression
 Compression=lzma2/ultra64
 SolidCompression=yes
-; UI
+
+; ── UI ────────────────────────────────────────────────────────────────────────
 WizardStyle=modern
-; Require admin for install (matches app.manifest requireAdministrator)
-PrivilegesRequired=admin
-; Target 64-bit Windows only
-ArchitecturesInstallIn64BitMode=x64compatible
-; Branding
 SetupIconFile=..\Assets\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
-; Windows 10 minimum (matches app.manifest supportedOS)
-MinVersion=10.0
-; Sign the uninstaller alongside the installer (leave blank if not signing)
-; SignTool=AzureSign
 
+; ── Platform ──────────────────────────────────────────────────────────────────
+PrivilegesRequired=admin
+ArchitecturesInstallIn64BitMode=x64compatible
+MinVersion=10.0
+
+; ─────────────────────────────────────────────────────────────────────────────
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+; ─────────────────────────────────────────────────────────────────────────────
 [Tasks]
-; Desktop shortcut — optional, defaults to unchecked
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; Start Menu shortcut — checked by default (no flag needed; Inno default is checked)
+Name: "startmenuicon"; \
+  Description: "Create a &Start Menu shortcut"; \
+  GroupDescription: "Shortcuts:"
 
+; Desktop shortcut — unchecked by default; user opts in
+Name: "desktopicon"; \
+  Description: "Create a &Desktop shortcut"; \
+  GroupDescription: "Shortcuts:"; \
+  Flags: unchecked
+
+; Startup — KaptureVault is a background tray app so startup makes sense;
+; uses Task Scheduler (not the Run registry key) so it launches correctly
+; even though the exe requests administrator privileges.
+Name: "startup"; \
+  Description: "Start KaptureVault automatically when &Windows starts (recommended)"; \
+  GroupDescription: "Startup:"
+
+; ─────────────────────────────────────────────────────────────────────────────
 [Files]
-; Single-file publish produces KaptureVault.exe plus a small number of native DLLs
-; (e.g. e_sqlite3.dll, libSkiaSharp.dll) that cannot be bundled into the exe.
-; recursesubdirs + createallsubdirs handles any nested runtime folders safely.
-Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Google OAuth credentials — bundled alongside the exe so LoadCredentials() finds them.
-; client_secret.json is gitignored; place it in the project root before running ISCC.
+; Main application files (single-file exe + native DLLs)
+Source: "{#PublishDir}\*"; DestDir: "{app}"; \
+  Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Google OAuth credentials — bundled if present in project root (gitignored)
 #define CredFile "..\client_secret.json"
 #if FileExists(CredFile)
 Source: "{#CredFile}"; DestDir: "{app}"; Flags: ignoreversion
 #endif
 
+; ─────────────────────────────────────────────────────────────────────────────
 [Icons]
-; Start Menu shortcut
-Name: "{group}\{#MyAppName}";            Filename: "{app}\{#MyAppExeName}"
-; Start Menu uninstall shortcut
-Name: "{group}\Uninstall {#MyAppName}";  Filename: "{uninstallexe}"
-; Desktop shortcut (only if user checked the task above)
-Name: "{autodesktop}\{#MyAppName}";      Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+; Start Menu shortcuts (only if user kept that task checked)
+Name: "{group}\{#MyAppName}";           Filename: "{app}\{#MyAppExeName}";   Tasks: startmenuicon
+Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}";          Tasks: startmenuicon
 
-; ---------------------------------------------------------------------------
-; [Run] section intentionally omitted.
-; KaptureVault is a tray/background app — the user launches it manually.
-; Auto-launching after install is undesirable for an elevated tray process.
-; ---------------------------------------------------------------------------
+; Desktop shortcut (only if user checked that task)
+Name: "{autodesktop}\{#MyAppName}";     Filename: "{app}\{#MyAppExeName}";   Tasks: desktopicon
 
-; ---------------------------------------------------------------------------
-; User data note:
-; KaptureVault stores data in %LOCALAPPDATA%\KaptureVault\ (user-owned).
-; This data is NOT removed by the uninstaller so no vault data is lost.
-; Users can manually delete that folder if they want a clean removal.
-; ---------------------------------------------------------------------------
+; ─────────────────────────────────────────────────────────────────────────────
+[Run]
+; Register a Task Scheduler job for startup.
+; /rl highest  — runs with the same elevation level as the logged-in user
+; /sc onlogon  — triggers on any user logon
+; /f           — force-overwrites if the task already exists
+Filename: "schtasks.exe"; \
+  Parameters: "/create /tn ""{#MyAppName}"" /tr """"""{app}\{#MyAppExeName}"""""" /sc onlogon /rl highest /f"; \
+  Flags: runhidden waituntilterminated; \
+  StatusMsg: "Registering startup task..."; \
+  Tasks: startup
 
+; Offer to launch KaptureVault immediately after install finishes
+Filename: "{app}\{#MyAppExeName}"; \
+  Description: "Launch {#MyAppName} now"; \
+  Flags: nowait postinstall skipifsilent
+
+; ─────────────────────────────────────────────────────────────────────────────
+[UninstallRun]
+; Remove the startup task when uninstalling
+Filename: "schtasks.exe"; \
+  Parameters: "/delete /tn ""{#MyAppName}"" /f"; \
+  Flags: runhidden; \
+  RunOnceId: "RemoveStartupTask"
+
+; ─────────────────────────────────────────────────────────────────────────────
+; User data lives in %LOCALAPPDATA%\KaptureVault\ — intentionally NOT removed
+; on uninstall so no vault content is lost. Users can delete it manually.
 [UninstallDelete]
-; Remove any log/cache files written next to the exe during operation,
-; but do NOT touch %LOCALAPPDATA%\KaptureVault\ (vault data stays).
 Type: filesandordirs; Name: "{app}"
