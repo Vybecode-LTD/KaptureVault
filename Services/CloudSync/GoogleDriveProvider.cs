@@ -10,12 +10,8 @@ namespace Kapture.Services.CloudSync;
 
 public class GoogleDriveProvider : ICloudStorageProvider
 {
-    // Client ID for an installed/desktop OAuth app (public client).
-    // No client secret — uses PKCE (S256) for authorization code exchange.
-    // If Google requires a secret for your OAuth client type, set the
-    // KAPTURE_GOOGLE_CLIENT_SECRET environment variable or reconfigure the
-    // Google Cloud Console client as "Desktop app" (which allows PKCE-only).
-    private const string ClientId = "232322018793-nnr80bnf7qjgucrqi25kct7f26hvbhaa.apps.googleusercontent.com";
+    // Fallback client ID used when no client_secret.json is present.
+    private const string FallbackClientId = "232322018793-nnr80bnf7qjgucrqi25kct7f26hvbhaa.apps.googleusercontent.com";
     private const int RedirectPort = 48721;
     private const string RedirectUri = "http://localhost:48721/";
     private const string Scope = "https://www.googleapis.com/auth/drive.file";
@@ -23,27 +19,77 @@ public class GoogleDriveProvider : ICloudStorageProvider
     private const string TokenEndpoint = "https://oauth2.googleapis.com/token";
     private const string DriveApiBase = "https://www.googleapis.com/drive/v3";
     private const string UploadApiBase = "https://www.googleapis.com/upload/drive/v3";
-    private const string AppFolderName = "Kapture";
+    private const string AppFolderName = "KaptureVault";
     private const int MaxRetries = 4;
 
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(5) };
     private CloudTokens? _tokens;
+    private readonly string _clientId;
+    private readonly string? _clientSecret;
 
     public string ProviderName => "Google Drive";
     public bool IsAuthenticated => _tokens?.AccessToken != null;
+    public string? LastAuthError { get; private set; }
 
     public GoogleDriveProvider()
     {
+        (_clientId, _clientSecret) = LoadCredentials();
         _tokens = CloudTokenStore.Load("google");
+    }
+
+    /// <summary>
+    /// Loads OAuth client credentials. Checks for client_secret.json in
+    /// %LOCALAPPDATA%\KaptureVault\ first, then alongside the executable.
+    /// Falls back to the hardcoded client ID and the env var secret.
+    /// </summary>
+    private static (string clientId, string? clientSecret) LoadCredentials()
+    {
+        var appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "KaptureVault", "client_secret.json");
+        var sideBySidePath = Path.Combine(AppContext.BaseDirectory, "client_secret.json");
+
+        foreach (var path in new[] { appDataPath, sideBySidePath })
+        {
+            if (!File.Exists(path)) continue;
+
+            try
+            {
+                var json = File.ReadAllText(path);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                // Standard Google format: { "installed": { "client_id": "...", "client_secret": "..." } }
+                if (doc.RootElement.TryGetProperty("installed", out var installed))
+                {
+                    var id = installed.GetProperty("client_id").GetString();
+                    var secret = installed.GetProperty("client_secret").GetString();
+                    if (!string.IsNullOrEmpty(id))
+                        return (id, secret);
+                }
+            }
+            catch
+            {
+                // Malformed JSON — fall through to next candidate
+            }
+        }
+
+        // No valid file found — use fallback
+        return (FallbackClientId, Environment.GetEnvironmentVariable("KAPTURE_GOOGLE_CLIENT_SECRET"));
     }
 
     public async Task<bool> AuthenticateAsync(CancellationToken ct = default)
     {
+        if (string.IsNullOrEmpty(_clientSecret))
+        {
+            LastAuthError = "client_secret.json not found — place your Google OAuth credentials file in " +
+                            $"%LOCALAPPDATA%\\KaptureVault\\";
+            return false;
+        }
+
         var codeVerifier = OAuthHelper.GenerateCodeVerifier();
         var codeChallenge = OAuthHelper.GenerateCodeChallenge(codeVerifier);
 
         var authUrl = $"{AuthEndpoint}?" +
-            $"client_id={ClientId}&" +
+            $"client_id={_clientId}&" +
             $"redirect_uri={HttpUtility.UrlEncode(RedirectUri)}&" +
             $"response_type=code&" +
             $"scope={HttpUtility.UrlEncode(Scope)}&" +
@@ -53,28 +99,38 @@ public class GoogleDriveProvider : ICloudStorageProvider
             $"prompt=consent";
 
         var code = await OAuthHelper.ListenForAuthCodeAsync(authUrl, RedirectPort, ct: ct);
-        if (string.IsNullOrEmpty(code)) return false;
+        if (string.IsNullOrEmpty(code))
+        {
+            LastAuthError = "Authorization cancelled or timed out";
+            return false;
+        }
 
         var tokenParams = new Dictionary<string, string>
         {
             ["code"] = code,
-            ["client_id"] = ClientId,
+            ["client_id"] = _clientId,
+            ["client_secret"] = _clientSecret,
             ["redirect_uri"] = RedirectUri,
             ["grant_type"] = "authorization_code",
             ["code_verifier"] = codeVerifier
         };
-        // Include client_secret only if configured (Google Desktop apps may not require it with PKCE)
-        var secret = Environment.GetEnvironmentVariable("KAPTURE_GOOGLE_CLIENT_SECRET");
-        if (!string.IsNullOrEmpty(secret))
-            tokenParams["client_secret"] = secret;
 
         var tokenRequest = new FormUrlEncodedContent(tokenParams);
 
         var response = await _http.PostAsync(TokenEndpoint, tokenRequest, ct);
-        if (!response.IsSuccessStatusCode) return false;
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            LastAuthError = $"Token exchange failed ({(int)response.StatusCode} {response.StatusCode}): {TruncateError(body)}";
+            return false;
+        }
 
         var tokenJson = await response.Content.ReadFromJsonAsync<GoogleTokenResponse>(cancellationToken: ct);
-        if (tokenJson == null) return false;
+        if (tokenJson == null)
+        {
+            LastAuthError = "Token exchange returned an empty response";
+            return false;
+        }
 
         _tokens = new CloudTokens
         {
@@ -83,6 +139,7 @@ public class GoogleDriveProvider : ICloudStorageProvider
             ExpiresAt = DateTime.UtcNow.AddSeconds(tokenJson.ExpiresIn - 60)
         };
         CloudTokenStore.Save("google", _tokens);
+        LastAuthError = null;
         return true;
     }
 
@@ -290,12 +347,11 @@ public class GoogleDriveProvider : ICloudStorageProvider
         var refreshParams = new Dictionary<string, string>
         {
             ["refresh_token"] = _tokens.RefreshToken,
-            ["client_id"] = ClientId,
+            ["client_id"] = _clientId,
             ["grant_type"] = "refresh_token"
         };
-        var refreshSecret = Environment.GetEnvironmentVariable("KAPTURE_GOOGLE_CLIENT_SECRET");
-        if (!string.IsNullOrEmpty(refreshSecret))
-            refreshParams["client_secret"] = refreshSecret;
+        if (!string.IsNullOrEmpty(_clientSecret))
+            refreshParams["client_secret"] = _clientSecret;
 
         var refreshRequest = new FormUrlEncodedContent(refreshParams);
 

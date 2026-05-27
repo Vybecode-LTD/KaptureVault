@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — KaptureVault</title>
+  <style>    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; background: #0f0f13; color: #e8e8f0; line-height: 1.6; }
+    a { color: #f07030; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .nav { display: flex; align-items: center; gap: 24px; padding: 16px 40px; border-bottom: 1px solid #2a2a3a; background: #0a0a10; }
+    .nav-brand { font-size: 1.1rem; font-weight: 700; background: linear-gradient(90deg, #f07030, #c040c0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav a { color: #a0a0b8; font-size: 0.9rem; }
+    .nav a:hover { color: #f07030; text-decoration: none; }
+    .nav-spacer { flex: 1; }
+    .page { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+    h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #f07030, #c040c0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+    .effective { font-size: 0.85rem; color: #606080; margin-bottom: 36px; }
+    h2 { font-size: 1.1rem; font-weight: 700; color: #e0e0f0; margin: 32px 0 10px; }
+    p { color: #9090b0; margin-bottom: 14px; font-size: 0.95rem; }
+    ul { color: #9090b0; font-size: 0.95rem; padding-left: 24px; margin-bottom: 14px; }
+    ul li { margin-bottom: 6px; }
+    .warn { background: #1e1020; border: 1px solid #8020a0; border-radius: 8px; padding: 16px 20px; margin: 20px 0; color: #c080e0; font-size: 0.9rem; }
+    footer { text-align: center; padding: 20px; border-top: 1px solid #2a2a3a; font-size: 0.8rem; color: #404060; }</style>
+</head>
+<body>
+<nav class="nav"><a class="nav-brand" href="index.html">KaptureVault</a><span class="nav-spacer"></span><a href="index.html">Home</a><a href="privacy-policy.html">Privacy Policy</a><a href="terms-of-service.html">Terms of Service</a></nav>
+<div class="page">
+  <h1>Privacy Policy</h1>
+  <p class="effective">Effective date: 27 May 2026</p>
+
+  <h2>Overview</h2>
+  <p>KaptureVault is a local-first Windows desktop application. Your data never leaves your device unless you explicitly enable optional Google Drive sync. We do not operate servers, collect analytics, or require accounts.</p>
+
+  <h2>Data collected and where it is stored</h2>
+  <p>KaptureVault captures the following data <strong>locally on your machine only</strong>, stored in <code>%LOCALAPPDATA%\KaptureVault\</code>:</p>
+  <ul>
+    <li><strong>Keystrokes</strong> — text typed into applications on your device.</li>
+    <li><strong>Clipboard entries</strong> — text, HTML, and image data copied to the Windows clipboard.</li>
+    <li><strong>Screenshots</strong> — periodic or triggered screenshots of your desktop.</li>
+  </ul>
+  <p>All captured content is stored in a local SQLite database. Optionally, content can be protected with AES-256-GCM encryption secured by a password you choose.</p>
+
+  <h2>Google Drive sync (optional)</h2>
+  <p>When you explicitly enable Google Drive sync in Settings, KaptureVault uses the Google Drive API with the <code>drive.file</code> scope. This means the app can only access files it created — it cannot read any other file on your Drive.</p>
+  <p>The only file uploaded is the encrypted database (<code>vault.db</code>) stored in a <strong>KaptureVault</strong> folder on your Drive. No other data is transmitted.</p>
+  <p>OAuth tokens that allow Drive access are stored locally using Windows DPAPI (Data Protection API), which encrypts them to your Windows user account. They are never transmitted to any party other than Google.</p>
+  <p>To disconnect Google Drive sync, click <em>Disconnect</em> in Settings. To fully revoke access, visit <a href="https://myaccount.google.com/permissions" target="_blank">myaccount.google.com/permissions</a> and remove KaptureVault.</p>
+
+  <h2>No third-party sharing</h2>
+  <p>We do not sell, share, or transmit your captured data to any third party. No analytics SDKs, crash reporters, or tracking libraries are included in KaptureVault.</p>
+
+  <h2>No accounts required</h2>
+  <p>KaptureVault requires no registration, login, or account of any kind. The optional Google sign-in is used solely to access your own Google Drive storage.</p>
+
+  <h2>Deleting your data</h2>
+  <p>To delete all locally stored data, uninstall KaptureVault and then delete the folder <code>%LOCALAPPDATA%\KaptureVault\</code>. To remove synced data from Google Drive, delete the <em>KaptureVault</em> folder from your Drive.</p>
+
+  <h2>Children's privacy</h2>
+  <p>KaptureVault is not directed at children under 13 and we do not knowingly collect data from children.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>Any changes to this policy will be reflected in updated releases of KaptureVault and on this page. The effective date above will be updated accordingly.</p>
+
+  <h2>Contact</h2>
+  <p>For privacy-related questions: <a href="mailto:privacy@vybecode.com">privacy@vybecode.com</a></p>
+</div>
+<footer>&copy; 2026 Vybecode Ltd.</footer>
+</body></html>

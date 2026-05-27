@@ -5,6 +5,9 @@ public interface ICloudStorageProvider
     string ProviderName { get; }
     bool IsAuthenticated { get; }
 
+    /// <summary>Human-readable description of why the last AuthenticateAsync call failed, or null if it succeeded.</summary>
+    string? LastAuthError { get; }
+
     /// <summary>Start OAuth2 flow — opens browser, listens for callback, stores tokens.</summary>
     Task<bool> AuthenticateAsync(CancellationToken ct = default);
 

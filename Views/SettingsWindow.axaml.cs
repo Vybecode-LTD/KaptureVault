@@ -93,12 +93,16 @@ public partial class SettingsWindow : Window
 
     // ── Cloud Sync ──
 
-    private void UpdateCloudStatus()
+    private void UpdateCloudStatus(bool preserveErrorText = false)
     {
         if (_syncManager == null) return;
 
         var google = _syncManager.Providers["Google Drive"];
-        GoogleStatusText.Text = google.IsAuthenticated ? "✓ Connected" : "Not connected";
+        if (google.IsAuthenticated)
+            GoogleStatusText.Text = "✓ Connected";
+        else if (!preserveErrorText)
+            GoogleStatusText.Text = "Not connected";
+
         GoogleConnectBtn.IsVisible = !google.IsAuthenticated;
         GoogleDisconnectBtn.IsVisible = google.IsAuthenticated;
 
@@ -111,19 +115,33 @@ public partial class SettingsWindow : Window
         GoogleConnectBtn.IsEnabled = false;
         GoogleStatusText.Text = "Connecting... (check browser)";
 
-        var provider = _syncManager.Providers["Google Drive"];
-        var success = await provider.AuthenticateAsync();
-
-        if (success)
+        try
         {
-            _syncManager.SetActiveProvider("Google Drive");
-            var settings = App.Services.GetRequiredService<ISettingsService>();
-            settings.Settings.CloudSyncProvider = "Google Drive";
-            settings.Save();
-        }
+            var provider = _syncManager.Providers["Google Drive"];
+            var success = await provider.AuthenticateAsync();
 
-        GoogleConnectBtn.IsEnabled = true;
-        UpdateCloudStatus();
+            if (success)
+            {
+                _syncManager.SetActiveProvider("Google Drive");
+                var settings = App.Services.GetRequiredService<ISettingsService>();
+                settings.Settings.CloudSyncProvider = "Google Drive";
+                settings.Save();
+            }
+            else
+            {
+                var reason = provider.LastAuthError ?? "Authorization cancelled or timed out";
+                GoogleStatusText.Text = $"⚠ {reason}";
+            }
+        }
+        catch (Exception ex)
+        {
+            GoogleStatusText.Text = $"⚠ Error: {ex.Message}";
+        }
+        finally
+        {
+            GoogleConnectBtn.IsEnabled = true;
+            UpdateCloudStatus(preserveErrorText: true);
+        }
     }
 
     private void GoogleDisconnect_Click(object? sender, RoutedEventArgs e)

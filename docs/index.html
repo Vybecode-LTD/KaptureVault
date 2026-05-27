@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KaptureVault</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; background: #0f0f13; color: #e8e8f0; line-height: 1.6; }
+    a { color: #f07030; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .nav { display: flex; align-items: center; gap: 24px; padding: 16px 40px; border-bottom: 1px solid #2a2a3a; background: #0a0a10; }
+    .nav-brand { font-size: 1.1rem; font-weight: 700; background: linear-gradient(90deg, #f07030, #c040c0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav a { color: #a0a0b8; font-size: 0.9rem; }
+    .nav a:hover { color: #f07030; text-decoration: none; }
+    .nav-spacer { flex: 1; }
+    .page { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+    h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #f07030, #c040c0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+    .effective { font-size: 0.85rem; color: #606080; margin-bottom: 36px; }
+    h2 { font-size: 1.1rem; font-weight: 700; color: #e0e0f0; margin: 32px 0 10px; }
+    p { color: #9090b0; margin-bottom: 14px; font-size: 0.95rem; }
+    ul { color: #9090b0; font-size: 0.95rem; padding-left: 24px; margin-bottom: 14px; }
+    ul li { margin-bottom: 6px; }
+    .warn { background: #1e1020; border: 1px solid #8020a0; border-radius: 8px; padding: 16px 20px; margin: 20px 0; color: #c080e0; font-size: 0.9rem; }
+    footer { text-align: center; padding: 20px; border-top: 1px solid #2a2a3a; font-size: 0.8rem; color: #404060; }
+    .hero { text-align: center; padding: 80px 24px 60px; background: radial-gradient(ellipse at 50% 0%, #2a1040 0%, #0f0f13 60%); }
+    .hero-logo { font-size: 3.5rem; font-weight: 800; letter-spacing: -1px; background: linear-gradient(135deg, #f07030 0%, #c040c0 50%, #6040e0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-tagline { margin-top: 12px; font-size: 1.2rem; color: #9090b0; }
+    .hero-sub { margin-top: 8px; font-size: 0.95rem; color: #606080; }
+    .features { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 20px; max-width: 860px; margin: 48px auto; padding: 0 24px; }
+    .card { background: #16161f; border: 1px solid #2a2a3a; border-radius: 10px; padding: 24px; }
+    .card-icon { font-size: 1.6rem; margin-bottom: 10px; }
+    .card-title { font-weight: 600; margin-bottom: 6px; }
+    .card-desc { font-size: 0.88rem; color: #7878a0; }
+    .links { text-align: center; padding: 40px 24px 80px; }
+    .links h2 { font-size: 1rem; color: #606080; margin-bottom: 20px; }
+    .link-row { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+    .link-btn { padding: 10px 22px; border-radius: 6px; font-size: 0.9rem; font-weight: 600; border: 1px solid #3a3a5a; color: #c0c0e0; transition: border-color 0.2s, color 0.2s; }
+    .link-btn:hover { border-color: #f07030; color: #f07030; text-decoration: none; }
+  </style>
+</head>
+<body>
+<nav class="nav"><span class="nav-brand">KaptureVault</span><span class="nav-spacer"></span><a href="privacy-policy.html">Privacy Policy</a><a href="terms-of-service.html">Terms of Service</a><a href="https://github.com/Vybecode-LTD/KaptureVault">GitHub</a></nav>
+<section class="hero">
+  <div class="hero-logo">KaptureVault</div>
+  <p class="hero-tagline">Keystroke, clipboard &amp; screenshot vault for Windows</p>
+  <p class="hero-sub">Everything you type, copy, and capture — stored locally, encrypted, always yours.</p>
+</section>
+<div class="features">
+  <div class="card"><div class="card-icon">&#9000;</div><div class="card-title">Keystroke Vault</div><div class="card-desc">Automatically captures everything you type, grouped into sessions and searchable.</div></div>
+  <div class="card"><div class="card-icon">&#128203;</div><div class="card-title">Clipboard Vault</div><div class="card-desc">Never lose a copied snippet again. Full clipboard history with type-aware display.</div></div>
+  <div class="card"><div class="card-icon">&#128444;</div><div class="card-title">Screenshot Vault</div><div class="card-desc">Auto-captured screenshots linked to the app you were using, with thumbnail previews.</div></div>
+  <div class="card"><div class="card-icon">&#128274;</div><div class="card-title">AES-256 Encryption</div><div class="card-desc">Optional password-protected encryption for all vault content stored on disk.</div></div>
+  <div class="card"><div class="card-icon">&#9729;</div><div class="card-title">Google Drive Sync</div><div class="card-desc">Optionally back up and sync your encrypted vault to Google Drive across devices.</div></div>
+  <div class="card"><div class="card-icon">&#128269;</div><div class="card-title">Quick Paste</div><div class="card-desc">Global hotkey to instantly search your vault and paste any entry into any app.</div></div>
+</div>
+<div class="links"><h2>Legal &amp; Source</h2><div class="link-row"><a class="link-btn" href="privacy-policy.html">Privacy Policy</a><a class="link-btn" href="terms-of-service.html">Terms of Service</a><a class="link-btn" href="https://github.com/Vybecode-LTD/KaptureVault">View on GitHub</a></div></div>
+<footer>&copy; 2026 Vybecode Ltd. KaptureVault is open source software.</footer>
+</body></html>

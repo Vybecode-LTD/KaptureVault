@@ -50,7 +50,7 @@ public static class OAuthHelper
 
             // Send response to browser
             var responseHtml = string.IsNullOrEmpty(error)
-                ? "<html><body style='font-family:sans-serif;text-align:center;padding:60px'><h2>✓ Kapture Connected!</h2><p>You can close this window and return to Kapture.</p></body></html>"
+                ? "<html><body style='font-family:sans-serif;text-align:center;padding:60px'><h2>✓ KaptureVault Connected!</h2><p>You can close this window and return to KaptureVault.</p></body></html>"
                 : $"<html><body style='font-family:sans-serif;text-align:center;padding:60px'><h2>✗ Authorization Failed</h2><p>{error}</p></body></html>";
 
             var buffer = Encoding.UTF8.GetBytes(responseHtml);
