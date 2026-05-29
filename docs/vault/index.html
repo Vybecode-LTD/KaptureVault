@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#0f0f13"/>
+  <title>KaptureVault</title>
+  <link rel="manifest" href="manifest.json"/>
+  <!-- sql.js — SQLite compiled to WASM -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+  <style>
+    /* ── Reset & variables ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f0f13;
+      --bg2:      #16161f;
+      --bg3:      #1e1e2a;
+      --border:   #2a2a3a;
+      --accent:   #f07030;
+      --accent2:  #c040c0;
+      --text:     #e8e8f0;
+      --text2:    #8080a0;
+      --text3:    #505068;
+      --success:  #22bb44;
+      --kb:       #22bb44;
+      --clip:     #bb44ff;
+      --ss:       #3399ff;
+      --radius:   12px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-size: 15px;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    /* ── Screen system ───────────────────────────────────────────── */
+    .screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bot);
+      transition: opacity .2s ease;
+    }
+    .screen.hidden { opacity: 0; pointer-events: none; }
+
+    /* ── AUTH screen ────────────────────────────────────────────── */
+    #s-auth {
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 32px 24px;
+    }
+    .auth-logo {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .auth-sub { color: var(--text2); font-size: .9rem; text-align: center; line-height: 1.5; max-width: 280px; }
+    .auth-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; }
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px 20px; border-radius: var(--radius);
+      font-size: .95rem; font-weight: 600; border: none; cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      -webkit-appearance: none;
+    }
+    .btn:active { opacity: .8; transform: scale(.97); }
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost    { background: transparent; color: var(--text2); font-size: .85rem; padding: 10px; }
+    .divider { display: flex; align-items: center; gap: 12px; color: var(--text3); font-size: .8rem; }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background: var(--border); }
+
+    /* ── LOADING screen ─────────────────────────────────────────── */
+    #s-loading { align-items: center; justify-content: center; gap: 20px; }
+    .spinner {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg { color: var(--text2); font-size: .9rem; }
+
+    /* ── UNLOCK screen ──────────────────────────────────────────── */
+    #s-unlock { align-items: center; justify-content: center; gap: 24px; padding: 32px 24px; }
+    .unlock-icon { font-size: 2.5rem; }
+    .unlock-title { font-size: 1.2rem; font-weight: 700; }
+    .unlock-sub { color: var(--text2); font-size: .85rem; text-align: center; max-width: 280px; }
+    .input-field {
+      width: 100%; max-width: 300px;
+      background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 16px; font-size: 1rem; color: var(--text); outline: none;
+      -webkit-appearance: none;
+      transition: border-color .15s;
+    }
+    .input-field:focus { border-color: var(--accent); }
+    .input-field::placeholder { color: var(--text3); }
+    .error-msg { color: #ff6060; font-size: .85rem; display: none; }
+    .error-msg.show { display: block; }
+
+    /* ── VAULT screen ───────────────────────────────────────────── */
+    #s-vault { background: var(--bg); }
+
+    .vault-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px 8px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .vault-logo {
+      font-size: 1.1rem; font-weight: 800;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .vault-meta { color: var(--text3); font-size: .75rem; }
+
+    .search-bar {
+      padding: 8px 12px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 14px; font-size: .9rem; color: var(--text); outline: none;
+      -webkit-appearance: none;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text3); }
+
+    .filter-tabs {
+      display: flex; gap: 4px; padding: 8px 12px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+      font-size: .82rem; font-weight: 600; cursor: pointer; border: none;
+      background: var(--bg3); color: var(--text2);
+      transition: background .15s, color .15s;
+    }
+    .tab.active { background: var(--accent); color: #fff; }
+    .tab.kb  { --tc: var(--kb); }
+    .tab.clip { --tc: var(--clip); }
+    .tab.ss  { --tc: var(--ss); }
+    .tab.kb.active  { background: var(--kb); }
+    .tab.clip.active { background: var(--clip); }
+    .tab.ss.active  { background: var(--ss); }
+
+    .entry-list {
+      flex: 1; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 8px 12px 16px;
+    }
+
+    .entry-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color .15s, background .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .entry-card:active { background: var(--bg3); }
+
+    .entry-top {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .type-badge {
+      flex-shrink: 0;
+      padding: 2px 7px; border-radius: 4px; font-size: .7rem; font-weight: 700;
+      letter-spacing: .02em; opacity: .85;
+    }
+    .type-badge.kb   { background: rgba(34,187,68,.18);  color: var(--kb); }
+    .type-badge.clip { background: rgba(187,68,255,.18); color: var(--clip); }
+    .type-badge.ss   { background: rgba(51,153,255,.18); color: var(--ss); }
+
+    .entry-app { font-size: .85rem; font-weight: 600; color: var(--accent); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-time { font-size: .75rem; color: var(--text3); flex-shrink: 0; }
+
+    .entry-preview {
+      font-size: .85rem; color: var(--text2); line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; word-break: break-all;
+    }
+    .entry-preview.screenshot { color: var(--text3); font-style: italic; }
+
+    .entry-chars { font-size: .72rem; color: var(--text3); margin-top: 4px; }
+
+    .empty-state {
+      text-align: center; color: var(--text3); padding: 60px 20px;
+      font-size: .9rem; line-height: 1.8;
+    }
+
+    /* ── DETAIL bottom sheet ─────────────────────────────────────── */
+    #s-detail {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s ease;
+      z-index: 100;
+    }
+    #s-detail.open { opacity: 1; pointer-events: all; }
+
+    .detail-sheet {
+      width: 100%; max-height: 80vh;
+      background: var(--bg2);
+      border-radius: var(--radius) var(--radius) 0 0;
+      border: 1px solid var(--border); border-bottom: none;
+      display: flex; flex-direction: column;
+      transform: translateY(100%);
+      transition: transform .25s ease;
+      padding-bottom: var(--safe-bot);
+    }
+    #s-detail.open .detail-sheet { transform: translateY(0); }
+
+    .detail-handle {
+      width: 40px; height: 4px; border-radius: 2px;
+      background: var(--border); margin: 10px auto 0;
+      flex-shrink: 0;
+    }
+    .detail-header {
+      padding: 12px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .detail-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .detail-app { font-size: 1rem; font-weight: 700; color: var(--accent); }
+    .detail-win { font-size: .8rem; color: var(--text2); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .detail-time { font-size: .78rem; color: var(--text3); }
+
+    .detail-content {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 14px 16px;
+      font-size: .88rem; line-height: 1.6; color: var(--text);
+      font-family: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
+      word-break: break-all; white-space: pre-wrap;
+    }
+    .detail-content.screenshot {
+      font-family: inherit; font-style: italic; color: var(--text2);
+    }
+    .detail-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 8px; flex-shrink: 0;
+    }
+    .copy-btn {
+      flex: 1; padding: 12px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px;
+      font-size: .9rem; font-weight: 600; cursor: pointer;
+      transition: opacity .15s;
+    }
+    .copy-btn:active { opacity: .8; }
+    .close-btn {
+      padding: 12px 16px;
+      background: var(--bg3); color: var(--text2);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: .9rem; cursor: pointer;
+    }
+
+    /* ── Toast ───────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: calc(24px + var(--safe-bot));
+      left: 50%; transform: translateX(-50%) translateY(16px);
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 20px;
+      border-radius: 20px; font-size: .85rem; font-weight: 500;
+      opacity: 0; transition: opacity .2s, transform .2s;
+      pointer-events: none; white-space: nowrap; z-index: 200;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ── Auth screen ─────────────────────────────────────────────────── -->
+<div id="s-auth" class="screen">
+  <div class="auth-logo">KaptureVault</div>
+  <p class="auth-sub">View and search your captured entries from any device.</p>
+  <div class="auth-btns">
+    <button class="btn btn-primary" onclick="connectDrive()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4.433 22l2.667-4.619H22L19.333 22H4.433zm-.766-1.333L0 13.952l6.667-11.619 3.766 6.524-6.766 11.81zM9.333 8.857l3.334 5.762H2.667L9.333 8.857zm4.434 5.762l3.766-6.524 3.8 6.524h-7.566z"/>
+      </svg>
+      Connect Google Drive
+    </button>
+    <div class="divider">or</div>
+    <button class="btn btn-secondary" onclick="openLocalFile()">
+      Open vault file (.db)
+    </button>
+    <input type="file" id="file-picker" accept=".db" style="display:none" onchange="handleFilePicked(event)"/>
+  </div>
+  <p style="color:var(--text3);font-size:.75rem;text-align:center;max-width:280px;line-height:1.6">
+    Your vault never leaves your device — all processing happens locally in your browser.
+  </p>
+</div>
+
+<!-- ── Loading screen ──────────────────────────────────────────────── -->
+<div id="s-loading" class="screen hidden">
+  <div class="spinner"></div>
+  <div id="loading-msg" class="loading-msg">Loading vault...</div>
+</div>
+
+<!-- ── Unlock screen ───────────────────────────────────────────────── -->
+<div id="s-unlock" class="screen hidden">
+  <div class="unlock-icon">🔐</div>
+  <div class="unlock-title">Vault is encrypted</div>
+  <p class="unlock-sub">Enter the password you set in the KaptureVault desktop app.</p>
+  <input type="password" id="vault-password" class="input-field"
+         placeholder="Vault password" autocomplete="current-password"
+         onkeydown="if(event.key==='Enter')unlockVault()"/>
+  <div id="unlock-error" class="error-msg">Incorrect password. Please try again.</div>
+  <button class="btn btn-primary" style="max-width:300px;width:100%" onclick="unlockVault()">Unlock</button>
+  <button class="btn btn-ghost" onclick="showScreen('s-auth')">Back</button>
+  <p id="no-salt-note" style="display:none;color:var(--text3);font-size:.75rem;text-align:center;max-width:280px;line-height:1.6">
+    Salt not found in Drive. Upload your <code>encryption.json</code> from
+    <code>%LOCALAPPDATA%\KaptureVault\</code> to decrypt:
+    <br/><br/>
+    <button class="btn btn-secondary" style="font-size:.8rem;padding:8px 16px" onclick="uploadEncJson()">Upload encryption.json</button>
+    <input type="file" id="enc-json-picker" accept=".json" style="display:none" onchange="handleEncJsonPicked(event)"/>
+  </p>
+</div>
+
+<!-- ── Vault screen ─────────────────────────────────────────────────── -->
+<div id="s-vault" class="screen hidden">
+  <div class="vault-header">
+    <div>
+      <div class="vault-logo">KaptureVault</div>
+      <div id="vault-meta" class="vault-meta"></div>
+    </div>
+    <button class="btn btn-ghost" style="padding:6px 10px;font-size:.8rem" onclick="signOut()">Sign out</button>
+  </div>
+
+  <div class="search-bar">
+    <input type="search" id="search-input" class="search-input"
+           placeholder="Search entries..."
+           oninput="onSearch(this.value)"/>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="tab active" data-filter="all"        onclick="setFilter('all',this)">All</button>
+    <button class="tab kb"     data-filter="keyboard"   onclick="setFilter('keyboard',this)">Keyboard</button>
+    <button class="tab clip"   data-filter="clipboard"  onclick="setFilter('clipboard',this)">Clipboard</button>
+    <button class="tab ss"     data-filter="screenshot" onclick="setFilter('screenshot',this)">Screenshots</button>
+  </div>
+
+  <div id="entry-list" class="entry-list"></div>
+</div>
+
+<!-- ── Detail bottom sheet ──────────────────────────────────────────── -->
+<div id="s-detail" onclick="closeDetail(event)">
+  <div class="detail-sheet" id="detail-sheet">
+    <div class="detail-handle"></div>
+    <div class="detail-header">
+      <div class="detail-meta">
+        <span id="d-badge" class="type-badge"></span>
+        <span id="d-app" class="detail-app"></span>
+      </div>
+      <div id="d-win" class="detail-win"></div>
+      <div id="d-time" class="detail-time"></div>
+    </div>
+    <div id="d-content" class="detail-content"></div>
+    <div class="detail-footer">
+      <button class="copy-btn" onclick="copyDetail()">Copy to clipboard</button>
+      <button class="close-btn" onclick="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// CONFIG — replace GOOGLE_WEB_CLIENT_ID with your Web Application
+// OAuth 2.0 client ID from Google Cloud Console.
+//
+// In Cloud Console:
+//   1. APIs & Services > Credentials > Create Credentials > OAuth client ID
+//   2. Application type: Web application
+//   3. Authorized JavaScript origins: https://kapture.tools
+//   4. No redirect URI needed (uses popup flow)
+//   5. Copy the client ID below
+// ══════════════════════════════════════════════════════════════════
+const GOOGLE_WEB_CLIENT_ID = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const DRIVE_API   = 'https://www.googleapis.com/drive/v3';
+
+// ── State ─────────────────────────────────────────────────────────
+let _sql = null;        // sql.js module
+let _db  = null;        // opened database
+let _key = null;        // CryptoKey for AES-GCM (if encrypted)
+let _accessToken = '';
+let _allEntries  = [];
+let _filter      = 'all';
+let _search      = '';
+let _detail      = null;
+
+// ── Screens ───────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function setLoadingMsg(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(msg, ms = 1800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Load sql.js
+  _sql = await initSqlJs({
+    locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}`
+  });
+});
+
+// ── Google Drive auth ─────────────────────────────────────────────
+function connectDrive() {
+  if (!window.google) { showToast('Google SDK not loaded — check network'); return; }
+  if (GOOGLE_WEB_CLIENT_ID.startsWith('YOUR_')) {
+    showToast('Configure GOOGLE_WEB_CLIENT_ID in index.html'); return;
+  }
+  google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_WEB_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: async (resp) => {
+      if (resp.error) { showToast('Sign-in failed: ' + resp.error); return; }
+      _accessToken = resp.access_token;
+      await loadVaultFromDrive();
+    }
+  }).requestAccessToken();
+}
+
+function signOut() {
+  _db?.close(); _db = null; _key = null;
+  _allEntries = []; _accessToken = '';
+  showScreen('s-auth');
+}
+
+// ── Drive API helpers ─────────────────────────────────────────────
+async function driveGet(url) {
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${_accessToken}` } });
+  if (!r.ok) throw new Error(`Drive API ${r.status}: ${await r.text()}`);
+  return r;
+}
+
+async function findDriveFile(name) {
+  const q = encodeURIComponent(`name='${name}' and trashed=false`);
+  const r = await driveGet(`${DRIVE_API}/files?q=${q}&spaces=drive&fields=files(id,name,size,modifiedTime)`);
+  const data = await r.json();
+  // Prefer file inside a KaptureVault folder if multiple hits
+  return data.files?.[0] ?? null;
+}
+
+async function downloadDriveFile(fileId) {
+  const r = await driveGet(`${DRIVE_API}/files/${fileId}?alt=media`);
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+// ── Load vault from Google Drive ──────────────────────────────────
+async function loadVaultFromDrive() {
+  showScreen('s-loading');
+  try {
+    setLoadingMsg('Finding vault in Drive...');
+    const vaultFile = await findDriveFile('vault.db');
+    if (!vaultFile) throw new Error('vault.db not found in your Google Drive.\n\nMake sure Cloud Sync is enabled in the KaptureVault desktop app.');
+
+    setLoadingMsg('Downloading vault...');
+    const bytes = await downloadDriveFile(vaultFile.id);
+    await openDatabase(bytes);
+
+    // Try to get encryption config from Drive
+    setLoadingMsg('Checking encryption...');
+    const encFile = await findDriveFile('encryption.json').catch(() => null);
+    if (encFile) {
+      const encBytes = await downloadDriveFile(encFile.id);
+      const encJson = JSON.parse(new TextDecoder().decode(encBytes));
+      sessionStorage.setItem('enc_json', JSON.stringify(encJson));
+    }
+
+    await maybeShowUnlock();
+  } catch (err) {
+    showScreen('s-auth');
+    showToast(err.message.split('\n')[0], 3500);
+    console.error(err);
+  }
+}
+
+// ── Load vault from local file ─────────────────────────────────────
+function openLocalFile() {
+  document.getElementById('file-picker').click();
+}
+
+async function handleFilePicked(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  showScreen('s-loading');
+  setLoadingMsg('Reading vault file...');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  await openDatabase(bytes);
+  await maybeShowUnlock();
+}
+
+// ── Open SQLite database ──────────────────────────────────────────
+async function openDatabase(bytes) {
+  if (_db) { _db.close(); _db = null; }
+  _db = new _sql.Database(bytes);
+}
+
+// ── Detect encryption and show unlock if needed ───────────────────
+async function maybeShowUnlock() {
+  // Check if any entry looks encrypted
+  const res = _db.exec("SELECT content FROM entries LIMIT 20");
+  const rows = res[0]?.values ?? [];
+  const isEncrypted = rows.some(r => String(r[0]).startsWith('ENC:'));
+
+  if (!isEncrypted) {
+    await renderVault();
+    return;
+  }
+
+  // Check if we have the salt
+  const encJson = sessionStorage.getItem('enc_json');
+  if (!encJson) {
+    document.getElementById('no-salt-note').style.display = 'block';
+  } else {
+    document.getElementById('no-salt-note').style.display = 'none';
+  }
+  document.getElementById('vault-password').value = '';
+  document.getElementById('unlock-error').classList.remove('show');
+  showScreen('s-unlock');
+}
+
+// ── encryption.json upload fallback ──────────────────────────────
+function uploadEncJson() {
+  document.getElementById('enc-json-picker').click();
+}
+async function handleEncJsonPicked(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  sessionStorage.setItem('enc_json', text);
+  document.getElementById('no-salt-note').style.display = 'none';
+  showToast('encryption.json loaded');
+}
+
+// ── Unlock vault ──────────────────────────────────────────────────
+async function unlockVault() {
+  const password = document.getElementById('vault-password').value;
+  if (!password) return;
+
+  const encJsonStr = sessionStorage.getItem('enc_json');
+  if (!encJsonStr) { showToast('Upload encryption.json first'); return; }
+
+  showScreen('s-loading');
+  setLoadingMsg('Deriving key...');
+
+  try {
+    const encJson = JSON.parse(encJsonStr);
+    const salt = b64ToBytes(encJson.Salt);
+    _key = await deriveKey(password, salt);
+
+    // Verify key against stored hash
+    const derivedKeyBytes = await crypto.subtle.exportKey('raw', _key);
+    const hashBuf = await crypto.subtle.digest('SHA-256', derivedKeyBytes);
+    const hashB64 = bytesToB64(new Uint8Array(hashBuf));
+
+    if (hashB64 !== encJson.KeyHash) {
+      _key = null;
+      showScreen('s-unlock');
+      document.getElementById('unlock-error').classList.add('show');
+      return;
+    }
+
+    await renderVault();
+  } catch (err) {
+    _key = null;
+    showScreen('s-unlock');
+    document.getElementById('unlock-error').classList.add('show');
+    console.error(err);
+  }
+}
+
+// ── Render vault ──────────────────────────────────────────────────
+async function renderVault() {
+  showScreen('s-loading');
+  setLoadingMsg('Loading entries...');
+
+  const res = _db.exec(`
+    SELECT id, app_name, window_title, content, char_count, captured_at, entry_type
+    FROM entries
+    ORDER BY captured_at DESC
+    LIMIT 2000
+  `);
+
+  const rows = res[0]?.values ?? [];
+  _allEntries = await Promise.all(rows.map(async r => ({
+    id:         r[0],
+    app:        r[1] ?? '',
+    window:     r[2] ?? '',
+    content:    await maybeDecrypt(r[3] ?? ''),
+    chars:      r[4] ?? 0,
+    time:       r[5] ?? '',
+    type:       r[6] ?? 'keyboard',
+  })));
+
+  const stats = _db.exec("SELECT COUNT(*), COUNT(DISTINCT app_name) FROM entries")[0]?.values?.[0];
+  document.getElementById('vault-meta').textContent =
+    `${stats?.[0] ?? 0} entries · ${stats?.[1] ?? 0} apps`;
+
+  showScreen('s-vault');
+  paintEntries();
+}
+
+// ── Decryption ────────────────────────────────────────────────────
+async function deriveKey(password, salt) {
+  const km = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password),
+    'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    km,
+    { name: 'AES-GCM', length: 256 },
+    true,   // extractable — needed for key hash verification
+    ['decrypt']
+  );
+}
+
+async function maybeDecrypt(value) {
+  if (!value.startsWith('ENC:') || !_key) return value;
+  try {
+    const bytes = b64ToBytes(value.slice(4));
+    const nonce  = bytes.slice(0, 12);
+    const tag    = bytes.slice(12, 28);
+    const cipher = bytes.slice(28);
+    // WebCrypto AES-GCM expects ciphertext || tag
+    const combined = new Uint8Array(cipher.length + tag.length);
+    combined.set(cipher); combined.set(tag, cipher.length);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: nonce }, _key, combined);
+    return new TextDecoder().decode(plain);
+  } catch {
+    return '[Decryption failed]';
+  }
+}
+
+// ── Filter + Search ───────────────────────────────────────────────
+function setFilter(filter, btn) {
+  _filter = filter;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  paintEntries();
+}
+
+function onSearch(val) {
+  _search = val.trim().toLowerCase();
+  paintEntries();
+}
+
+function paintEntries() {
+  const list = document.getElementById('entry-list');
+  let entries = _allEntries;
+
+  if (_filter !== 'all')
+    entries = entries.filter(e => e.type === _filter);
+
+  if (_search)
+    entries = entries.filter(e =>
+      e.content.toLowerCase().includes(_search) ||
+      e.app.toLowerCase().includes(_search) ||
+      e.window.toLowerCase().includes(_search)
+    );
+
+  if (!entries.length) {
+    list.innerHTML = `<div class="empty-state">No entries found.</div>`;
+    return;
+  }
+
+  list.innerHTML = entries.map((e, i) => `
+    <div class="entry-card" onclick="openDetail(${i})" data-idx="${i}">
+      <div class="entry-top">
+        <span class="type-badge ${typeCls(e.type)}">${typeLabel(e.type)}</span>
+        <span class="entry-app">${esc(e.app || 'Unknown')}</span>
+        <span class="entry-time">${fmtTime(e.time)}</span>
+      </div>
+      <div class="entry-preview${e.type==='screenshot'?' screenshot':''}">${
+        e.type === 'screenshot'
+          ? '📷 ' + esc(e.app) + ' screenshot'
+          : esc(preview(e.content))
+      }</div>
+      <div class="entry-chars">${e.chars.toLocaleString()} chars · ${fmtDate(e.time)}</div>
+    </div>
+  `).join('');
+
+  // Re-attach onclick with correct filtered index
+  list.querySelectorAll('.entry-card').forEach((el, i) => {
+    el.onclick = () => openDetail(entries[i]);
+  });
+}
+
+// ── Detail sheet ──────────────────────────────────────────────────
+function openDetail(entry) {
+  _detail = entry;
+  const badge = document.getElementById('d-badge');
+  badge.textContent = typeLabel(entry.type);
+  badge.className = `type-badge ${typeCls(entry.type)}`;
+  document.getElementById('d-app').textContent   = entry.app || 'Unknown';
+  document.getElementById('d-win').textContent   = entry.window || '';
+  document.getElementById('d-time').textContent  = fmtDate(entry.time) + ' ' + fmtTime(entry.time);
+  const content = document.getElementById('d-content');
+  content.textContent = entry.type === 'screenshot'
+    ? `📷 Screenshot captured in ${entry.app}\n${entry.window}`
+    : entry.content;
+  content.className = 'detail-content' + (entry.type === 'screenshot' ? ' screenshot' : '');
+  document.getElementById('s-detail').classList.add('open');
+}
+
+function closeDetail(event) {
+  if (event && document.getElementById('detail-sheet').contains(event.target)) return;
+  document.getElementById('s-detail').classList.remove('open');
+}
+
+async function copyDetail() {
+  if (!_detail) return;
+  const text = _detail.type === 'screenshot'
+    ? `Screenshot: ${_detail.app} — ${_detail.window}`
+    : _detail.content;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Copied!');
+  } catch {
+    showToast('Copy failed — please select manually');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function typeCls(type)   { return type === 'keyboard' ? 'kb' : type === 'clipboard' ? 'clip' : 'ss'; }
+function typeLabel(type) { return type === 'keyboard' ? 'KB' : type === 'clipboard' ? 'CLIP' : 'SS'; }
+function preview(s, n=140) { return s.length > n ? s.slice(0, n) + '…' : s; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  } catch { return ''; }
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const today = new Date();
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    const yest = new Date(today); yest.setDate(today.getDate()-1);
+    if (d.toDateString() === yest.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString([], { month:'short', day:'numeric' });
+  } catch { return ''; }
+}
+
+function b64ToBytes(b64) {
+  const bin = atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(bin, c => c.charCodeAt(0));
+}
+function bytesToB64(bytes) {
+  return btoa(String.fromCharCode(...bytes));
+}
+</script>
+
+<!-- Google Identity Services (loaded last — non-blocking) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>

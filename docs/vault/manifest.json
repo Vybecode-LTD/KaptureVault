@@ -1,0 +1,13 @@
+{
+  "name": "KaptureVault",
+  "short_name": "KaptureVault",
+  "description": "Browse your KaptureVault on mobile",
+  "start_url": "/vault/",
+  "display": "standalone",
+  "background_color": "#0f0f13",
+  "theme_color": "#0f0f13",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/Assets/AppIcon.png", "sizes": "any", "type": "image/png" }
+  ]
+}
