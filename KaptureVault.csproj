@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -10,7 +10,7 @@
     <SelfContained>true</SelfContained>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>KaptureVault</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Product>KaptureVault</Product>
     <Description>Keystroke, clipboard, and screenshot capture vault</Description>
   </PropertyGroup>
@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
     <PackageReference Include="Avalonia" Version="11.3.12" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
@@ -45,3 +46,4 @@
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.93.0" />
   </ItemGroup>
 </Project>
+
