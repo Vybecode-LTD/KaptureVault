@@ -1,0 +1,70 @@
+name: Auto-create release from installer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'releases/latest/*.exe'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find installer and extract version
+        id: info
+        run: |
+          EXE=$(ls releases/latest/*.exe 2>/dev/null | head -1)
+          if [ -z "$EXE" ]; then
+            echo "No .exe found in releases/latest/"
+            exit 1
+          fi
+          FILENAME=$(basename "$EXE")
+          # Extract version from filename like KaptureVaultSetup-1.0.1-x64.exe
+          VERSION=$(echo "$FILENAME" | grep -oP '\d+\.\d+\.\d+')
+          if [ -z "$VERSION" ]; then
+            echo "Could not extract version from $FILENAME"
+            exit 1
+          fi
+          echo "exe=$EXE" >> "$GITHUB_OUTPUT"
+          echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Found: $FILENAME (v$VERSION)"
+
+      - name: Check if release already exists
+        id: check
+        run: |
+          TAG="${{ steps.info.outputs.tag }}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists, skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG does not exist, will create."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.info.outputs.tag }}"
+          VERSION="${{ steps.info.outputs.version }}"
+          EXE="${{ steps.info.outputs.exe }}"
+
+          gh release create "$TAG" "$EXE" \
+            --title "KaptureVault v$VERSION" \
+            --notes "KaptureVault v$VERSION
+
+          Automated release from installer commit.
+
+          **Download:** ${{ steps.info.outputs.filename }}
+          **Platform:** Windows 10/11 (x64)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
