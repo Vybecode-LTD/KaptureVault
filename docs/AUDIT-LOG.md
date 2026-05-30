@@ -1,7 +1,7 @@
 ---
 document: AUDIT-LOG
-doc-version: 1.0.0
-app-version: 1.0.2
+doc-version: 1.1.0
+app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: codebase-audit
@@ -9,7 +9,30 @@ managed-by: codebase-audit
 
 # AUDIT-LOG.md — KaptureVault
 
-## 2026-05-30 — Full codebase audit (v1.0.2)
+## 2026-05-30 (PM) — P0 remediation + v1.0.3 release
+
+**Trigger:** User request — "knock them out one by one" (P0 fixes), then "release it + update docs."
+
+**Code fixes (all test-first, RED→GREEN):**
+- **KV-005 / KV-034** — self-exclusion derived from `Process.GetCurrentProcess().ProcessName` (was hardcoded `"Kapture"`); clipboard dedupe updated on the self path. `CaptureServiceTests`.
+- **KV-002** — `Decrypt` throws `DecryptionException` on tamper/corruption/wrong-key; `ReadEntries` shows a per-row placeholder, `DecryptAllEntries` skips bad rows. `EncryptionServiceTests`.
+- **KV-004** — `Search` filters decrypted candidates in memory when encryption is active. `DatabaseServiceSearchTests`.
+- **KV-003** — `ReplaceDatabaseFromAsync` retains the `.pre_sync_backup` recovery point (mitigation; full merge deferred). `DatabaseServiceReplaceTests`.
+
+**Test harness stood up (KV-045):** `KaptureVault.Tests` (xUnit + NSubstitute + FluentAssertions) on `KaptureVault.slnx`; persistence seams added (base-dir for `EncryptionService`, connection-string for `DatabaseService`). **10 tests passing.**
+
+**Security (KV-001) — resolved:**
+- All Google OAuth secrets **rotated** (desktop client recreated → new ID `…15r8pqq8…`; web secret rotated). New creds written to gitignored files + `%LOCALAPPDATA%`; `FallbackClientId` updated; stale duplicate removed.
+- `Utilities` repo history **purged** with `git filter-repo` (secret file removed, all `GOCSPX-…` values scrubbed), force-pushed, local realigned + pruned, release tag restored on the cleaned commit. Verified clean via fresh remote clone. Repo is PRIVATE.
+- **Residual:** new secret still bundled in installer → KV-007/T-12 (secret-less OAuth) before wide release.
+
+**Release:** **v1.0.3** cut via `scripts/Invoke-Release.ps1` (CHANGELOG + version bump + installer + tag + GitHub release). Installer in `releases/latest/`.
+
+**Status:** All P0 items closed (KV-003 mitigated). Next: P1.
+
+---
+
+## 2026-05-30 (AM) — Full codebase audit (v1.0.2)
 
 **Trigger:** User request — "full codebase audit, update all docs, document all issues, prepare for handoff."
 

@@ -1,7 +1,7 @@
 ---
 document: TESTING
-doc-version: 1.0.0
-app-version: 1.0.2
+doc-version: 1.1.0
+app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: codebase-audit

@@ -10,7 +10,7 @@
 
 It does **NOT** contain the original app's system-tweak suite — there are no Tweaks/Services/Dashboard/Profiles/Startup/Scheduler/Privacy sections, no `SystemTweaks/`, and no `ITweak` infrastructure. It runs as a standard user (`asInvoker`), not admin.
 
-- **Version:** 1.0.2 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
+- **Version:** 1.0.3 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
 - **Repo root (= project root):** `C:\Users\vybec\OneDrive\Documents\Development\Utilities\KaptureVault`
 - **Remote:** `github.com/Vybecode-LTD/KaptureVault` (private) · **Site:** `kapture.tools`
 - **Environment:** Windows 11, Claude Code
@@ -121,13 +121,12 @@ When the user says **"release it"**: add a new top entry to `CHANGELOG.md`, then
 
 ## Health & Known Issues
 
-A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md` — 4 Critical, 13 High. The app runs well but has **security and data-integrity gaps that must be fixed before wider distribution.** Top items:
-- 🔴 Google OAuth secrets exposed in git history + on disk, **unrevoked** (KV-001) — needs human action in Cloud Console.
-- 🔴 Decrypt silently returns ciphertext on auth failure (KV-002); content search broken under encryption (KV-004); Drive sync whole-DB clobber → data loss (KV-003).
-- 🟠 **Self-exclusion bug** — `SelfProcessName="Kapture"` ≠ runtime `KaptureVault`, so the app logs its own input (KV-005, one-line fix).
-- **0% test coverage** (KV-045) — see `TESTING.md`.
+A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (Critical) items are fixed and shipped in v1.0.3:**
+- ✅ KV-005 self-exclusion (no longer captures own input); KV-002 decrypt integrity (throws on tamper); KV-004 search works under encryption; KV-003 mitigated (pre-sync backup retained).
+- ✅ KV-001 — all OAuth secrets rotated; committed secret purged from `Utilities` git history (verified clean).
+- ✅ Test suite live (`KaptureVault.Tests`, 10 tests) — was KV-045.
 
-See `docs/ROADMAP.md` for the fix order and `docs/HANDOFF.md` to pick up.
+**Remaining (P1, before wide distribution):** move DB writes off the keyboard-hook thread (KV-012), centralize shutdown/teardown (KV-011), virtualize the entry list (KV-013), **secret-less OAuth + stop bundling `client_secret.json`** (KV-007/T-12 — closes the residual KV-001 exposure), bump PBKDF2/Argon2id (KV-006). See `docs/ROADMAP.md` (P1) and `docs/HANDOFF.md` to pick up.
 
 ---
 
@@ -136,3 +135,4 @@ See `docs/ROADMAP.md` for the fix order and `docs/HANDOFF.md` to pick up.
 - **≤2026-05-26:** Pre-fork "Kapture" full app (8 tabs, 60+ system tweaks). *(History; not in this fork.)*
 - **2026-05-27 → 05-29 (v1.0.0 → v1.0.1):** Forked to vault-only. KV branding/icon, Google Drive sync fix, TOS/Privacy pages, interactive installer + uninstaller data removal, error-740 fix (`asInvoker`), Capture Admin Apps, About dialog, screenshot save-as-image + annotation editor, BMP installer icon, `kapture.tools` wiring, release automation.
 - **2026-05-30 (v1.0.2):** App/tag sidebar filter selection fix (diff-update); mobile vault viewer web app (`/vault/`); CHANGELOG + v1.0.2 release; **full codebase audit** → created `docs/` set (BUGS/ROADMAP/TESTING/AUDIT-LOG/HANDOFF) and rewrote this file.
+- **2026-05-30 (v1.0.3):** **P0 remediation, test-first** — self-exclusion (KV-005/034), decrypt integrity (KV-002), encrypted search (KV-004), Drive pre-sync backup retention (KV-003). Stood up `KaptureVault.Tests` (10 tests) + `KaptureVault.slnx` with persistence seams. **Security:** rotated all Google OAuth secrets, new desktop client ID `…15r8pqq8…`, updated `FallbackClientId`; purged the committed secret from `Utilities` git history (filter-repo) and verified clean. Released v1.0.3.

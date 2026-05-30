@@ -1,7 +1,7 @@
 ---
 document: BUGS
-doc-version: 1.0.0
-app-version: 1.0.2
+doc-version: 1.1.0
+app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: codebase-audit
@@ -11,7 +11,7 @@ managed-by: codebase-audit
 
 > Source: full multi-agent codebase audit on **2026-05-30** (architecture, data/security, performance, testing, correctness). 45 issues. See `AUDIT-LOG.md` for methodology and `ROADMAP.md` for the prioritized fix order.
 >
-> **Remediation progress (2026-05-30):** ✅ KV-005, KV-034, KV-002, KV-004 fixed (test-first). 🟡 KV-003 mitigated (backup retained; full merge deferred). Test project stood up with 10 passing tests (KV-045 → in progress). Remaining P0 are human-only: **KV-001** secret rotation (Cloud Console) + parent-repo history purge.
+> **Remediation progress (2026-05-30, shipped in v1.0.3):** ✅ KV-005, KV-034, KV-002, KV-004 fixed (test-first). 🟡 KV-003 mitigated (backup retained; full merge deferred). ✅ KV-001 resolved — all OAuth secrets rotated and the committed secret purged from `Utilities` git history (verified clean). Test project live with 10 passing tests (KV-045 → in progress). **All P0 done.** Next focus: P1 (KV-012 hook-thread DB writes, KV-011 shutdown teardown, KV-013 list virtualization, KV-006/007/T-12 secret-less OAuth).
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 
@@ -21,10 +21,11 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 
 ## 🔴 Critical
 
-### KV-001 · Live Google OAuth secrets exposed (git history + on disk), unrevoked
-- **Area:** Security · **Status:** OPEN · **Owner:** requires human (Google Cloud Console)
-- The desktop OAuth client secret was committed in the **parent** `Utilities` repo history (commits `97cb28c`/`db86dd3`/`e821089`, path `Kapture/client_secret_232322018793-…json`, secret `GOCSPX-…69t19o`) and is still reachable there. The parent repo has a real push remote (`github.com/Vybecode-LTD/Utilities`). Three more **live** secrets sit on disk and are bundled into installers: desktop `…iB5` (×2 projects) and **web** `…L9a-1` (kapture.tools). The KaptureVault fork itself is clean (gitignored, verified), but it shares the same client identity.
-- **Fix:** (1) **Revoke + rotate all three secrets in Google Cloud Console** — most urgent, human-only. (2) `git filter-repo`/BFG the parent repo to purge the secret blob, force-push. (3) Confirm repo visibility (public = assume full compromise). (4) Reconfigure desktop client as native/PKCE-no-secret (see KV-007).
+### KV-001 · Live Google OAuth secrets exposed (git history + on disk)
+- **Area:** Security · **Status:** ✅ RESOLVED (2026-05-30)
+- The desktop OAuth secret was committed in the parent `Utilities` repo history (`Kapture/client_secret_…json`) plus more live secrets on disk/in installers.
+- **Resolved:** (1) all three secrets **rotated** in Google Cloud Console (desktop client deleted+recreated → new ID `…15r8pqq8…`; web secret rotated). (2) New creds written to the gitignored `client_secret.json` / `kaptureweb_clientsecret.json` + `%LOCALAPPDATA%` runtime copy; stale duplicate deleted; `FallbackClientId` updated to the new (public) client ID. (3) `git filter-repo` purged the secret file + scrubbed all old `GOCSPX-…` values from `Utilities` history; force-pushed; local repo realigned + pruned; release tag restored on the cleaned commit. **Verified clean** via fresh remote clone (no secret file, no full secrets). Parent repo is PRIVATE.
+- **Still open (separate task):** **KV-007 / T-12** — the *new* secret is still bundled in the installer. Reconfigure the desktop client as native/loopback-PKCE with **no secret** before wide distribution. User should also confirm the old web secret is deleted in the console.
 
 ### KV-002 · Decryption silently returns ciphertext on auth-tag failure
 - **Area:** Crypto · **Status:** ✅ FIXED (2026-05-30) · `Services/EncryptionService.cs`, `Services/DatabaseService.cs`

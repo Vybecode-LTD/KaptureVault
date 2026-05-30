@@ -1,7 +1,7 @@
 ---
 document: ROADMAP
-doc-version: 1.0.0
-app-version: 1.0.2
+doc-version: 1.1.0
+app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: codebase-audit
@@ -14,9 +14,24 @@ managed-by: codebase-audit
 
 ---
 
-> **Progress 2026-05-30:** ✅ T-03, T-04, T-05 done (test-first). 🟡 T-06 mitigated (pre-sync backup retained; full merge still open). T-16 started (test project + 10 tests live). ⏳ T-01, T-02 are human-only and still outstanding.
+> **Progress 2026-05-30 (shipped in v1.0.3):** ✅ **All P0 done** — T-01 (secrets rotated), T-02 (history purged + verified), T-03/T-04/T-05 fixed test-first. 🟡 T-06 mitigated (pre-sync backup retained; full per-entry merge still open). T-16 started (test project + 10 tests live).
+>
+> **Next up — P1.** Recommended order: T-07 (DB writes off the hook thread), T-08 (centralized shutdown/teardown), T-09 (entry-list virtualization), T-12 (secret-less OAuth — closes the residual KV-007), then T-16 (broaden tests).
 
-## P0 — Critical / do first (data loss, security, broken core behavior)
+## P0 — Critical / ✅ COMPLETE (shipped v1.0.3)
+
+| # | Task | Status |
+|---|------|--------|
+| T-01 | Rotate the 3 Google OAuth secrets | ✅ done |
+| T-02 | Purge secret from `Utilities` git history | ✅ done + verified |
+| T-03 | Fix self-exclusion (KV-005/034) | ✅ done (tested) |
+| T-04 | Stop swallowing decrypt failures (KV-002) | ✅ done (tested) |
+| T-05 | Fix content search under encryption (KV-004) | ✅ done (tested) |
+| T-06 | Drive data-loss | 🟡 mitigated (backup retained); full merge → P1 |
+
+<details><summary>Original P0 detail (kept for reference)</summary>
+
+### (historical) P0 — Critical / do first (data loss, security, broken core behavior)
 
 | # | Task | Issues | Effort | Notes |
 |---|------|--------|--------|-------|
@@ -26,6 +41,8 @@ managed-by: codebase-audit
 | T-04 | **Stop silently swallowing decrypt failures** — throw typed `DecryptionException`, surface to UI | KV-002 | S | Restores AES-GCM integrity guarantee. |
 | T-05 | **Fix / guard content search under encryption** — decrypt-then-filter or clear "unavailable while encrypted" notice | KV-004, KV-041 | M | Currently returns nothing silently. |
 | T-06 | **Address Drive multi-device data loss** — at minimum document single-device-only + keep pre-sync backup; ideally per-entry merge | KV-003, KV-029 | L | Whole-DB clobber. Decide: document limitation now, real delta-sync later. |
+
+</details>
 
 ## P1 — High (reliability, security hardening, perf hot paths)
 
