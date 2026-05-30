@@ -25,7 +25,6 @@ jobs:
             exit 1
           fi
           FILENAME=$(basename "$EXE")
-          # Extract version from filename like KaptureVaultSetup-1.0.1-x64.exe
           VERSION=$(echo "$FILENAME" | grep -oP '\d+\.\d+\.\d+')
           if [ -z "$VERSION" ]; then
             echo "Could not extract version from $FILENAME"
@@ -51,12 +50,54 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Scan with VirusTotal
+        if: steps.check.outputs.exists == 'false'
+        id: vtscan
+        run: |
+          EXE="${{ steps.info.outputs.exe }}"
+          VT_KEY="${{ secrets.VT_API_KEY }}"
+
+          if [ -z "$VT_KEY" ]; then
+            echo "No VT_API_KEY secret set, skipping scan"
+            echo "vt_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Uploading to VirusTotal..."
+          RESPONSE=$(curl -s --request POST \
+            --url https://www.virustotal.com/api/v3/files \
+            --header "x-apikey: $VT_KEY" \
+            --form "file=@$EXE")
+
+          ANALYSIS_ID=$(echo "$RESPONSE" | jq -r '.data.id // empty')
+          if [ -z "$ANALYSIS_ID" ]; then
+            echo "VirusTotal upload failed: $RESPONSE"
+            echo "vt_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Uploaded. Analysis ID: $ANALYSIS_ID"
+
+          # Get the file hash for permalink
+          SHA256=$(sha256sum "$EXE" | cut -d' ' -f1)
+          VT_URL="https://www.virustotal.com/gui/file/$SHA256"
+          echo "VirusTotal report: $VT_URL"
+          echo "vt_url=$VT_URL" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         if: steps.check.outputs.exists == 'false'
         run: |
           TAG="${{ steps.info.outputs.tag }}"
           VERSION="${{ steps.info.outputs.version }}"
           EXE="${{ steps.info.outputs.exe }}"
+          VT_URL="${{ steps.vtscan.outputs.vt_url }}"
+          SHA256="${{ steps.vtscan.outputs.sha256 }}"
+
+          VT_LINE=""
+          if [ -n "$VT_URL" ]; then
+            VT_LINE="**VirusTotal:** [$SHA256]($VT_URL)"
+          fi
 
           gh release create "$TAG" "$EXE" \
             --title "KaptureVault v$VERSION" \
@@ -65,6 +106,7 @@ jobs:
           Automated release from installer commit.
 
           **Download:** ${{ steps.info.outputs.filename }}
-          **Platform:** Windows 10/11 (x64)"
+          **Platform:** Windows 10/11 (x64)
+          $VT_LINE"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
