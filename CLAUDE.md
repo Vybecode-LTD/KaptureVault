@@ -153,11 +153,18 @@ KaptureVault/
 - Reconciliation (`perform audit`) at session boundaries / before deploy: ROADMAP↔code, BUGS↔code, TESTING↔suite, CLAUDE↔reality, HANDOFF↔state, CHANGELOG↔versions, cross-refs resolve.
 
 ### 🚀 Release directive ("release it")
+Three stages, no race conditions, no manual steps — the local script makes the artifact, the cloud workflow creates the release, the website reads from GitHub.
+
 When the user says **"release it"**:
-1. Add a new top entry to `CHANGELOG.md` for the new version (user-facing summary).
-2. Run `powershell -ExecutionPolicy Bypass -File scripts\Invoke-Release.ps1 -BumpType minor` (**minor = +0.0.1**, **major = +0.1.0**).
-3. The script bumps the version in `.csproj` **and** `installer/.iss`, publishes, builds the Inno Setup installer, copies it to `releases/latest/`, commits (incl. CHANGELOG) + tags `vX.Y.Z` + pushes, and runs `gh release create`.
-4. Pre-release gate: kill any running `KaptureVault.exe` (locks output), confirm tests green. Stable URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
+1. Add a new top entry to `CHANGELOG.md` for the new version (user-facing summary; promote the `[Unreleased]` items).
+2. Pre-flight: kill any running `KaptureVault.exe` (locks build output); confirm `dotnet test` is green.
+3. Run `powershell -ExecutionPolicy Bypass -File scripts\Invoke-Release.ps1 -BumpType minor` (**minor = +0.0.1**, **major = +0.1.0**). The script bumps the version in `.csproj` **and** `installer/.iss`, publishes, builds the Inno Setup installer, copies it to `releases/latest/`, and commits (incl. CHANGELOG) + tags `vX.Y.Z` + **pushes**. It does **NOT** create the GitHub release.
+
+Then it's automatic:
+- **`.github/workflows/auto-release.yml`** (the **single** release creator) triggers on the pushed `releases/latest/*.exe` → VirusTotal-scans the installer → creates the GitHub Release (with the VT link in the notes), ~30 s later.
+- The **kapture.tools** website is a passive consumer: `download.js` reads the latest release (button URL, version, size, VT badge) and `changelog.js` reads `CHANGELOG.md` — both live from GitHub, 5-min cache. Nothing is pushed to the site.
+
+⚠️ **Never re-add `gh release create` to the script** — it would race the workflow, pre-empt the VirusTotal scan, and produce minimal notes. Stable download URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
 
 ---
 

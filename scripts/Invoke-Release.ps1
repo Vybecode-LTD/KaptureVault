@@ -5,13 +5,18 @@
 #   .\scripts\Invoke-Release.ps1 -BumpType minor    # 1.0.0 -> 1.0.1  (default)
 #   .\scripts\Invoke-Release.ps1 -BumpType major    # 1.0.0 -> 1.1.0
 #
-# Flags: -SkipGitHub  skip gh release create
-#        -SkipPush    skip git push
+# Flags: -SkipPush    commit + tag locally but don't push (no release is created)
+#
+# This script does NOT create the GitHub Release. It builds + packages the installer,
+# bumps the version, updates CHANGELOG.md, commits, and pushes. The push of the new
+# releases/latest/*.exe triggers .github/workflows/auto-release.yml, which is the SINGLE
+# release creator: it VirusTotal-scans the installer and creates the GitHub Release (with
+# the VT link in the notes). The kapture.tools website then reads the latest release and
+# CHANGELOG.md live from GitHub (download.js / changelog.js) — nothing is pushed to it.
 
 param(
     [ValidateSet("minor", "major")]
     [string]$BumpType = "minor",
-    [switch]$SkipGitHub,
     [switch]$SkipPush
 )
 
@@ -45,7 +50,7 @@ Write-Host "----------------------------------------------------" -ForegroundCol
 Write-Host ""
 
 # 3. Update .csproj and .iss
-Write-Host "[1/6] Updating version to $NewVersion..." -ForegroundColor Yellow
+Write-Host "[1/5] Updating version to $NewVersion..." -ForegroundColor Yellow
 
 $CsprojContent = $CsprojContent -replace '<Version>\d+\.\d+\.\d+</Version>', "<Version>$NewVersion</Version>"
 Set-Content $CsprojPath $CsprojContent -Encoding utf8
@@ -57,7 +62,7 @@ Set-Content $IssPath $IssContent -Encoding utf8
 Write-Host "    .csproj and installer/.iss updated." -ForegroundColor Green
 
 # 4. dotnet publish
-Write-Host "[2/6] Publishing release build..." -ForegroundColor Yellow
+Write-Host "[2/5] Publishing release build..." -ForegroundColor Yellow
 
 Push-Location $Root
 try {
@@ -69,7 +74,7 @@ try {
 Write-Host "    Publish complete." -ForegroundColor Green
 
 # 5. Inno Setup
-Write-Host "[3/6] Building installer..." -ForegroundColor Yellow
+Write-Host "[3/5] Building installer..." -ForegroundColor Yellow
 
 $ISCC = "C:\Users\vybec\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
 if (-not (Test-Path $ISCC)) { throw "Inno Setup not found at: $ISCC" }
@@ -83,7 +88,7 @@ if (-not (Test-Path $InstallerSrc)) { throw "Installer not found: $InstallerSrc"
 Write-Host "    Installer built: $InstallerName" -ForegroundColor Green
 
 # 6. Copy to releases/latest/
-Write-Host "[4/6] Copying to releases/latest/..." -ForegroundColor Yellow
+Write-Host "[4/5] Copying to releases/latest/..." -ForegroundColor Yellow
 
 $ReleasesDir   = Join-Path $Root "releases\latest"
 $InstallerDest = Join-Path $ReleasesDir $InstallerName
@@ -95,7 +100,7 @@ Copy-Item $InstallerSrc $InstallerDest -Force
 Write-Host "    Copied to releases/latest/$InstallerName" -ForegroundColor Green
 
 # 7. Git commit + tag + push
-Write-Host "[5/6] Committing and tagging..." -ForegroundColor Yellow
+Write-Host "[5/5] Committing, tagging, and pushing..." -ForegroundColor Yellow
 
 Push-Location $Root
 try {
@@ -116,19 +121,20 @@ try {
     Pop-Location
 }
 
-# 8. GitHub Release
-if (-not $SkipGitHub) {
-    Write-Host "[6/6] Creating GitHub release..." -ForegroundColor Yellow
-    gh release create "v$NewVersion" $InstallerDest --title "KaptureVault v$NewVersion" --notes "KaptureVault v$NewVersion" --latest
-    if ($LASTEXITCODE -ne 0) { throw "gh release create failed (exit $LASTEXITCODE)" }
-    Write-Host "    GitHub release v$NewVersion created." -ForegroundColor Green
-} else {
-    Write-Host "[6/6] Skipped GitHub release creation (-SkipGitHub)." -ForegroundColor DarkGray
-}
+# The GitHub Release is created by .github/workflows/auto-release.yml, which triggers
+# on the push of releases/latest/*.exe above. No `gh release create` here — that would
+# race the workflow and pre-empt its VirusTotal scan + richer release notes.
 
 Write-Host ""
 Write-Host "----------------------------------------------------" -ForegroundColor DarkGray
-Write-Host "Release v$NewVersion complete!" -ForegroundColor Green
-Write-Host "  Installer : releases/latest/$InstallerName" -ForegroundColor White
-Write-Host "  GitHub    : https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v$NewVersion" -ForegroundColor White
+if ($SkipPush) {
+    Write-Host "v$NewVersion built + committed locally (push skipped)." -ForegroundColor Yellow
+    Write-Host "  Installer : releases/latest/$InstallerName" -ForegroundColor White
+    Write-Host "  No release will be created until you push (the workflow triggers on the installer push)." -ForegroundColor White
+} else {
+    Write-Host "v$NewVersion pushed. auto-release.yml will VirusTotal-scan + create the GitHub Release." -ForegroundColor Green
+    Write-Host "  Installer : releases/latest/$InstallerName" -ForegroundColor White
+    Write-Host "  Release   : https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v$NewVersion  (created by CI, ~30s)" -ForegroundColor White
+    Write-Host "  Actions   : https://github.com/Vybecode-LTD/KaptureVault/actions" -ForegroundColor White
+}
 Write-Host ""
