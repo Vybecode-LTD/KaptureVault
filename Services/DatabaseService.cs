@@ -450,10 +450,27 @@ public class DatabaseService : IDatabaseService
     private List<CaptureEntry> ReadEntries(SqliteCommand cmd)
     {
         using var reader = cmd.ExecuteReader();
+
+        // KV-009: resolve columns by name (case-insensitive) once, instead of hard-coded
+        // ordinals against SELECT *. This is robust to column reordering and to a DB
+        // synced down from a different schema/app version, which would otherwise shift
+        // the ordinals and silently corrupt the decode.
+        var col = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < reader.FieldCount; i++)
+            col[reader.GetName(i)] = i;
+
+        int Req(string name) => col[name];                                  // required columns
+        int Opt(string name) => col.TryGetValue(name, out var i) ? i : -1;  // post-migration optionals
+
+        int idCol = Req("id"), appCol = Req("app_name"), titleCol = Req("window_title"),
+            contentCol = Req("content"), charsCol = Req("char_count"), capturedCol = Req("captured_at"),
+            expiresCol = Req("expires_at"), pinnedCol = Req("is_pinned");
+        int typeCol = Opt("entry_type"), langCol = Opt("detected_language"), tagsCol = Opt("tags");
+
         var entries = new List<CaptureEntry>();
         while (reader.Read())
         {
-            var rawContent = reader.GetString(3);
+            var rawContent = reader.GetString(contentCol);
             string content;
             if (_encryption?.IsActive == true)
             {
@@ -477,17 +494,17 @@ public class DatabaseService : IDatabaseService
 
             entries.Add(new CaptureEntry
             {
-                Id = reader.GetInt64(0),
-                AppName = reader.GetString(1),
-                WindowTitle = reader.GetString(2),
+                Id = reader.GetInt64(idCol),
+                AppName = reader.GetString(appCol),
+                WindowTitle = reader.GetString(titleCol),
                 Content = content,
-                CharCount = reader.GetInt32(4),
-                CapturedAt = DateTime.Parse(reader.GetString(5), null, System.Globalization.DateTimeStyles.RoundtripKind),
-                ExpiresAt = reader.IsDBNull(6) ? null : DateTime.Parse(reader.GetString(6), null, System.Globalization.DateTimeStyles.RoundtripKind),
-                IsPinned = reader.GetInt32(7) == 1,
-                EntryType = reader.FieldCount > 8 && !reader.IsDBNull(8) ? reader.GetString(8) : "keyboard",
-                DetectedLanguage = reader.FieldCount > 9 && !reader.IsDBNull(9) ? reader.GetString(9) : null,
-                Tags = reader.FieldCount > 10 && !reader.IsDBNull(10) ? reader.GetString(10) : string.Empty
+                CharCount = reader.GetInt32(charsCol),
+                CapturedAt = DateTime.Parse(reader.GetString(capturedCol), null, System.Globalization.DateTimeStyles.RoundtripKind),
+                ExpiresAt = reader.IsDBNull(expiresCol) ? null : DateTime.Parse(reader.GetString(expiresCol), null, System.Globalization.DateTimeStyles.RoundtripKind),
+                IsPinned = reader.GetInt32(pinnedCol) == 1,
+                EntryType = typeCol >= 0 && !reader.IsDBNull(typeCol) ? reader.GetString(typeCol) : "keyboard",
+                DetectedLanguage = langCol >= 0 && !reader.IsDBNull(langCol) ? reader.GetString(langCol) : null,
+                Tags = tagsCol >= 0 && !reader.IsDBNull(tagsCol) ? reader.GetString(tagsCol) : string.Empty
             });
         }
         return entries;

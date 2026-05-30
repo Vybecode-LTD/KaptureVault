@@ -43,6 +43,7 @@ public partial class ScreenshotEditorWindow : Window
     private Button? _activeColorBtn;
     private Button? _activeStrokeBtn;
     private TextBox? _liveTextBox;
+    private Bitmap? _baseBitmap; // KV-014: owned full-res screenshot; disposed in OnClosed
 
     public ScreenshotEditorWindow() : this(new CaptureEntry()) { }
 
@@ -63,17 +64,21 @@ public partial class ScreenshotEditorWindow : Window
 
     private void LoadImage()
     {
-        if (!System.IO.File.Exists(_entry.Content)) return;
+        if (!System.IO.File.Exists(_entry.Content))
+        {
+            StatusText.Text = "Screenshot file not found — nothing to edit.";
+            return;
+        }
 
-        var bmp = new Bitmap(_entry.Content);
-        AnnotationCanvas.Width = bmp.PixelSize.Width;
-        AnnotationCanvas.Height = bmp.PixelSize.Height;
+        _baseBitmap = new Bitmap(_entry.Content);
+        AnnotationCanvas.Width = _baseBitmap.PixelSize.Width;
+        AnnotationCanvas.Height = _baseBitmap.PixelSize.Height;
 
         var img = new Image
         {
-            Source = bmp,
-            Width = bmp.PixelSize.Width,
-            Height = bmp.PixelSize.Height,
+            Source = _baseBitmap,
+            Width = _baseBitmap.PixelSize.Width,
+            Height = _baseBitmap.PixelSize.Height,
             Stretch = Stretch.None,
             IsHitTestVisible = false
         };
@@ -81,7 +86,14 @@ public partial class ScreenshotEditorWindow : Window
         Canvas.SetTop(img, 0);
         AnnotationCanvas.Children.Add(img);
 
-        StatusText.Text = $"{bmp.PixelSize.Width} × {bmp.PixelSize.Height}";
+        StatusText.Text = $"{_baseBitmap.PixelSize.Width} × {_baseBitmap.PixelSize.Height}";
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        _baseBitmap?.Dispose(); // KV-014: release the full-res native bitmap surface
+        _baseBitmap = null;
     }
 
     private void SetActiveToolBtn(Button btn)
@@ -466,6 +478,14 @@ public partial class ScreenshotEditorWindow : Window
     {
         CommitLiveText();
 
+        // KV-018: if the source image never loaded, the canvas size stays NaN; (int)NaN
+        // is int.MinValue and would throw building the RenderTargetBitmap. Guard early.
+        if (_baseBitmap == null || double.IsNaN(AnnotationCanvas.Width) || double.IsNaN(AnnotationCanvas.Height))
+        {
+            StatusText.Text = "Nothing to export — the screenshot did not load.";
+            return;
+        }
+
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save Annotated Screenshot",
@@ -483,31 +503,40 @@ public partial class ScreenshotEditorWindow : Window
         var w = (int)AnnotationCanvas.Width;
         var h = (int)AnnotationCanvas.Height;
 
-        var rtb = new RenderTargetBitmap(new PixelSize(w, h), new Vector(96, 96));
-        rtb.Render(AnnotationCanvas);
-
-        var fileName = file.Name.ToLowerInvariant();
-        await using var stream = await file.OpenWriteAsync();
-
-        if (fileName.EndsWith(".jpg") || fileName.EndsWith(".jpeg"))
+        try
         {
-            using var ms = new System.IO.MemoryStream();
-            rtb.Save(ms);
-            ms.Position = 0;
+            // KV-023: `using` guarantees the (full-canvas, ~33 MB) RenderTargetBitmap is
+            // released even if render/encode/IO throws. The whole export is wrapped so a
+            // failure surfaces in the status bar instead of crashing this async void handler.
+            using var rtb = new RenderTargetBitmap(new PixelSize(w, h), new Vector(96, 96));
+            rtb.Render(AnnotationCanvas);
 
-            using var skData = SKData.Create(ms);
-            using var skBitmap = SKBitmap.Decode(skData);
-            using var skImage = SKImage.FromBitmap(skBitmap);
-            using var encoded = skImage.Encode(SKEncodedImageFormat.Jpeg, 90);
-            encoded.SaveTo(stream);
+            var fileName = file.Name.ToLowerInvariant();
+            await using var stream = await file.OpenWriteAsync();
+
+            if (fileName.EndsWith(".jpg") || fileName.EndsWith(".jpeg"))
+            {
+                using var ms = new System.IO.MemoryStream();
+                rtb.Save(ms);
+                ms.Position = 0;
+
+                using var skData = SKData.Create(ms);
+                using var skBitmap = SKBitmap.Decode(skData);
+                using var skImage = SKImage.FromBitmap(skBitmap);
+                using var encoded = skImage.Encode(SKEncodedImageFormat.Jpeg, 90);
+                encoded.SaveTo(stream);
+            }
+            else
+            {
+                rtb.Save(stream);
+            }
+
+            StatusText.Text = "Exported.";
         }
-        else
+        catch (Exception ex)
         {
-            rtb.Save(stream);
+            StatusText.Text = $"Export failed: {ex.Message}";
         }
-
-        rtb.Dispose();
-        StatusText.Text = "Exported.";
     }
 
     private void CloseBtn_Click(object? sender, RoutedEventArgs e) => Close();

@@ -68,9 +68,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Route every public op through a shared `_dbGate.WaitAsync` vs. the exclusive replace path, or call `ThrowIfReplacing()` at the top of all public methods. Partial application is worse than none.
 
 ### KV-009 · Fragile positional/ordinal column mapping in `ReadEntries`
-- **Area:** Data · **Status:** OPEN · `Services/DatabaseService.cs:402-418` (+ `SELECT *`)
-- Hard-coded ordinals against `SELECT *`. A reordered `CREATE TABLE`, a mid-table column, or a DB **synced down from a different app version** shifts ordinals → silent decode corruption / `DateTime.Parse` throws.
-- **Fix:** `SELECT` explicit named columns and use `reader.GetOrdinal("…")`.
+- **Area:** Data · **Status:** ✅ FIXED (2026-05-30, P1) · `Services/DatabaseService.cs`
+- Hard-coded ordinals against `SELECT *` — a reordered schema or a DB synced from a different app version would shift ordinals and silently corrupt the decode.
+- **Fix applied:** `ReadEntries` builds a case-insensitive name→ordinal map from the reader once and reads every field by name (optional post-migration columns tolerated). Test: `DatabaseServiceCrudTests` (all-field round-trip + null-expiry + pin/tags).
 
 ### KV-010 · `HotkeyService` created outside DI, never disposed
 - **Area:** Lifecycle · **Status:** OPEN · `App.axaml.cs:140-143`, `Services/HotkeyService.cs`
@@ -93,9 +93,8 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Add `LIMIT`/paging; apply the sidebar's diff-update pattern to `Entries`; return cached static brushes from converters.
 
 ### KV-014 · Annotation editor base `Bitmap` never disposed
-- **Area:** Performance/Memory · **Status:** OPEN · `Views/Dialogs/ScreenshotEditorWindow.axaml.cs:68`
-- `new Bitmap(_entry.Content)` is assigned to a transient `Image.Source`; the window has no `OnClosed`. Each open leaks ~33 MB (4K). Editor is non-modal (`.Show()`) so they accumulate.
-- **Fix:** Store the bitmap in a field, dispose in `OnClosed` (mirror `ContentViewerWindow`).
+- **Area:** Performance/Memory · **Status:** ✅ FIXED (2026-05-30, P1) · `Views/Dialogs/ScreenshotEditorWindow.axaml.cs`
+- **Fix applied:** base bitmap stored in `_baseBitmap` field and disposed in a new `OnClosed` override.
 
 ### KV-015 · `SettingsWindow` code-behind holds business logic (MVVM inversion)
 - **Area:** Architecture/MVVM · **Status:** OPEN · `Views/SettingsWindow.axaml.cs:64-185,203-279`
@@ -117,9 +116,8 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 ## 🟡 Medium
 
 ### KV-018 · ScreenshotEditor SaveAs crashes (NaN→PixelSize) when source image missing
-- **Area:** Correctness · **Status:** OPEN · `Views/Dialogs/ScreenshotEditorWindow.axaml.cs:64-85,483-487`
-- `LoadImage()` early-returns if the file is missing, leaving `Canvas.Width/Height = NaN`; `SaveAs_Click` does `(int)NaN` → `int.MinValue` → `RenderTargetBitmap` throws on an `async void` handler. Missing files are realistic (deleted screenshots, synced-in entries without local images).
-- **Fix:** Guard SaveAs (`double.IsNaN(Width)` / `Children.Count==0`); surface "screenshot file not found" from `LoadImage`.
+- **Area:** Correctness · **Status:** ✅ FIXED (2026-05-30, P1) · `Views/Dialogs/ScreenshotEditorWindow.axaml.cs`
+- **Fix applied:** `LoadImage` shows a "file not found" status; `SaveAs_Click` guards on `_baseBitmap == null || double.IsNaN(Width/Height)` and the whole export is wrapped in try/catch (surfaces failures instead of crashing the `async void` handler).
 
 ### KV-019 · `KeyHash = SHA256(derived key)` is an offline password oracle
 - **Area:** Crypto · **Status:** OPEN · `Services/EncryptionService.cs:33-38`
@@ -142,9 +140,8 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** `PRAGMA wal_checkpoint(TRUNCATE)` before any copy/replace; ensure no other open connection.
 
 ### KV-023 · `RenderTargetBitmap` leaks on the exception path in SaveAs
-- **Area:** Performance · **Status:** OPEN · `ScreenshotEditorWindow.axaml.cs:486-509`
-- `rtb.Dispose()` isn't in a `finally`; any throw in render/encode/IO leaks ~33 MB.
-- **Fix:** `using var rtb = …`.
+- **Area:** Performance · **Status:** ✅ FIXED (2026-05-30, P1) · `ScreenshotEditorWindow.axaml.cs`
+- **Fix applied:** `using var rtb = …` inside the try/catch — released on every path.
 
 ### KV-024 · `ServiceProvider` never disposed
 - **Area:** Lifecycle · **Status:** OPEN · `App.axaml.cs:18,53`
