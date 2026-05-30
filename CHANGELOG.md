@@ -9,15 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-P1 hardening on `main` (not yet released — will ship as the next version). Internal robustness/perf; no change to day-to-day behavior.
+_Nothing yet._
+
+---
+
+## [1.0.4] — 2026-05-30
+
+Reliability and performance hardening from the post-audit P1 pass. Internal robustness/perf; no change to day-to-day behavior.
 
 ### Changed
-- Database reads now resolve columns by name (robust to schema/version drift). (KV-009)
+- Database reads now resolve columns by name, so a vault from a different app version can't be misread. (KV-009)
 - The concurrency guard is applied consistently across all database operations. (KV-008)
-- The entry list is capped at the 1000 most recent items and reuses shared brushes — less work per refresh on large vaults. (KV-013, partial)
+- The entry list shows the 1,000 most recent items and reuses shared colors — noticeably less work per refresh on large vaults. (KV-013, partial)
 
 ### Fixed
-- The screenshot annotation editor no longer leaks its image when closed, and "Save As" no longer crashes when the source image is missing. (KV-014, KV-023, KV-018)
+- The screenshot annotation editor no longer leaks its image when closed, and **Save As** no longer crashes when the source screenshot is missing. (KV-014, KV-023, KV-018)
 
 ---
 
@@ -128,6 +134,8 @@ clipboard, and screenshot capture plus settings).
   features were the only thing that needed elevation) and switched startup from a
   scheduled task to the per-user `Run` registry key.
 
+[1.0.4]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.4
+[1.0.3]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.3
 [1.0.2]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.2
 [1.0.1]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.0
