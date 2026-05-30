@@ -37,9 +37,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Per-entry delta sync (watermark/`synced` flag + `last_update_time`) merging rows by `id`/content-hash, or document loudly that sync is **single-device-only**. At minimum union DBs instead of clobbering and keep the pre-sync backup.
 
 ### KV-004 · Content search returns nothing when encryption is active
-- **Area:** Search/Data · **Status:** OPEN · `Services/DatabaseService.cs:175`, `ViewModels/MainWindowViewModel.cs:158`
-- `Search()` runs `content LIKE @q` against ciphertext when encryption is on → **zero rows** for any real content query (app/window/tags still match, masking it intermittently). No decrypt-then-filter fallback.
-- **Fix:** When `IsActive`, fetch candidates (app/date/tags) and filter on decrypted `Content` in memory; or a keyed blind index. At minimum show a "search needs vault unlocked / limited while encrypted" notice.
+- **Area:** Search/Data · **Status:** ✅ FIXED (2026-05-30) · `Services/DatabaseService.cs`
+- `Search()` ran `content LIKE @q` against ciphertext when encryption was on → zero rows for any real content query.
+- **Fix applied:** when `_encryption.IsActive`, `Search` now fetches candidates (`GetAll`/`GetByApp`, which decrypt per-row) and filters in memory via `MatchesQuery` (content + plaintext metadata, case-insensitive). Unencrypted vaults keep the efficient SQL `LIKE` path. Added the in-memory-SQLite **connection-string seam** to `DatabaseService` (progress on KV-045) and `ThrowIfReplacing()` to `Search` (partial KV-008). Tests: `DatabaseServiceSearchTests` (encrypted content found, ciphertext-at-rest sanity, no-match empty). RED→GREEN verified.
 
 ---
 

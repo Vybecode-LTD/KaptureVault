@@ -17,15 +17,28 @@ public class DatabaseService : IDatabaseService
     private readonly SemaphoreSlim _dbGate = new(1, 1);
     private volatile bool _isReplacing;
 
-    public DatabaseService(IEncryptionService? encryption = null)
+    /// <param name="connectionString">
+    /// Optional explicit connection string. When null (production) the live
+    /// <c>%LOCALAPPDATA%\KaptureVault\vault.db</c> file is used. Tests pass a
+    /// shared in-memory connection string so they never touch the real vault.
+    /// </param>
+    public DatabaseService(IEncryptionService? encryption = null, string? connectionString = null)
     {
         _encryption = encryption;
-        var folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "KaptureVault");
-        Directory.CreateDirectory(folder);
-        _dbPath = Path.Combine(folder, "vault.db");
-        _connectionString = $"Data Source={_dbPath}";
+        if (connectionString != null)
+        {
+            _connectionString = connectionString;
+            _dbPath = string.Empty; // not file-backed; sync replace is N/A in tests
+        }
+        else
+        {
+            var folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "KaptureVault");
+            Directory.CreateDirectory(folder);
+            _dbPath = Path.Combine(folder, "vault.db");
+            _connectionString = $"Data Source={_dbPath}";
+        }
     }
 
     /// <summary>
@@ -168,6 +181,18 @@ public class DatabaseService : IDatabaseService
 
     public List<CaptureEntry> Search(string query, string? appFilter = null)
     {
+        ThrowIfReplacing();
+
+        // KV-004: when encryption is active, `content` is ciphertext in the DB, so a
+        // SQL LIKE on it can never match real text. Fetch candidate rows (optionally
+        // narrowed by app, which is plaintext) and filter on the DECRYPTED content plus
+        // the plaintext metadata in memory. ReadEntries already decrypts each row.
+        if (_encryption?.IsActive == true)
+        {
+            var candidates = string.IsNullOrEmpty(appFilter) ? GetAll() : GetByApp(appFilter);
+            return candidates.Where(e => MatchesQuery(e, query)).ToList();
+        }
+
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         var sql = """
@@ -183,6 +208,17 @@ public class DatabaseService : IDatabaseService
         if (!string.IsNullOrEmpty(appFilter))
             cmd.Parameters.AddWithValue("@app", appFilter);
         return ReadEntries(cmd);
+    }
+
+    // Case-insensitive match of a query against an entry's decrypted content and
+    // plaintext metadata — the in-memory equivalent of the SQL LIKE used above.
+    private static bool MatchesQuery(CaptureEntry e, string query)
+    {
+        if (string.IsNullOrEmpty(query)) return true;
+        return (e.Content?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+            || e.AppName.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || (e.WindowTitle?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (e.Tags?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
     public void Delete(long id)
