@@ -101,22 +101,41 @@ jobs:
           TAG="${{ steps.info.outputs.tag }}"
           VERSION="${{ steps.info.outputs.version }}"
           EXE="${{ steps.info.outputs.exe }}"
+          FILENAME="${{ steps.info.outputs.filename }}"
           VT_URL="${{ steps.vtscan.outputs.vt_url }}"
           SHA256="${{ steps.vtscan.outputs.sha256 }}"
 
-          VT_LINE=""
-          if [ -n "$VT_URL" ]; then
-            VT_LINE="**VirusTotal:** [$SHA256]($VT_URL)"
-          fi
+          # Slice this version's section out of CHANGELOG.md: everything between its
+          # "## [X.Y.Z]" heading and the next "## [" heading, with the --- separators
+          # and trailing blank lines stripped. Uses index() (literal prefix match) to
+          # avoid awk dynamic-regex escaping pitfalls with the bracketed version heading.
+          CHANGELOG_SECTION=$(awk -v key="## [$VERSION]" '
+            index($0, key) == 1 { capture=1; next }
+            capture && index($0, "## [") == 1 { exit }
+            capture { print }
+          ' CHANGELOG.md | sed '/^---[[:space:]]*$/d' | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba}')
+
+          # Assemble release notes: changelog body + download / platform / VirusTotal footer.
+          {
+            if [ -n "$CHANGELOG_SECTION" ]; then
+              printf '%s\n\n' "$CHANGELOG_SECTION"
+            else
+              printf 'Automated release from installer commit.\n\n'
+            fi
+            echo "---"
+            echo ""
+            echo "**Download:** $FILENAME"
+            echo "**Platform:** Windows 10/11 (x64)"
+            if [ -n "$VT_URL" ]; then
+              echo "**VirusTotal:** [\`$SHA256\`]($VT_URL)"
+            fi
+          } > release_notes.md
+
+          echo "----- release notes -----"; cat release_notes.md; echo "-------------------------"
 
           gh release create "$TAG" "$EXE" \
             --title "KaptureVault v$VERSION" \
-            --notes "KaptureVault v$VERSION
-
-          Automated release from installer commit.
-
-          **Download:** ${{ steps.info.outputs.filename }}
-          **Platform:** Windows 10/11 (x64)
-          $VT_LINE"
+            --notes-file release_notes.md \
+            --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
