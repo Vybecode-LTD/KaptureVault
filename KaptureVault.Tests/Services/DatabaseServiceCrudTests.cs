@@ -99,6 +99,26 @@ public class DatabaseServiceCrudTests : IDisposable
         db.GetDistinctTags().Should().Contain(new[] { "alpha", "beta" });
     }
 
+    [Fact]
+    public void GetAll_WithLimit_ReturnsMostRecentCapped()
+    {
+        var db = NewDb();
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        for (var i = 0; i < 5; i++)
+            db.Insert(new CaptureEntry
+            {
+                AppName = "app", WindowTitle = "t", Content = $"entry {i}", CharCount = 1,
+                CapturedAt = baseTime.AddMinutes(i), EntryType = "keyboard", Tags = ""
+            });
+
+        var limited = db.GetAll(limit: 2);
+
+        limited.Should().HaveCount(2);
+        // ordered by captured_at DESC → the two newest (entry 4, entry 3)
+        limited.Select(e => e.Content).Should().Equal("entry 4", "entry 3");
+        db.GetAll().Should().HaveCount(5); // unlimited default unchanged
+    }
+
     public void Dispose()
     {
         _keepAlive.Dispose();

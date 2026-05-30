@@ -28,6 +28,11 @@ public partial class MainWindowViewModel : ViewModelBase
     // into SelectedAppFilter, firing RefreshEntries() with no filter applied.
     private bool _suppressFilterRefresh;
 
+    // KV-013: cap how many entries the list materializes at once (most-recent first).
+    // The ListBox virtualizes, but an unbounded result set still decrypts + allocates
+    // for every row on each refresh. Search is unaffected (it scans the full vault).
+    private const int MaxDisplayedEntries = 1000;
+
     // (single-section app — vault is always the active view)
 
     // Stats
@@ -157,9 +162,9 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(SearchText))
             results = _db.Search(SearchText, appFilter);
         else if (appFilter != null)
-            results = _db.GetByApp(appFilter);
+            results = _db.GetByApp(appFilter, MaxDisplayedEntries);
         else
-            results = _db.GetAll();
+            results = _db.GetAll(MaxDisplayedEntries);
 
         // Apply entry type filter
         if (SelectedTypeFilter == "Keyboard")

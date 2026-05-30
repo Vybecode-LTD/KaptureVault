@@ -6,8 +6,8 @@ public interface IDatabaseService
 {
     void Initialize();
     void Insert(CaptureEntry entry);
-    List<CaptureEntry> GetAll();
-    List<CaptureEntry> GetByApp(string appName);
+    List<CaptureEntry> GetAll(int? limit = null);
+    List<CaptureEntry> GetByApp(string appName, int? limit = null);
     List<CaptureEntry> Search(string query, string? appFilter = null);
     void Delete(long id);
     void UpdatePin(long id, bool isPinned);

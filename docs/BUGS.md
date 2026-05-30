@@ -89,9 +89,10 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Hand flushed text to a bounded `Channel<CaptureEntry>`; run inserts on a dedicated writer task. Never do DB/crypto on the hook thread.
 
 ### KV-013 · Entry `ListBox` effectively non-virtualized
-- **Area:** Performance · **Status:** OPEN · `Views/MainWindow.axaml:219-267`, `MainWindowViewModel.cs:176-178`, `DatabaseService.cs:156`
-- (a) `GetAll()` has **no LIMIT** (the "2000" in older notes is not enforced) → entire table loaded. (b) `Entries.Clear()`+per-row `Add` on every flush tears down all realized containers. (c) Each row runs 4 converters, 3 of which `new SolidColorBrush(...)` per call.
-- **Fix:** Add `LIMIT`/paging; apply the sidebar's diff-update pattern to `Entries`; return cached static brushes from converters.
+- **Area:** Performance · **Status:** 🟡 PARTIAL (2026-05-30, P1) · `MainWindowViewModel.cs`, `Services/DatabaseService.cs`, `ViewModels/Converters.cs`
+- (a) no LIMIT → whole table loaded; (b) `Entries.Clear()`+rebuild tears down realized containers each flush; (c) per-row converters `new SolidColorBrush` per call.
+- **Done:** (a) `GetAll`/`GetByApp` take an optional `limit`; the entry list caps at `MaxDisplayedEntries = 1000` (search still scans the full vault) — `DatabaseServiceCrudTests.GetAll_WithLimit_…`. (c) converters return cached `ImmutableSolidColorBrush` — `ConverterTests`.
+- **Remaining:** (b) diff-update `Entries` instead of `Clear()`+rebuild (apply the sidebar pattern, preserving order + selection) — pairs with **KV-032** (debounce `Refresh`) and **KV-033** (move whole-table decrypt off the UI thread). Deferred to the next P1 batch (threading/UI-thread work).
 
 ### KV-014 · Annotation editor base `Bitmap` never disposed
 - **Area:** Performance/Memory · **Status:** ✅ FIXED (2026-05-30, P1) · `Views/Dialogs/ScreenshotEditorWindow.axaml.cs`

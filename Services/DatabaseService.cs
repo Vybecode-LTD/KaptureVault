@@ -169,22 +169,29 @@ public class DatabaseService : IDatabaseService
         cmd.ExecuteNonQuery();
     }
 
-    public List<CaptureEntry> GetAll()
+    // KV-013: an optional limit caps how many rows the entry list pulls (most-recent
+    // first). Defaults to null = unlimited so the encrypted-search candidate scan and
+    // other callers are unchanged.
+    public List<CaptureEntry> GetAll(int? limit = null)
     {
         ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT * FROM entries ORDER BY is_pinned DESC, captured_at DESC";
+        cmd.CommandText = "SELECT * FROM entries ORDER BY is_pinned DESC, captured_at DESC"
+            + (limit.HasValue ? " LIMIT @limit" : "");
+        if (limit.HasValue) cmd.Parameters.AddWithValue("@limit", limit.Value);
         return ReadEntries(cmd);
     }
 
-    public List<CaptureEntry> GetByApp(string appName)
+    public List<CaptureEntry> GetByApp(string appName, int? limit = null)
     {
         ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT * FROM entries WHERE app_name = @app ORDER BY is_pinned DESC, captured_at DESC";
+        cmd.CommandText = "SELECT * FROM entries WHERE app_name = @app ORDER BY is_pinned DESC, captured_at DESC"
+            + (limit.HasValue ? " LIMIT @limit" : "");
         cmd.Parameters.AddWithValue("@app", appName);
+        if (limit.HasValue) cmd.Parameters.AddWithValue("@limit", limit.Value);
         return ReadEntries(cmd);
     }
 
