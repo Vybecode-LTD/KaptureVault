@@ -1,7 +1,7 @@
 ---
 document: CLAUDE
-version: 1.2.0
-app-version: 1.0.3
+version: 1.3.0
+app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: manual-reconciliation
@@ -34,7 +34,7 @@ All managed docs share **one `version`** (currently **1.2.0**) and carry YAML fr
 
 It does **NOT** contain the original app's system-tweak suite — there are no Tweaks/Services/Dashboard/Profiles/Startup/Scheduler/Privacy sections, no `SystemTweaks/`, and no `ITweak` infrastructure. It runs as a standard user (`asInvoker`), not admin.
 
-- **Version:** 1.0.3 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
+- **Version:** 1.0.4 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
 - **Repo root (= project root):** `C:\Users\vybec\OneDrive\Documents\Development\Utilities\KaptureVault`
 - **Remote:** `github.com/Vybecode-LTD/KaptureVault` (private) · **Site:** `kapture.tools`
 - **Environment:** Windows 11, Claude Code
@@ -191,7 +191,7 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - ✅ KV-001 — all OAuth secrets rotated; committed secret purged from `Utilities` git history (verified clean).
 - ✅ Test suite live (`KaptureVault.Tests`, 10 tests) — was KV-045.
 
-**Remaining (P1, before wide distribution):** move DB writes off the keyboard-hook thread (KV-012), centralize shutdown/teardown (KV-011), virtualize the entry list (KV-013), **secret-less OAuth + stop bundling `client_secret.json`** (KV-007/T-12 — closes the residual KV-001 exposure), bump PBKDF2/Argon2id (KV-006). See `docs/ROADMAP.md` (P1) and `docs/HANDOFF.md` to pick up.
+**P1 in progress (shipped so far in v1.0.4):** ✅ KV-008, KV-009, KV-014/023/018, KV-013 (partial). **Remaining P1, before wide distribution:** move DB writes off the keyboard-hook thread (KV-012), centralize shutdown/teardown (KV-011), finish the entry-list virtualization (KV-013/032/033), **secret-less OAuth + stop bundling `client_secret.json`** (KV-007/T-12 — closes the residual KV-001 exposure), bump PBKDF2/Argon2id (KV-006). See `docs/ROADMAP.md` (P1) and `docs/HANDOFF.md` to pick up.
 
 ---
 
@@ -212,4 +212,4 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - **2026-05-27 → 05-29 (v1.0.0 → v1.0.1):** Forked to vault-only. KV branding/icon, Google Drive sync fix, TOS/Privacy pages, interactive installer + uninstaller data removal, error-740 fix (`asInvoker`), Capture Admin Apps, About dialog, screenshot save-as-image + annotation editor, BMP installer icon, `kapture.tools` wiring, release automation.
 - **2026-05-30 (v1.0.2):** App/tag sidebar filter selection fix (diff-update); mobile vault viewer web app (`/vault/`); CHANGELOG + v1.0.2 release; **full codebase audit** → created `docs/` set (BUGS/ROADMAP/TESTING/AUDIT-LOG/HANDOFF) and rewrote this file.
 - **2026-05-30 (v1.0.3):** **P0 remediation, test-first** — self-exclusion (KV-005/034), decrypt integrity (KV-002), encrypted search (KV-004), Drive pre-sync backup retention (KV-003). Stood up `KaptureVault.Tests` (10 tests) + `KaptureVault.slnx` with persistence seams. **Security:** rotated all Google OAuth secrets, new desktop client ID `…15r8pqq8…`, updated `FallbackClientId`; purged the committed secret from `Utilities` git history (filter-repo) and verified clean. Released v1.0.3.
-- **2026-05-30 (P1, unreleased):** Hardening — named-column DB reads (KV-009), annotation editor bitmap/RTB disposal + SaveAs guard (KV-014/023/018), consistent `ThrowIfReplacing()` gate (KV-008), cached row brushes + 1000-row entry cap (KV-013 partial). Tests 10 → **30**. Then **doc reconciliation** (this): standing directives captured, all docs synced to `version` 1.2.0, cross-linked, handoff prepared. **Remaining P1:** KV-012 (hook-thread writer), KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033 (Entries diff-update / debounce / off-UI decrypt), KV-007/006/T-12 (secret-less OAuth). Not yet released → cut **v1.0.4** when ready.
+- **2026-05-30 (P1 → v1.0.4):** Hardening — named-column DB reads (KV-009), annotation editor bitmap/RTB disposal + SaveAs guard (KV-014/023/018), consistent `ThrowIfReplacing()` gate (KV-008), cached row brushes + 1000-row entry cap (KV-013 partial). Tests 10 → **30**. **Release pipeline:** removed `gh release create` from the script — `auto-release.yml` is now the single release creator (VirusTotal scan + GitHub Release with the version's CHANGELOG section sliced into the notes). **Released v1.0.4** (workflow-created, verified). Docs reconciled to `version` 1.3.0. **Remaining P1:** KV-012 (hook-thread writer), KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033, KV-007/006/T-12 (secret-less OAuth).

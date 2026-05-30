@@ -1,7 +1,7 @@
 ---
 document: BUGS
-version: 1.2.0
-app-version: 1.0.3
+version: 1.3.0
+app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: manual-reconciliation
@@ -14,7 +14,7 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 >
 > **Remediation progress (2026-05-30):**
 > - **P0 (shipped v1.0.3):** ✅ KV-001 (secrets rotated + history purged, verified), KV-005/034, KV-002, KV-004. 🟡 KV-003 mitigated.
-> - **P1 (unreleased on `main`, → v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
+> - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
 > - **Tests:** 10 → **30** passing (KV-045 in progress).
 > - **Next:** KV-012 (hook-thread DB writes), KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033, KV-007/006/T-12 (secret-less OAuth).
 

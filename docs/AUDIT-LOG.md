@@ -1,7 +1,7 @@
 ---
 document: AUDIT-LOG
-version: 1.2.0
-app-version: 1.0.3
+version: 1.3.0
+app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: manual-reconciliation
@@ -9,6 +9,17 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-05-30 (PM-3) — release pipeline split + v1.0.4
+
+**Trigger:** User — analysis of the two release "workflows," then "remove `gh release create`," then "add changelog-to-notes and release v1.0.4."
+
+- **Single release creator:** removed `gh release create` (+ the `-SkipGitHub` flag) from `Invoke-Release.ps1`. The local script now only builds/packages/bumps/commits-CHANGELOG/pushes; `.github/workflows/auto-release.yml` is the sole creator. This fixed the race where the local `gh release create` pre-empted the workflow (its VirusTotal step was effectively dead).
+- **Richer notes:** the workflow now slices the version's `## [X.Y.Z]` section out of `CHANGELOG.md` (awk `index()`), appends the download/platform/VirusTotal footer, and marks the release `--latest`.
+- **Released v1.0.4** (P1 batch 1). **Verified end-to-end:** workflow run succeeded; release created by `github-actions[bot]` with the sliced changelog notes **and** a real VirusTotal badge (the >32 MB upload-URL path worked). First successful run of the workflow as sole creator.
+- Docs bumped to `version` 1.3.0 / app 1.0.4; status flips (unreleased → shipped) across CLAUDE/BUGS/ROADMAP/HANDOFF.
+
+---
 
 ## 2026-05-30 (PM-2) — P1 hardening + full doc reconciliation
 

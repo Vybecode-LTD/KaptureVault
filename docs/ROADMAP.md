@@ -1,7 +1,7 @@
 ---
 document: ROADMAP
-version: 1.2.0
-app-version: 1.0.3
+version: 1.3.0
+app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: manual-reconciliation
@@ -17,8 +17,8 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 
 > **P0 — ✅ complete, shipped in v1.0.3.** T-01 (secrets rotated), T-02 (history purged + verified), T-03/04/05 fixed test-first; T-06 🟡 mitigated.
 >
-> **P1 — in progress (unreleased on `main`, will ship as v1.0.4):**
-> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 in progress (test suite 10 → **30**).
+> **P1 — in progress (first batch shipped in v1.0.4):**
+> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 in progress (test suite 10 → **30**). Release pipeline now single-creator (`auto-release.yml`).
 > **Remaining P1, recommended order:** **T-07** (DB writes off the hook thread — top risk), **T-08** (centralized shutdown/teardown), **T-09 remainder + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-12** (secret-less OAuth — closes residual KV-007), **T-11** (PBKDF2/Argon2id), **T-10** (DI for HotkeyService + ViewModels), then continue **T-16**.
 
 ## P0 — Critical / ✅ COMPLETE (shipped v1.0.3)
@@ -93,10 +93,10 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 
 ## Shipped (releases) — see `CHANGELOG.md`
 
+- **v1.0.4** — P1 hardening batch 1 (KV-008, KV-009, KV-014/023/018, KV-013 partial); release pipeline now single-creator via `auto-release.yml` (VirusTotal + sliced-changelog notes).
 - **v1.0.3** — P0 remediation (KV-005/002/004/003) + OAuth rotation + history purge + test harness.
 - **v1.0.2** — sidebar filter fix; mobile vault viewer (`kapture.tools/vault`).
 - **v1.0.1** — About dialog; screenshot save-as-image + annotation editor; BMP installer icon; release automation + CHANGELOG.
-- **Unreleased (on `main`, → v1.0.4):** P1 hardening — KV-008, KV-009, KV-014/023/018, KV-013 (partial).
 
 ## Carried over from earlier (pre-audit, still relevant)
 

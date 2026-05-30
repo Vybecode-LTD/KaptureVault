@@ -1,7 +1,7 @@
 ---
 document: HANDOFF
-version: 1.2.0
-app-version: 1.0.3
+version: 1.3.0
+app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
 managed-by: manual-reconciliation
@@ -19,13 +19,13 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 
 ## TL;DR
 
-KaptureVault is the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, with settings, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, and a screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Released: v1.0.3.** `main` has **unreleased P1 work** on top (→ v1.0.4). Clean tree, builds 0/0, **30 tests passing**.
+KaptureVault is the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, with settings, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, and a screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Released: v1.0.4** (latest). Clean tree, builds 0/0, **30 tests passing**.
 
-A full audit landed 2026-05-30 (45 issues). **All P0 fixed + shipped in v1.0.3** (incl. OAuth rotation + history purge). **P1 in progress:** several reliability/robustness items done; the bigger threading/lifecycle items remain before wide distribution.
+A full audit landed 2026-05-30 (45 issues). **All P0 fixed + shipped in v1.0.3** (incl. OAuth rotation + history purge). **P1 in progress:** first batch shipped in v1.0.4; the bigger threading/lifecycle items remain before wide distribution.
 
 ## Current state
 
-- **Branch:** `main`. Released tip = `v1.0.3`; **6 unreleased P1 commits on top** (→ cut **v1.0.4** when ready: say "release it").
+- **Branch:** `main` @ `release: v1.0.4` (released, workflow-created). Next work goes on top → cut **v1.0.5** when ready (say "release it").
 - **Build/test:** `dotnet build -c Debug` → clean; `dotnet test` → **30/30 green**.
 - **Tests:** `KaptureVault.Tests` (xUnit + NSubstitute + FluentAssertions + coverlet) on `KaptureVault.slnx`. 6 suites; seams: base-dir (`EncryptionService`), connection-string (`DatabaseService`). Inventory in `TESTING.md`.
 - **Release (3-stage, single creator):** `scripts/Invoke-Release.ps1` builds/packages/version-bumps/commits-CHANGELOG/**pushes** (it no longer creates the release). The pushed `releases/latest/*.exe` triggers `.github/workflows/auto-release.yml`, which VirusTotal-scans and **creates the GitHub Release** (~30 s). The `kapture.tools` site reads the latest release + `CHANGELOG.md` live from GitHub (`download.js`/`changelog.js`) — nothing pushed to it. **Do not re-add `gh release create` to the script** (it would race the workflow). Stable URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
