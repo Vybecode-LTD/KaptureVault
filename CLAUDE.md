@@ -156,7 +156,7 @@ KaptureVault/
 Three stages, no race conditions, no manual steps — the local script makes the artifact, the cloud workflow creates the release, the website reads from GitHub.
 
 When the user says **"release it"**:
-1. Add a new top entry to `CHANGELOG.md` for the new version (user-facing summary; promote the `[Unreleased]` items).
+1. Add a new top entry to `CHANGELOG.md` for the new version (user-facing summary; promote the `[Unreleased]` items). **Each bullet MUST lead with a `**bold sentence**`** (the problem/what), then plain text (the fix) — the kapture.tools changelog parser uses the bold lead as a column; a plain bullet renders with an empty middle column. Match the 1.0.2/1.0.3 entry style.
 2. Pre-flight: kill any running `KaptureVault.exe` (locks build output); confirm `dotnet test` is green.
 3. Run `powershell -ExecutionPolicy Bypass -File scripts\Invoke-Release.ps1 -BumpType minor` (**minor = +0.0.1**, **major = +0.1.0**). The script bumps the version in `.csproj` **and** `installer/.iss`, publishes, builds the Inno Setup installer, copies it to `releases/latest/`, and commits (incl. CHANGELOG) + tags `vX.Y.Z` + **pushes**. It does **NOT** create the GitHub release.
 
@@ -205,6 +205,7 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - **Bash tool eats backslashes** in args (`-o publish\win-x64` → `publishwin-x64`) — use forward slashes or PowerShell for paths.
 - **Running app locks the build output** (single-instance, hides to tray; may be elevated) — kill `KaptureVault.exe` before build/publish.
 - **OneDrive + `.git`** is risky — let OneDrive settle before git history ops; do history rewrites on a mirror clone in a non-OneDrive temp dir.
+- **CHANGELOG entries need a `**bold lead**`** — the kapture.tools `changelog.js` parser treats the bold opening of each bullet as the "what/problem" column and the rest as the "fix" column. A plain bullet (no bold) renders with an empty middle column. Always write `- **Problem statement.** How it was fixed.`
 
 ## Session Log
 
