@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] — 2026-05-30
+
+Security and data-integrity release following a full codebase audit. Addresses the
+critical and high-severity findings; first release with an automated test suite.
+
+### Fixed
+- **KaptureVault no longer captures its own input.** The self-exclusion check used a
+  stale process name (`"Kapture"`), so keystrokes typed into KaptureVault's own
+  windows (search, tag boxes) and clipboard content it set itself (Copy, Quick Paste)
+  were being recorded. It now derives the name from the running process.
+- **Search works when encryption is enabled.** Content search ran against encrypted
+  data and silently returned nothing; it now searches your decrypted entries.
+
+### Security
+- **Tampered or corrupted entries are detected** instead of being shown as raw
+  ciphertext — decryption failures now surface clearly rather than being silently
+  ignored (restores the AES-256-GCM integrity guarantee).
+- **Rotated all Google OAuth credentials** and purged the previously-committed secret
+  from repository history.
+
+### Added
+- **Cloud sync keeps a recovery backup.** When a newer copy is pulled from Google
+  Drive, the pre-sync local database is retained as `vault.db.pre_sync_backup` so a
+  sync can no longer leave you with no way back. (Full multi-device merge is still
+  planned; until then, sync remains safest on a single device.)
+- **Automated test suite** (`KaptureVault.Tests`) covering the fixes above.
+
+---
+
 ## [1.0.2] — 2026-05-30
 
 ### Fixed

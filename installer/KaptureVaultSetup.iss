@@ -9,7 +9,7 @@
 ; Output: installer\output\KaptureVaultSetup-1.0.0-x64.exe
 
 #define MyAppName      "KaptureVault"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.0.3"
 #define MyAppPublisher "Vybecode Ltd"
 #define MyAppURL       "https://kapture.tools"
 #define MyAppExeName   "KaptureVault.exe"
@@ -174,5 +174,6 @@ begin
   if Response = IDYES then
     DelTree(DataDir, True, True, True);
 end;
+
 
 
