@@ -5,6 +5,16 @@ using Kapture.Models;
 
 namespace Kapture.Services;
 
+/// <summary>
+/// Thrown when content carrying the encrypted prefix cannot be decrypted —
+/// tampering, corruption, truncation, or a wrong password/key. Callers must
+/// surface this to the user instead of treating ciphertext as plaintext (KV-002).
+/// </summary>
+public class DecryptionException : Exception
+{
+    public DecryptionException(string message, Exception? inner = null) : base(message, inner) { }
+}
+
 public class EncryptionService : IEncryptionService
 {
     private const int SaltSize = 16;
@@ -14,16 +24,26 @@ public class EncryptionService : IEncryptionService
     private const int Iterations = 100_000;
     private const string EncryptedPrefix = "ENC:";
 
-    private static readonly string MetaDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "KaptureVault");
-
-    private static readonly string MetaPath = Path.Combine(MetaDir, "encryption.json");
+    private readonly string _metaDir;
+    private readonly string _metaPath;
 
     private byte[]? _key;
 
+    /// <param name="baseDirectory">
+    /// Directory that holds <c>encryption.json</c>. Defaults to
+    /// <c>%LOCALAPPDATA%\KaptureVault</c>. Tests pass a temp directory so they never
+    /// read or overwrite the real vault's encryption metadata.
+    /// </param>
+    public EncryptionService(string? baseDirectory = null)
+    {
+        _metaDir = baseDirectory ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "KaptureVault");
+        _metaPath = Path.Combine(_metaDir, "encryption.json");
+    }
+
     public bool IsActive => _key != null;
-    public bool IsConfigured => File.Exists(MetaPath);
+    public bool IsConfigured => File.Exists(_metaPath);
 
     public void Configure(string password)
     {
@@ -38,8 +58,8 @@ public class EncryptionService : IEncryptionService
             KeyHash = Convert.ToBase64String(hash)
         };
 
-        Directory.CreateDirectory(MetaDir);
-        File.WriteAllText(MetaPath, JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true }));
+        Directory.CreateDirectory(_metaDir);
+        File.WriteAllText(_metaPath, JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     public bool Unlock(string password)
@@ -63,8 +83,8 @@ public class EncryptionService : IEncryptionService
     public void Disable()
     {
         _key = null;
-        if (File.Exists(MetaPath))
-            File.Delete(MetaPath);
+        if (File.Exists(_metaPath))
+            File.Delete(_metaPath);
     }
 
     public string Encrypt(string plaintext)
@@ -94,30 +114,43 @@ public class EncryptionService : IEncryptionService
         if (_key == null || string.IsNullOrEmpty(ciphertext))
             return ciphertext;
 
-        // Only decrypt if it has our prefix
+        // Only decrypt if it has our prefix; anything else is genuine plaintext.
         if (!ciphertext.StartsWith(EncryptedPrefix))
             return ciphertext;
 
+        // KV-002: from here the value CLAIMS to be encrypted. Any failure is a real
+        // error (tamper, corruption, wrong key) and must be surfaced — never swallowed
+        // back to the caller as ciphertext, which would defeat AES-GCM's integrity.
+        byte[] combined;
         try
         {
-            var combined = Convert.FromBase64String(ciphertext[EncryptedPrefix.Length..]);
-            if (combined.Length < NonceSize + TagSize)
-                return ciphertext;
+            combined = Convert.FromBase64String(ciphertext[EncryptedPrefix.Length..]);
+        }
+        catch (FormatException ex)
+        {
+            throw new DecryptionException("Encrypted content is malformed (invalid base64).", ex);
+        }
 
-            var nonce = combined[..NonceSize];
-            var tag = combined[NonceSize..(NonceSize + TagSize)];
-            var encrypted = combined[(NonceSize + TagSize)..];
-            var plaintext = new byte[encrypted.Length];
+        if (combined.Length < NonceSize + TagSize)
+            throw new DecryptionException("Encrypted content is truncated or corrupted.");
 
+        var nonce = combined[..NonceSize];
+        var tag = combined[NonceSize..(NonceSize + TagSize)];
+        var encrypted = combined[(NonceSize + TagSize)..];
+        var plaintext = new byte[encrypted.Length];
+
+        try
+        {
             using var aes = new AesGcm(_key, TagSize);
             aes.Decrypt(nonce, encrypted, tag, plaintext);
-
-            return Encoding.UTF8.GetString(plaintext);
         }
-        catch
+        catch (CryptographicException ex) // includes AuthenticationTagMismatchException
         {
-            return ciphertext; // Return as-is if decryption fails
+            throw new DecryptionException(
+                "Decryption failed — the content was tampered with, corrupted, or encrypted with a different password/key.", ex);
         }
+
+        return Encoding.UTF8.GetString(plaintext);
     }
 
     private static byte[] DeriveKey(string password, byte[] salt)
@@ -126,11 +159,11 @@ public class EncryptionService : IEncryptionService
         return pbkdf2.GetBytes(KeySize);
     }
 
-    private static EncryptionMeta? LoadMeta()
+    private EncryptionMeta? LoadMeta()
     {
         try
         {
-            var json = File.ReadAllText(MetaPath);
+            var json = File.ReadAllText(_metaPath);
             return JsonSerializer.Deserialize<EncryptionMeta>(json);
         }
         catch

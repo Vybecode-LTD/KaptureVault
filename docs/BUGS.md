@@ -27,9 +27,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** (1) **Revoke + rotate all three secrets in Google Cloud Console** — most urgent, human-only. (2) `git filter-repo`/BFG the parent repo to purge the secret blob, force-push. (3) Confirm repo visibility (public = assume full compromise). (4) Reconfigure desktop client as native/PKCE-no-secret (see KV-007).
 
 ### KV-002 · Decryption silently returns ciphertext on auth-tag failure
-- **Area:** Crypto · **Status:** OPEN · `Services/EncryptionService.cs:117-120`
-- `catch { return ciphertext; }` swallows `AuthenticationTagMismatchException`. AES-GCM's integrity guarantee is discarded: a tampered/corrupted row, or a vault synced under a *different* key, surfaces in the UI as the literal `ENC:…` string instead of failing. Risk of double-encryption on re-save.
-- **Fix:** Let auth failures propagate as a typed `DecryptionException`; distinguish "not our prefix → return as-is" (legit) from "our prefix but auth failed → error". Surface "wrong password / corrupted vault" to the user.
+- **Area:** Crypto · **Status:** ✅ FIXED (2026-05-30) · `Services/EncryptionService.cs`, `Services/DatabaseService.cs`
+- `catch { return ciphertext; }` swallowed `AuthenticationTagMismatchException`, discarding AES-GCM's integrity guarantee.
+- **Fix applied:** `Decrypt` now throws a typed `DecryptionException` on malformed/truncated/tampered/wrong-key content (still returns non-`ENC:` input and locked-vault as-is). Callers handle it gracefully: `ReadEntries` substitutes a per-row "[Unable to decrypt …]" placeholder (no silent ciphertext, no list crash); `DecryptAllEntries` skips un-decryptable rows instead of aborting the disable. Also added a **base-directory seam** to `EncryptionService` so tests never touch the real `encryption.json` (progress on KV-045). Tests: `EncryptionServiceTests` (round-trip, tamper→throw, wrong-key→throw, non-encrypted passthrough). RED→GREEN verified.
 
 ### KV-003 · Drive sync = last-write-wins whole-DB overwrite → multi-device data loss
 - **Area:** Data/Sync · **Status:** OPEN · `Services/CloudSync/CloudSyncManager.cs:114-141`

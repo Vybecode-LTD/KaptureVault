@@ -334,7 +334,17 @@ public class DatabaseService : IDatabaseService
             {
                 var id = reader.GetInt64(0);
                 var content = reader.GetString(1);
-                updates.Add((id, _encryption.Decrypt(content)));
+                // KV-002: skip rows that can't be decrypted (corrupt / from another
+                // vault) rather than aborting the whole disable-encryption operation.
+                // They stay encrypted; everything decryptable is still converted.
+                try
+                {
+                    updates.Add((id, _encryption.Decrypt(content)));
+                }
+                catch (DecryptionException)
+                {
+                    // leave this row encrypted
+                }
             }
         }
         foreach (var (id, decrypted) in updates)
@@ -400,7 +410,26 @@ public class DatabaseService : IDatabaseService
         while (reader.Read())
         {
             var rawContent = reader.GetString(3);
-            var content = _encryption?.IsActive == true ? _encryption.Decrypt(rawContent) : rawContent;
+            string content;
+            if (_encryption?.IsActive == true)
+            {
+                // KV-002: Decrypt now throws on tamper/corruption/wrong-key. Handle it
+                // per-row so one bad entry surfaces a visible placeholder instead of
+                // either silently showing ciphertext (the old bug) or crashing the
+                // whole list. Other rows still decrypt normally.
+                try
+                {
+                    content = _encryption.Decrypt(rawContent);
+                }
+                catch (DecryptionException)
+                {
+                    content = "[Unable to decrypt — wrong password, or this entry is corrupted / from another vault]";
+                }
+            }
+            else
+            {
+                content = rawContent;
+            }
 
             entries.Add(new CaptureEntry
             {
