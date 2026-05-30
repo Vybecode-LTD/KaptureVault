@@ -130,7 +130,7 @@ KaptureVault/
 ## STANDING DIRECTIVES — binding, apply every session
 
 > Full authoritative versions live at the parent level and are `@include`d by the parent constitution:
-> `../../DEBUG_PROTOCOL.md`, `../../TESTING_PROCEDURES.md`, `../../DOCUMENTATION_MANAGER.md`. The summaries below are the working contract; read the source files when a situation needs the detail.
+> `../../DEBUG_PROTOCOL.md`, `../../TESTING_PROCEDURES.md`, `../../DOCUMENTATION_MANAGER.md`, and `../../SOFTWARE_RELEASE.md` (release pipeline — KaptureVault **is** a desktop download app, so `ONLY_IF_DESKTOP_DOWNLOAD_APP` is true here). The summaries below are the working contract; read the source files when a situation needs the detail.
 
 ### 🧪 Testing directive
 - **Tests are part of the implementation, not follow-up.** Every bug fix gets a regression test that **fails before the fix and passes after** (proven RED→GREEN). If a test is genuinely impossible, document the exact reason.
