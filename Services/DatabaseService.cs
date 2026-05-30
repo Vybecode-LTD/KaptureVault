@@ -28,7 +28,12 @@ public class DatabaseService : IDatabaseService
         if (connectionString != null)
         {
             _connectionString = connectionString;
-            _dbPath = string.Empty; // not file-backed; sync replace is N/A in tests
+            // Derive the backing file path when the connection is file-based (so the
+            // sync-replace path is exercisable in tests); in-memory leaves it empty.
+            var ds = new SqliteConnectionStringBuilder(connectionString).DataSource;
+            _dbPath = ds.StartsWith("file:", StringComparison.OrdinalIgnoreCase) || ds.Contains(":memory:")
+                ? string.Empty
+                : ds;
         }
         else
         {
@@ -86,9 +91,12 @@ public class DatabaseService : IDatabaseService
                 throw;
             }
 
-            // Clean up backup after successful replace
-            if (File.Exists(backupPath))
-                File.Delete(backupPath);
+            // KV-003: RETAIN the pre-sync backup as a recovery point. Sync replaces the
+            // whole local DB when the remote is newer, which can clobber local-only
+            // entries; keeping <db>.pre_sync_backup (overwritten each sync-down) means a
+            // user can always recover the state immediately before the last sync.
+            // (The full fix — per-entry merge instead of whole-file replace — is tracked
+            // separately as a larger task.)
 
             // Reinitialize schema
             Initialize();

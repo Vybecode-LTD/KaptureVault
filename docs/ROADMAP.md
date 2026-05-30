@@ -14,6 +14,8 @@ managed-by: codebase-audit
 
 ---
 
+> **Progress 2026-05-30:** ✅ T-03, T-04, T-05 done (test-first). 🟡 T-06 mitigated (pre-sync backup retained; full merge still open). T-16 started (test project + 10 tests live). ⏳ T-01, T-02 are human-only and still outstanding.
+
 ## P0 — Critical / do first (data loss, security, broken core behavior)
 
 | # | Task | Issues | Effort | Notes |

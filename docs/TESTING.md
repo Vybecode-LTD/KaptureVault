@@ -11,9 +11,15 @@ managed-by: codebase-audit
 
 ## Current state
 
-**Automated test coverage: 0%.** There is no test project, no test packages, no `.sln`, and no test job in CI (only `.github/workflows/auto-release.yml`, which packages releases and runs no tests). All verification to date has been manual (build + run-and-click).
+**Test project: LIVE as of 2026-05-30** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions, on `KaptureVault.slnx`). **10 tests passing.** Stood up during P0 remediation; the persistence ctor seams (base-dir for `EncryptionService`, connection-string for `DatabaseService`) are in place.
 
-This is tracked as **KV-045** and is a P1 roadmap item (**T-16**).
+Suites so far:
+- `CaptureServiceTests` — KV-005 self-exclusion regression (2)
+- `EncryptionServiceTests` — round-trip, tamper→throw, wrong-key→throw, passthrough (4)
+- `DatabaseServiceSearchTests` — KV-004 encrypted-content search (3)
+- `DatabaseServiceReplaceTests` — KV-003 pre-sync backup retention (1)
+
+Still **no CI test job** (only `auto-release.yml`) and broad coverage is low — the suites above target the fixed P0s. Continue per the plan below (LanguageDetector, AppSettings, CaptureEntry, converters, filter-regression). Tracked as **KV-045 / T-16**.
 
 ---
 

@@ -11,7 +11,7 @@ managed-by: codebase-audit
 
 > Source: full multi-agent codebase audit on **2026-05-30** (architecture, data/security, performance, testing, correctness). 45 issues. See `AUDIT-LOG.md` for methodology and `ROADMAP.md` for the prioritized fix order.
 >
-> **Remediation progress (2026-05-30):** ✅ KV-005, KV-034 fixed (test-first). Test project stood up (was KV-045). In progress: KV-002, KV-004, KV-003.
+> **Remediation progress (2026-05-30):** ✅ KV-005, KV-034, KV-002, KV-004 fixed (test-first). 🟡 KV-003 mitigated (backup retained; full merge deferred). Test project stood up with 10 passing tests (KV-045 → in progress). Remaining P0 are human-only: **KV-001** secret rotation (Cloud Console) + parent-repo history purge.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 
@@ -32,9 +32,10 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix applied:** `Decrypt` now throws a typed `DecryptionException` on malformed/truncated/tampered/wrong-key content (still returns non-`ENC:` input and locked-vault as-is). Callers handle it gracefully: `ReadEntries` substitutes a per-row "[Unable to decrypt …]" placeholder (no silent ciphertext, no list crash); `DecryptAllEntries` skips un-decryptable rows instead of aborting the disable. Also added a **base-directory seam** to `EncryptionService` so tests never touch the real `encryption.json` (progress on KV-045). Tests: `EncryptionServiceTests` (round-trip, tamper→throw, wrong-key→throw, non-encrypted passthrough). RED→GREEN verified.
 
 ### KV-003 · Drive sync = last-write-wins whole-DB overwrite → multi-device data loss
-- **Area:** Data/Sync · **Status:** OPEN · `Services/CloudSync/CloudSyncManager.cs:114-141`
-- Conflict resolution compares file mtimes (±5s) then uploads or **wholesale-replaces** `vault.db`. No merge. Device A and Device B capturing independently → last sync clobbers the other's entire vault. The `.pre_sync_backup` only guards replace mechanics, not the logical merge.
-- **Fix:** Per-entry delta sync (watermark/`synced` flag + `last_update_time`) merging rows by `id`/content-hash, or document loudly that sync is **single-device-only**. At minimum union DBs instead of clobbering and keep the pre-sync backup.
+- **Area:** Data/Sync · **Status:** 🟡 MITIGATED (2026-05-30); full fix deferred · `Services/DatabaseService.cs`, `Services/CloudSync/CloudSyncManager.cs`
+- Conflict resolution compares file mtimes (±5s) then uploads or **wholesale-replaces** `vault.db`. No merge → independent captures on two devices → last sync clobbers the other's vault.
+- **Mitigation applied:** `ReplaceDatabaseFromAsync` now **retains** the `<db>.pre_sync_backup` (it was deleted on success), so a clobbering sync-down always leaves a recoverable copy of the pre-sync local state. Test: `DatabaseServiceReplaceTests.ReplaceDatabaseFromAsync_RetainsPreSyncBackupWithLocalData` (RED→GREEN).
+- **Still open (larger task, ROADMAP T-06):** real per-entry delta merge (watermark/`synced` flag) instead of whole-file replace; download md5 verification (KV-029); a prominent **single-device-only** warning in the sync UI. Until then, multi-device use can still lose data between syncs — recoverable only from the retained backup.
 
 ### KV-004 · Content search returns nothing when encryption is active
 - **Area:** Search/Data · **Status:** ✅ FIXED (2026-05-30) · `Services/DatabaseService.cs`
