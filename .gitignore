@@ -2,7 +2,12 @@
 bin/
 obj/
 publish/
+publishwin-x64/
 installer/output/
+
+## Release artifacts — releases/latest/ IS committed so the download script can pick it up
+# The installer EXE is intentionally tracked here; use Git LFS if the repo grows large
+!releases/latest/*.exe
 
 ## Visual Studio / Rider
 .vs/
@@ -20,6 +25,10 @@ logs/
 cloud_tokens_*.bin
 cloud_tokens_*.json
 client_secret*.json
+# Any file containing an OAuth client secret (web or desktop), regardless of prefix
+*client_secret*.json
+*clientsecret*.json
+*_clientsecret.json
 
 ## DB & user data
 *.db

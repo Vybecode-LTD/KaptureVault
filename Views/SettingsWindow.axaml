@@ -181,6 +181,25 @@
                     </Border>
                 </StackPanel>
 
+                <!-- Advanced -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Advanced" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="Capture Admin App Keystrokes"/>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"
+                                               Text="Run KaptureVault with administrator privileges so keystrokes typed inside elevated apps (Task Manager, Registry Editor, etc.) are captured."/>
+                                    <TextBlock FontSize="11" Foreground="#E08030" TextWrapping="Wrap" Margin="0,4,0,0"
+                                               Text="⚠ KaptureVault will restart. A UAC prompt will appear on every Windows login."/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding CaptureAdminApps}" OnContent="" OffContent=""/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
 

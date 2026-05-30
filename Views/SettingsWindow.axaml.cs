@@ -1,11 +1,14 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
 using Kapture.Services;
 using Kapture.Services.CloudSync;
 using Kapture.ViewModels;
 using Kapture.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace Kapture.Views;
 
@@ -13,6 +16,7 @@ public partial class SettingsWindow : Window
 {
     public bool WasSaved { get; private set; }
     private CloudSyncManager? _syncManager;
+    private bool _originalCaptureAdminApps;
 
     public SettingsWindow()
     {
@@ -26,6 +30,10 @@ public partial class SettingsWindow : Window
 
         _syncManager = App.Services.GetService<CloudSyncManager>();
         UpdateCloudStatus();
+
+        // Snapshot the current value so Save_Click can detect a change.
+        if (DataContext is SettingsViewModel vm)
+            _originalCaptureAdminApps = vm.CaptureAdminApps;
     }
 
     // ── Encryption ──
@@ -195,6 +203,78 @@ public partial class SettingsWindow : Window
     private void Save_Click(object? sender, RoutedEventArgs e)
     {
         WasSaved = true;
+
+        // ── Capture Admin Apps — handle restart if the setting changed ────────
+        if (DataContext is SettingsViewModel vm && vm.CaptureAdminApps != _originalCaptureAdminApps)
+        {
+            if (vm.CaptureAdminApps)
+                RestartElevated(vm);
+            else
+                RestartNormal();
+            return; // either path handles the close / shutdown
+        }
+
         Close();
+    }
+
+    // Re-launch the process with administrator privileges (UAC elevation).
+    // If the user cancels the UAC prompt, we revert the setting and close normally.
+    private void RestartElevated(SettingsViewModel vm)
+    {
+        // Release the mutex NOW so the incoming elevated instance can acquire it.
+        Program.PrepareForRestart();
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(Environment.ProcessPath!)
+            {
+                UseShellExecute = true,
+                Verb = "runas"
+            });
+
+            // Elevated instance is starting up — shut this one down.
+            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+                ?.Shutdown();
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) // UAC cancelled
+        {
+            // Revert the toggle and re-persist so the reverted value is saved.
+            vm.CaptureAdminApps = false;
+            var svc = App.Services.GetRequiredService<ISettingsService>();
+            svc.Settings.CaptureAdminApps = false;
+            svc.Save();
+
+            // We already released the mutex above — the app can keep running but
+            // single-instance protection is gone for this session. Safest: shutdown.
+            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+                ?.Shutdown();
+        }
+        catch
+        {
+            // Unknown error — fall back to a plain close.
+            Close();
+        }
+    }
+
+    // Turning off admin capture: settings already saved with CaptureAdminApps=false.
+    // We can't programmatically de-elevate, so we shut down and relaunch via the
+    // Windows shell (inherits Explorer's medium-integrity token).
+    private void RestartNormal()
+    {
+        Program.PrepareForRestart();
+
+        try
+        {
+            // explorer.exe starts the target at Explorer's (medium) integrity level,
+            // effectively stripping the elevated token.
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{Environment.ProcessPath}\"")
+            {
+                UseShellExecute = false
+            });
+        }
+        catch { /* if the relaunch fails the user can start it manually */ }
+
+        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+            ?.Shutdown();
     }
 }

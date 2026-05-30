@@ -1,0 +1,129 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Kapture.Views.Dialogs.ScreenshotEditorWindow"
+        Title="Edit / Annotate — KaptureVault"
+        Icon="/Assets/app.ico"
+        Width="1100" Height="720"
+        MinWidth="700" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="True">
+
+    <Window.Styles>
+        <Style Selector="Button.tool-btn">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinWidth" Value="54"/>
+        </Style>
+        <Style Selector="Button.tool-btn.active">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Button.stroke-btn.active">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Row 0 — Toolbar -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource AppBgSecondary}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="10,7">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+
+                <!-- Tool buttons -->
+                <Button x:Name="BtnPen"    Content="✏ Pen"       Classes="tool-btn active" Click="BtnPen_Click"/>
+                <Button x:Name="BtnRect"   Content="□ Rect"      Classes="tool-btn"        Click="BtnRect_Click"/>
+                <Button x:Name="BtnEllipse" Content="○ Ellipse"  Classes="tool-btn"        Click="BtnEllipse_Click"/>
+                <Button x:Name="BtnArrow"  Content="→ Arrow"     Classes="tool-btn"        Click="BtnArrow_Click"/>
+                <Button x:Name="BtnText"   Content="T Text"      Classes="tool-btn"        Click="BtnText_Click"/>
+                <Button x:Name="BtnHighlight" Content="▓ Highlight" Classes="tool-btn"     Click="BtnHighlight_Click"/>
+
+                <Border Width="1" Background="{DynamicResource AppBorderBrush}" Margin="4,2"/>
+
+                <!-- Color swatches -->
+                <Button x:Name="C1" Tag="#F03030" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#F03030"/>
+                <Button x:Name="C2" Tag="#FF8C00" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#FF8C00"/>
+                <Button x:Name="C3" Tag="#FFD700" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#FFD700"/>
+                <Button x:Name="C4" Tag="#22BB44" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#22BB44"/>
+                <Button x:Name="C5" Tag="#3399FF" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#3399FF"/>
+                <Button x:Name="C6" Tag="#BB44FF" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#BB44FF"/>
+                <Button x:Name="C7" Tag="#111111" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#111111"/>
+                <Button x:Name="C8" Tag="#FFFFFF" Click="ColorSwatch_Click"
+                        Width="22" Height="22" CornerRadius="11" Padding="0"
+                        Background="#FFFFFF"
+                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"/>
+
+                <Border Width="1" Background="{DynamicResource AppBorderBrush}" Margin="4,2"/>
+
+                <!-- Stroke buttons -->
+                <Button x:Name="StrokeThin"   Classes="stroke-btn" Tag="1" Click="StrokeBtn_Click" Width="32" Padding="4,5">
+                    <Rectangle Width="22" Height="1" Fill="{DynamicResource AppTextPrimary}"/>
+                </Button>
+                <Button x:Name="StrokeMedium" Classes="stroke-btn active" Tag="3" Click="StrokeBtn_Click" Width="32" Padding="4,5">
+                    <Rectangle Width="22" Height="3" Fill="{DynamicResource AppTextPrimary}"/>
+                </Button>
+                <Button x:Name="StrokeThick"  Classes="stroke-btn" Tag="6" Click="StrokeBtn_Click" Width="32" Padding="4,5">
+                    <Rectangle Width="22" Height="6" Fill="{DynamicResource AppTextPrimary}"/>
+                </Button>
+
+                <Border Width="1" Background="{DynamicResource AppBorderBrush}" Margin="4,2"/>
+
+                <Button Content="↩ Undo" Click="Undo_Click"/>
+                <Button Content="✗ Clear" Click="Clear_Click"/>
+
+                <Border Width="1" Background="{DynamicResource AppBorderBrush}" Margin="4,2"/>
+
+                <Button Content="💾 Save As…" Classes="accent" Click="SaveAs_Click"/>
+                <Button Content="Close" Click="CloseBtn_Click"/>
+
+            </StackPanel>
+        </Border>
+
+        <!-- Row 1 — Canvas area -->
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      Background="#141420">
+            <Canvas x:Name="AnnotationCanvas"
+                    Background="Transparent"
+                    Cursor="Cross"
+                    PointerPressed="Canvas_PointerPressed"
+                    PointerMoved="Canvas_PointerMoved"
+                    PointerReleased="Canvas_PointerReleased"/>
+        </ScrollViewer>
+
+        <!-- Row 2 — Status bar -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource AppBgSecondary}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,4">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock x:Name="StatusText"
+                           FontSize="11"
+                           Foreground="{DynamicResource AppTextSecondary}"/>
+                <TextBlock x:Name="CoordText"
+                           FontSize="11"
+                           Foreground="{DynamicResource AppTextSecondary}"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</Window>

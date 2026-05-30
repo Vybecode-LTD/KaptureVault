@@ -29,6 +29,9 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private int _cloudSyncIntervalMinutes = 15;
     [ObservableProperty] private bool _syncOnClose = true;
 
+    // Advanced
+    [ObservableProperty] private bool _captureAdminApps = false;
+
     // Status
     [ObservableProperty] private bool _hasChanges;
 
@@ -58,6 +61,7 @@ public partial class SettingsViewModel : ViewModelBase
         CloudSyncEnabled = s.CloudSyncEnabled;
         CloudSyncIntervalMinutes = s.CloudSyncIntervalMinutes;
         SyncOnClose = s.SyncOnClose;
+        CaptureAdminApps = s.CaptureAdminApps;
         HasChanges = false;
     }
 
@@ -73,6 +77,7 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnCloudSyncEnabledChanged(bool value) => HasChanges = true;
     partial void OnCloudSyncIntervalMinutesChanged(int value) => HasChanges = true;
     partial void OnSyncOnCloseChanged(bool value) => HasChanges = true;
+    partial void OnCaptureAdminAppsChanged(bool value) => HasChanges = true;
 
     [RelayCommand]
     private void SaveSettings()
@@ -89,6 +94,7 @@ public partial class SettingsViewModel : ViewModelBase
         s.CloudSyncEnabled = CloudSyncEnabled;
         s.CloudSyncIntervalMinutes = CloudSyncIntervalMinutes;
         s.SyncOnClose = SyncOnClose;
+        s.CaptureAdminApps = CaptureAdminApps;
         _settings.Save();
         HasChanges = false;
     }
@@ -108,5 +114,6 @@ public partial class SettingsViewModel : ViewModelBase
         CloudSyncEnabled = defaults.CloudSyncEnabled;
         CloudSyncIntervalMinutes = defaults.CloudSyncIntervalMinutes;
         SyncOnClose = defaults.SyncOnClose;
+        CaptureAdminApps = defaults.CaptureAdminApps;
     }
 }

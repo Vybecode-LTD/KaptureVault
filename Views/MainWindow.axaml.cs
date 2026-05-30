@@ -45,6 +45,11 @@ public partial class MainWindow : Window
         await settingsWindow.ShowDialog(this);
     }
 
+    private async void About_Click(object? sender, RoutedEventArgs e)
+    {
+        await new AboutDialog().ShowDialog(this);
+    }
+
     private async void ViewContent_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm && vm.SelectedEntry != null)
@@ -52,6 +57,12 @@ public partial class MainWindow : Window
             var viewer = new ContentViewerWindow(vm.SelectedEntry);
             await viewer.ShowDialog(this);
         }
+    }
+
+    private void EditScreenshot_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.SelectedEntry == null) return;
+        new ScreenshotEditorWindow(vm.SelectedEntry).Show();
     }
 
     private void SearchBox_KeyDown(object? sender, KeyEventArgs e)

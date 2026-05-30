@@ -93,6 +93,8 @@
                             <TextBlock Text="Settings" FontSize="12"/>
                         </StackPanel>
                     </Button>
+                    <Button Content="?" Padding="8,5" FontSize="13" FontWeight="SemiBold"
+                            Click="About_Click" ToolTip.Tip="About KaptureVault"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -355,10 +357,14 @@
                     <Border Grid.Row="2" Padding="12"
                             IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}">
                         <Grid RowDefinitions="Auto,*">
-                            <Button Grid.Row="0" Content="View Full Content"
-                                    Click="ViewContent_Click"
-                                    HorizontalAlignment="Center"
-                                    Padding="16,8" FontSize="13" Margin="0,0,0,8"/>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center"
+                                        Spacing="8" Margin="0,0,0,8">
+                                <Button Content="View Full Content" Click="ViewContent_Click"
+                                        Padding="16,8" FontSize="13"/>
+                                <Button Content="✏ Edit / Annotate" Click="EditScreenshot_Click"
+                                        IsVisible="{Binding SelectedEntry.IsScreenshot}"
+                                        Padding="16,8" FontSize="13"/>
+                            </StackPanel>
                             <!-- Screenshot image preview -->
                             <ScrollViewer Grid.Row="1"
                                           IsVisible="{Binding SelectedEntry.IsScreenshot}"

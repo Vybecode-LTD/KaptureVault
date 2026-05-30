@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -8,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kapture.Models;
 using Kapture.Services;
+using SkiaSharp;
 
 namespace Kapture.ViewModels;
 
@@ -19,6 +21,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IScreenshotService? _screenshotService;
     private readonly IStartupService _startup;
     private readonly ISettingsService? _settings;
+
+    // Prevents OnSelected*FilterChanged from calling RefreshEntries() while
+    // RefreshAppList / RefreshTagList are rebuilding their collections.
+    // Without this, AppList.Clear() causes Avalonia's ListBox to push null back
+    // into SelectedAppFilter, firing RefreshEntries() with no filter applied.
+    private bool _suppressFilterRefresh;
 
     // (single-section app — vault is always the active view)
 
@@ -110,16 +118,35 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var apps = _db.GetDistinctApps();
         var currentSelection = SelectedAppFilter;
-        AppList.Clear();
-        AppList.Add("All Apps");
-        foreach (var app in apps)
-            AppList.Add(app);
 
-        // Restore selection
-        if (currentSelection != null && AppList.Contains(currentSelection))
-            SelectedAppFilter = currentSelection;
-        else
-            SelectedAppFilter = "All Apps";
+        // Diff-update instead of Clear()+rebuild.
+        // Clear() makes Avalonia's ListBox post a DEFERRED SelectedItem=null binding
+        // callback that fires AFTER _suppressFilterRefresh returns to false, wiping
+        // the user's selection. By never removing the currently-selected item (unless
+        // it truly left the DB), the ListBox never loses its selection and nothing
+        // needs to be deferred.
+        _suppressFilterRefresh = true;
+        try
+        {
+            var desired = new List<string>(apps.Count + 1) { "All Apps" };
+            desired.AddRange(apps);
+
+            // Remove items no longer valid (reverse so indices stay stable)
+            for (int i = AppList.Count - 1; i >= 0; i--)
+                if (!desired.Contains(AppList[i])) AppList.RemoveAt(i);
+
+            // Add missing items (preserves relative order)
+            foreach (var item in desired)
+                if (!AppList.Contains(item)) AppList.Add(item);
+
+            SelectedAppFilter = currentSelection != null && AppList.Contains(currentSelection)
+                ? currentSelection
+                : "All Apps";
+        }
+        finally
+        {
+            _suppressFilterRefresh = false;
+        }
     }
 
     private void RefreshEntries()
@@ -159,9 +186,11 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     partial void OnSearchTextChanged(string value) => RefreshEntries();
-    partial void OnSelectedAppFilterChanged(string? value) => RefreshEntries();
     partial void OnSelectedTypeFilterChanged(string value) => RefreshEntries();
-    partial void OnSelectedTagFilterChanged(string? value) => RefreshEntries();
+    // App and tag filters are suppressed during list rebuilds to prevent
+    // the mid-rebuild null push from Avalonia's ListBox clearing selection.
+    partial void OnSelectedAppFilterChanged(string? value) { if (!_suppressFilterRefresh) RefreshEntries(); }
+    partial void OnSelectedTagFilterChanged(string? value) { if (!_suppressFilterRefresh) RefreshEntries(); }
 
     partial void OnSelectedEntryChanged(CaptureEntry? value)
     {
@@ -281,15 +310,27 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var tags = _db.GetDistinctTags();
         var currentSelection = SelectedTagFilter;
-        TagList.Clear();
-        TagList.Add("All Tags");
-        foreach (var tag in tags)
-            TagList.Add(tag);
 
-        if (currentSelection != null && TagList.Contains(currentSelection))
-            SelectedTagFilter = currentSelection;
-        else
-            SelectedTagFilter = "All Tags";
+        _suppressFilterRefresh = true;
+        try
+        {
+            var desired = new List<string>(tags.Count + 1) { "All Tags" };
+            desired.AddRange(tags);
+
+            for (int i = TagList.Count - 1; i >= 0; i--)
+                if (!desired.Contains(TagList[i])) TagList.RemoveAt(i);
+
+            foreach (var item in desired)
+                if (!TagList.Contains(item)) TagList.Add(item);
+
+            SelectedTagFilter = currentSelection != null && TagList.Contains(currentSelection)
+                ? currentSelection
+                : "All Tags";
+        }
+        finally
+        {
+            _suppressFilterRefresh = false;
+        }
     }
 
     [RelayCommand]
@@ -311,32 +352,88 @@ public partial class MainWindowViewModel : ViewModelBase
         var topLevel = GetTopLevel();
         if (topLevel == null) return;
 
-        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        if (SelectedEntry.IsScreenshot)
         {
-            Title = "Save Entry as Text",
-            DefaultExtension = "txt",
-            SuggestedFileName = $"kapture_{SelectedEntry.AppName}_{SelectedEntry.CapturedAt:yyyyMMdd_HHmmss}.txt",
-            FileTypeChoices =
-            [
-                new FilePickerFileType("Text Files") { Patterns = ["*.txt"] }
-            ]
-        });
+            var sourcePath = SelectedEntry.Content;
+            if (!File.Exists(sourcePath))
+            {
+                ShowToast("Screenshot file not found");
+                return;
+            }
 
-        if (file != null)
-        {
-            var header = $"""
-                Kapture Export
-                App: {SelectedEntry.AppName}
-                Window: {SelectedEntry.WindowTitle}
-                Captured: {SelectedEntry.CapturedAt:yyyy-MM-dd HH:mm:ss}
-                Characters: {SelectedEntry.CharCount}
-                ───────────────────────────────
+            var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save Screenshot",
+                DefaultExtension = "png",
+                SuggestedFileName = $"kapture_{SelectedEntry.AppName}_{SelectedEntry.CapturedAt:yyyyMMdd_HHmmss}",
+                FileTypeChoices =
+                [
+                    new FilePickerFileType("PNG Image") { Patterns = ["*.png"] },
+                    new FilePickerFileType("JPEG Image") { Patterns = ["*.jpg", "*.jpeg"] },
+                    new FilePickerFileType("BMP Image") { Patterns = ["*.bmp"] }
+                ]
+            });
 
-                """;
+            if (file == null) return;
+
+            var fileName = file.Name.ToLowerInvariant();
+            SKEncodedImageFormat format;
+            int quality = 92;
+            if (fileName.EndsWith(".jpg") || fileName.EndsWith(".jpeg"))
+            {
+                format = SKEncodedImageFormat.Jpeg;
+                quality = 90;
+            }
+            else if (fileName.EndsWith(".bmp"))
+            {
+                format = SKEncodedImageFormat.Bmp;
+            }
+            else
+            {
+                format = SKEncodedImageFormat.Png;
+            }
+
+            using var bitmap = SKBitmap.Decode(sourcePath);
+            if (bitmap == null)
+            {
+                ShowToast("Failed to decode screenshot");
+                return;
+            }
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(format, quality);
             await using var stream = await file.OpenWriteAsync();
-            await using var writer = new System.IO.StreamWriter(stream);
-            await writer.WriteAsync(header + SelectedEntry.Content);
-            ShowToast("Saved to file");
+            data.SaveTo(stream);
+            ShowToast("Screenshot saved");
+        }
+        else
+        {
+            var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save Entry as Text",
+                DefaultExtension = "txt",
+                SuggestedFileName = $"kapture_{SelectedEntry.AppName}_{SelectedEntry.CapturedAt:yyyyMMdd_HHmmss}.txt",
+                FileTypeChoices =
+                [
+                    new FilePickerFileType("Text Files") { Patterns = ["*.txt"] }
+                ]
+            });
+
+            if (file != null)
+            {
+                var header = $"""
+                    Kapture Export
+                    App: {SelectedEntry.AppName}
+                    Window: {SelectedEntry.WindowTitle}
+                    Captured: {SelectedEntry.CapturedAt:yyyy-MM-dd HH:mm:ss}
+                    Characters: {SelectedEntry.CharCount}
+                    ───────────────────────────────
+
+                    """;
+                await using var stream = await file.OpenWriteAsync();
+                await using var writer = new StreamWriter(stream);
+                await writer.WriteAsync(header + SelectedEntry.Content);
+                ShowToast("Saved to file");
+            }
         }
     }
 

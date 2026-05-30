@@ -44,4 +44,13 @@ public class AppSettings
 
     [JsonPropertyName("idleFlushSeconds")]
     public int IdleFlushSeconds { get; set; } = 20;
+
+    // Advanced
+    /// <summary>
+    /// When true, KaptureVault restarts with administrator privileges so that
+    /// its low-level keyboard hook can receive input from elevated processes
+    /// (Task Manager, Registry Editor, etc.). Requires a UAC prompt on startup.
+    /// </summary>
+    [JsonPropertyName("captureAdminApps")]
+    public bool CaptureAdminApps { get; set; } = false;
 }
