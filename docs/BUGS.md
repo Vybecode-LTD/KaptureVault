@@ -1,17 +1,22 @@
 ---
 document: BUGS
-doc-version: 1.1.0
+version: 1.2.0
 app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
-managed-by: codebase-audit
+managed-by: manual-reconciliation
+see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT-LOG.md]
 ---
 
 # BUGS.md — KaptureVault Issue Register
 
 > Source: full multi-agent codebase audit on **2026-05-30** (architecture, data/security, performance, testing, correctness). 45 issues. See `AUDIT-LOG.md` for methodology and `ROADMAP.md` for the prioritized fix order.
 >
-> **Remediation progress (2026-05-30, shipped in v1.0.3):** ✅ KV-005, KV-034, KV-002, KV-004 fixed (test-first). 🟡 KV-003 mitigated (backup retained; full merge deferred). ✅ KV-001 resolved — all OAuth secrets rotated and the committed secret purged from `Utilities` git history (verified clean). Test project live with 10 passing tests (KV-045 → in progress). **All P0 done.** Next focus: P1 (KV-012 hook-thread DB writes, KV-011 shutdown teardown, KV-013 list virtualization, KV-006/007/T-12 secret-less OAuth).
+> **Remediation progress (2026-05-30):**
+> - **P0 (shipped v1.0.3):** ✅ KV-001 (secrets rotated + history purged, verified), KV-005/034, KV-002, KV-004. 🟡 KV-003 mitigated.
+> - **P1 (unreleased on `main`, → v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
+> - **Tests:** 10 → **30** passing (KV-045 in progress).
+> - **Next:** KV-012 (hook-thread DB writes), KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033, KV-007/006/T-12 (secret-less OAuth).
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 

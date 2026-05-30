@@ -1,44 +1,53 @@
 ---
 document: HANDOFF
-doc-version: 1.1.0
+version: 1.2.0
 app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
-managed-by: codebase-audit
+managed-by: manual-reconciliation
+see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT-LOG.md, CHANGELOG.md]
 ---
 
 # HANDOFF.md — KaptureVault
 
-> Read this first when picking up the project. Pairs with `CLAUDE.md` (project facts), `BUGS.md` (issue register), `ROADMAP.md` (fix order), `TESTING.md` (test plan).
+> **Canary doc — read first when picking up the project.** Pairs with `CLAUDE.md` (project facts + **standing directives**), `ROADMAP.md` (all to-dos), `BUGS.md` (issue register), `TESTING.md` (test plan), `AUDIT-LOG.md` (history).
+
+## ▶ Start here (fresh session)
+1. Read `CLAUDE.md` (esp. the **STANDING DIRECTIVES** section: testing / debugging / documentation / release) and this file.
+2. Establish a green baseline: `dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj` → expect **30 passing**.
+3. Pick up at **P1 / T-07** (see priorities below). Work **test-first** (RED→GREEN). End the session with a handoff.
 
 ## TL;DR
 
-KaptureVault is the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, with settings, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, and a screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. Currently **v1.0.3**, on `main`, clean working tree, building 0 warnings / 0 errors, **10 tests passing**.
+KaptureVault is the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, with settings, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, and a screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Released: v1.0.3.** `main` has **unreleased P1 work** on top (→ v1.0.4). Clean tree, builds 0/0, **30 tests passing**.
 
-A full audit landed 2026-05-30 (45 issues). **All P0 items are now fixed and shipped in v1.0.3** — including the OAuth secret rotation + git-history purge. The app is in good shape; remaining work is **P1** hardening (perf hot paths, lifecycle, secret-less OAuth) before wide distribution.
+A full audit landed 2026-05-30 (45 issues). **All P0 fixed + shipped in v1.0.3** (incl. OAuth rotation + history purge). **P1 in progress:** several reliability/robustness items done; the bigger threading/lifecycle items remain before wide distribution.
 
 ## Current state
 
-- **Branch:** `main` @ `release: v1.0.3`, pushed, GitHub release live.
-- **Build/test:** `dotnet build -c Debug` → clean; `dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj` → 10/10 green.
-- **Release:** `scripts/Invoke-Release.ps1 -BumpType minor|major` → version-bump → publish → Inno Setup → copy to `releases/latest/` → commit (incl. `CHANGELOG.md`) → tag → push → `gh release create`. Convention: add a CHANGELOG entry first. Stable URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
-- **Tests:** `KaptureVault.Tests` (xUnit + NSubstitute + FluentAssertions) on `KaptureVault.slnx`. Seams: base-dir (`EncryptionService`), connection-string (`DatabaseService`). Coverage is narrow (P0 fixes only) — broaden per `TESTING.md`.
-- **Security:** all OAuth secrets rotated; `Utilities` history purged + verified clean. New creds live in gitignored `client_secret.json` / `kaptureweb_clientsecret.json` + `%LOCALAPPDATA%`. Desktop client ID now `…15r8pqq8…`.
-- **Mobile viewer:** static web app at `docs/vault/` (served at `kapture.tools/vault`). Still needs the Web OAuth client ID pasted into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID` → the web client `…70gd1j2j…`).
+- **Branch:** `main`. Released tip = `v1.0.3`; **6 unreleased P1 commits on top** (→ cut **v1.0.4** when ready: say "release it").
+- **Build/test:** `dotnet build -c Debug` → clean; `dotnet test` → **30/30 green**.
+- **Tests:** `KaptureVault.Tests` (xUnit + NSubstitute + FluentAssertions + coverlet) on `KaptureVault.slnx`. 6 suites; seams: base-dir (`EncryptionService`), connection-string (`DatabaseService`). Inventory in `TESTING.md`.
+- **Release:** `scripts/Invoke-Release.ps1 -BumpType minor|major` (add a CHANGELOG entry first). Stable URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
+- **Security:** all OAuth secrets rotated; `Utilities` history purged + verified clean. New creds in gitignored `client_secret.json` / `kaptureweb_clientsecret.json` + `%LOCALAPPDATA%`. Desktop client ID `…15r8pqq8…`. **Residual:** the new secret is still bundled in the installer → close via T-12 before wide release.
+- **Mobile viewer:** static web app `docs/vault/` (→ `kapture.tools/vault`). Needs the web client ID `…70gd1j2j…` pasted into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
+- **Docs:** all managed docs reconciled at shared `version` 1.2.0 (app 1.0.3), cross-linked via `see-also`.
 
-## What shipped recently
+## What shipped / done recently
 
-**v1.0.3 (P0 remediation + security):** self-exclusion fix (KV-005/034), decrypt-integrity (KV-002), encrypted-search (KV-004), pre-sync backup retention (KV-003), test harness (10 tests), **OAuth secret rotation + `Utilities` history purge** (KV-001).
-**v1.0.1–1.0.2:** Capture Admin Apps, About dialog, screenshot save-as-image + annotation editor, BMP installer icon, `kapture.tools` wiring, release automation, sidebar filter fix, mobile vault viewer, full audit + `docs/` set + `CLAUDE.md` rewrite.
+- **P1 (done, unreleased on `main` → v1.0.4):** ✅ KV-008 (consistent DB gate), KV-009 (name-based column reads), KV-014/023/018 (annotation editor leaks + SaveAs guard), KV-013 partial (cached row brushes + 1000-row entry cap). Tests 10 → **30**.
+- **v1.0.3 (P0 + security):** self-exclusion (KV-005/034), decrypt-integrity (KV-002), encrypted-search (KV-004), pre-sync backup retention (KV-003), test harness, **OAuth rotation + history purge** (KV-001).
+- **v1.0.1–1.0.2:** Capture Admin Apps, About dialog, screenshot save-as-image + annotation editor, BMP installer icon, `kapture.tools` wiring, release automation, sidebar filter fix, mobile vault viewer, full audit + `docs/` set.
 
-## ⚠️ Top priorities for the next session — P1 (from `ROADMAP.md`)
+## ⚠️ Top priorities for the next session — remaining P1 (from `ROADMAP.md`)
 
-All P0 done. Recommended P1 order:
-1. **T-07 / KV-012** — move the SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task). Current biggest latency risk (input stutter / hook eviction).
+1. **T-07 / KV-012** — move the SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task). **Biggest latency risk** (input stutter / hook eviction) and the riskiest change (rewires `CaptureService` threading + its tests) — give it focused attention.
 2. **T-08 / KV-011, KV-010, KV-024** — centralize shutdown/teardown (`ShutdownRequested`/`OnExit`): stop all services, dispose tray + `HotkeyService` + `ServiceProvider`, run SyncOnClose once. Today only the tray-Quit path cleans up.
-3. **T-09 / KV-013, KV-032, KV-033** — make the entry `ListBox` virtualize: `LIMIT`/paging, diff-update `Entries` (same pattern already used for the sidebar lists), cache converter brushes.
-4. **T-12 / KV-007, KV-006** — reconfigure the desktop OAuth client as **secret-less** (native + loopback PKCE) and stop bundling `client_secret.json`; bump PBKDF2 ≥600k / plan Argon2id. **Do before wide distribution** — closes the residual exposure from KV-001.
-5. **T-16 / KV-045** — broaden tests (LanguageDetector, AppSettings, CaptureEntry, converters, the filter regression) + add a CI test job.
+3. **T-09 remainder / KV-013, KV-032, KV-033** — diff-update `Entries` (apply the sidebar pattern, preserve order + selection), debounce `Refresh()`, move whole-table decrypt off the UI thread. (Brush caching + 1000-row cap already done.)
+4. **T-12 / KV-007, KV-006** — secret-less desktop OAuth (native + loopback PKCE), stop bundling `client_secret.json`; bump PBKDF2 ≥600k / plan Argon2id (store KDF params in `encryption.json` so existing vaults still unlock). **Do before wide distribution.**
+5. **T-16 / KV-045** — Avalonia headless smoke tests, the **VM filter regression** test, CI test job, wire `dotnet format` + vulnerable-scan into the loop.
+
+When ready, **"release it"** to cut v1.0.4 with the P1 work.
 
 ## Blockers / things only the human can do
 

@@ -1,6 +1,30 @@
+---
+document: CLAUDE
+version: 1.2.0
+app-version: 1.0.3
+last-updated: 2026-05-30
+last-audit: 2026-05-30
+managed-by: manual-reconciliation
+---
+
 # CLAUDE.md — KaptureVault
 
-> **Living context document for Claude Code sessions.** Read this first. It was rewritten 2026-05-30 to match the vault-only fork (the previous version described the pre-fork 8-tab "Kapture" and was entirely stale). Companion docs live in `docs/`: `HANDOFF.md`, `BUGS.md`, `ROADMAP.md`, `TESTING.md`, `AUDIT-LOG.md`.
+> **Living context document for Claude Code sessions. Read this first.**
+> Start-of-session: read this file, then `docs/HANDOFF.md`, then run `dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj` to confirm a green baseline.
+
+## Documentation Map (all docs are cross-linked)
+
+| Doc | Purpose |
+|---|---|
+| `CLAUDE.md` (this) | Project constitution, architecture, standing directives, session log |
+| `docs/HANDOFF.md` | **Canary** — current state + next steps; read at every session start |
+| `docs/ROADMAP.md` | All to-do items (P1/P2/P3), prioritized, with status |
+| `docs/BUGS.md` | Issue register KV-001…KV-045 with fix status + test refs |
+| `docs/TESTING.md` | Test suite inventory, coverage, the testing directive |
+| `docs/AUDIT-LOG.md` | Audit + reconciliation history |
+| `CHANGELOG.md` | Versioned release history (+ Unreleased section) |
+
+All managed docs share **one `version`** (currently **1.2.0**) and carry YAML frontmatter. App version (`1.0.3`) is tracked separately via `app-version`.
 
 ---
 
@@ -103,6 +127,40 @@ KaptureVault/
 
 ---
 
+## STANDING DIRECTIVES — binding, apply every session
+
+> Full authoritative versions live at the parent level and are `@include`d by the parent constitution:
+> `../../DEBUG_PROTOCOL.md`, `../../TESTING_PROCEDURES.md`, `../../DOCUMENTATION_MANAGER.md`. The summaries below are the working contract; read the source files when a situation needs the detail.
+
+### 🧪 Testing directive
+- **Tests are part of the implementation, not follow-up.** Every bug fix gets a regression test that **fails before the fix and passes after** (proven RED→GREEN). If a test is genuinely impossible, document the exact reason.
+- New source file → create its test; new public method/endpoint → test it.
+- **Test stack:** `KaptureVault.Tests` (xUnit + NSubstitute + FluentAssertions + coverlet) on `KaptureVault.slnx`. Persistence seams exist: base-dir (`EncryptionService`), connection-string (`DatabaseService`). Never touch the real `%LOCALAPPDATA%\KaptureVault` vault in tests — use temp dirs / shared in-memory SQLite.
+- **Before declaring work done, run the relevant checks and report results (evidence ledger):**
+  `dotnet build` · `dotnet build -c Release` · `dotnet test --collect:"XPlat Code Coverage"` · `dotnet format --verify-no-changes` · `dotnet list package --vulnerable --include-transitive` · `dotnet publish -c Release -r win-x64` (for deliverables).
+- **Known test gaps (P1/T-16):** no `Avalonia.Headless.XUnit` UI smoke tests yet; no CI test job; `dotnet format` / vulnerable-scan not yet wired into the loop. Add these.
+
+### 🐞 Debugging directive (anti-loop circuit breaker)
+- **2-strike rule:** if the same bug survives **two** fix attempts (user says "still broken" twice), STOP blind fixing and enter **DIAGNOSTIC MODE** — freeze production-code edits, restate assumptions, read the whole error, **reproduce**, form 3 competing hypotheses, explain why each prior fix failed, instrument + gather evidence, then propose ONE evidence-backed fix and **verify with proof (verbatim command output), not assertion.**
+- **`BREAKLOOP`** (or "enter debug protocol") forces DIAGNOSTIC MODE immediately.
+- Standing rules: run the code rather than guess; fix root causes, not symptoms; read whole stack traces; never fabricate results; don't mirror the user's guessed cause if evidence disagrees; stop and ask when genuinely ambiguous.
+- When the user has to manually break a loop, append a one-line guard to **Lessons** below.
+
+### 📚 Documentation directive
+- **Update docs at the point of change, not later.** Fix a bug → update `BUGS.md` in the same step; complete a task → mark `ROADMAP.md`; add a dep → update `TESTING.md` + this file's Stack.
+- All managed docs share **one `version`**; bump together (MINOR for session work that adds content). Keep frontmatter accurate.
+- **Every session ends with a handoff** (`perform handoff`): reconcile all docs vs. code, update `HANDOFF.md` (the canary) + `CLAUDE.md`, log the audit in `AUDIT-LOG.md`. If the user forgets, remind them.
+- Reconciliation (`perform audit`) at session boundaries / before deploy: ROADMAP↔code, BUGS↔code, TESTING↔suite, CLAUDE↔reality, HANDOFF↔state, CHANGELOG↔versions, cross-refs resolve.
+
+### 🚀 Release directive ("release it")
+When the user says **"release it"**:
+1. Add a new top entry to `CHANGELOG.md` for the new version (user-facing summary).
+2. Run `powershell -ExecutionPolicy Bypass -File scripts\Invoke-Release.ps1 -BumpType minor` (**minor = +0.0.1**, **major = +0.1.0**).
+3. The script bumps the version in `.csproj` **and** `installer/.iss`, publishes, builds the Inno Setup installer, copies it to `releases/latest/`, commits (incl. CHANGELOG) + tags `vX.Y.Z` + pushes, and runs `gh release create`.
+4. Pre-release gate: kill any running `KaptureVault.exe` (locks output), confirm tests green. Stable URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
+
+---
+
 ## Build / Run / Release
 
 ```powershell
@@ -130,9 +188,21 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 
 ---
 
+## Lessons (self-maintaining — append a guard each time a loop is broken)
+
+- **Avalonia `ListBox.Clear()` + two-way bound `SelectedItem`** posts a *deferred* `SelectedItem = null` back to the property → silently wipes the bound filter. **Diff-update collections; never `Clear()` a list whose selection is bound.** (Root cause of two filter-loses-selection bugs; fixed for AppList/TagList. `Entries` still uses Clear()+rebuild — KV-013.)
+- **Never do DB/crypto work on the WH_KEYBOARD_LL hook thread** — it degrades system input latency and risks hook eviction (KV-012, still open).
+- **Self-exclusion / process identity:** derive from `Process.GetCurrentProcess().ProcessName`, never hardcode the app name (a rename silently broke self-exclusion — KV-005).
+- **AES-GCM decrypt must throw on auth failure**, never return ciphertext as plaintext (silent swallow defeated integrity — KV-002).
+- **PowerShell 5.1 mangles non-ASCII** in scripts/here-strings — keep `.ps1` ASCII only.
+- **Bash tool eats backslashes** in args (`-o publish\win-x64` → `publishwin-x64`) — use forward slashes or PowerShell for paths.
+- **Running app locks the build output** (single-instance, hides to tray; may be elevated) — kill `KaptureVault.exe` before build/publish.
+- **OneDrive + `.git`** is risky — let OneDrive settle before git history ops; do history rewrites on a mirror clone in a non-OneDrive temp dir.
+
 ## Session Log
 
 - **≤2026-05-26:** Pre-fork "Kapture" full app (8 tabs, 60+ system tweaks). *(History; not in this fork.)*
 - **2026-05-27 → 05-29 (v1.0.0 → v1.0.1):** Forked to vault-only. KV branding/icon, Google Drive sync fix, TOS/Privacy pages, interactive installer + uninstaller data removal, error-740 fix (`asInvoker`), Capture Admin Apps, About dialog, screenshot save-as-image + annotation editor, BMP installer icon, `kapture.tools` wiring, release automation.
 - **2026-05-30 (v1.0.2):** App/tag sidebar filter selection fix (diff-update); mobile vault viewer web app (`/vault/`); CHANGELOG + v1.0.2 release; **full codebase audit** → created `docs/` set (BUGS/ROADMAP/TESTING/AUDIT-LOG/HANDOFF) and rewrote this file.
 - **2026-05-30 (v1.0.3):** **P0 remediation, test-first** — self-exclusion (KV-005/034), decrypt integrity (KV-002), encrypted search (KV-004), Drive pre-sync backup retention (KV-003). Stood up `KaptureVault.Tests` (10 tests) + `KaptureVault.slnx` with persistence seams. **Security:** rotated all Google OAuth secrets, new desktop client ID `…15r8pqq8…`, updated `FallbackClientId`; purged the committed secret from `Utilities` git history (filter-repo) and verified clean. Released v1.0.3.
+- **2026-05-30 (P1, unreleased):** Hardening — named-column DB reads (KV-009), annotation editor bitmap/RTB disposal + SaveAs guard (KV-014/023/018), consistent `ThrowIfReplacing()` gate (KV-008), cached row brushes + 1000-row entry cap (KV-013 partial). Tests 10 → **30**. Then **doc reconciliation** (this): standing directives captured, all docs synced to `version` 1.2.0, cross-linked, handoff prepared. **Remaining P1:** KV-012 (hook-thread writer), KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033 (Entries diff-update / debounce / off-UI decrypt), KV-007/006/T-12 (secret-less OAuth). Not yet released → cut **v1.0.4** when ready.

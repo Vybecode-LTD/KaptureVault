@@ -1,13 +1,30 @@
 ---
 document: AUDIT-LOG
-doc-version: 1.1.0
+version: 1.2.0
 app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
-managed-by: codebase-audit
+managed-by: manual-reconciliation
+see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md]
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-05-30 (PM-2) — P1 hardening + full doc reconciliation
+
+**Trigger:** User — "let's do P1," then "get documentation all aligned and reconciled … prepare for a handoff … note the standing testing, debugging and documentation directives as well as the new release directives."
+
+**P1 code (all test-first / verified):** ✅ KV-008 (gate on all DB methods), KV-009 (name-based column reads), KV-014/023/018 (annotation editor bitmap/RTB disposal + SaveAs guard), KV-013 partial (cached row brushes + 1000-row entry cap). Tests **10 → 30**, all green; app builds 0/0. 6 commits on `main`, unreleased (→ v1.0.4).
+
+**Documentation reconciliation (this pass):**
+- Captured the **standing directives** in `CLAUDE.md` (new "STANDING DIRECTIVES" section: Testing, Debugging/anti-loop, Documentation, Release), pointing at the authoritative parent files `../../DEBUG_PROTOCOL.md`, `../../TESTING_PROCEDURES.md`, `../../DOCUMENTATION_MANAGER.md`. Added a **Documentation Map** and a **Lessons** section to `CLAUDE.md`.
+- **Version synchronization:** adopted the standard frontmatter field `version` across all managed docs and bumped to the shared **1.2.0** (was split `doc-version`/`app-version`; `app-version` 1.0.3 retained). Added `see-also` cross-links to every doc.
+- Reconciled content vs. code: ROADMAP P1 statuses (T-13/14/15 ✅, T-09 🟡, T-16 🟡, T-17 folded into T-15), human/one-time to-dos added; BUGS progress header; TESTING inventory (30 tests) + required-checks directive; HANDOFF rewritten to current state; CHANGELOG Unreleased section.
+- **Cross-document checks:** ROADMAP↔code ✅, BUGS↔code ✅ (fixed issues marked + test refs), TESTING↔suite ✅ (6 suites / 30 tests match disk), CHANGELOG↔versions ✅ (1.0.0–1.0.3 entries present; 1.2.0 doc version is the doc-set version, distinct from app version), cross-refs resolve. No CRITICAL/HIGH reconciliation failures found.
+
+**Reconciliation result:** docs aligned at `version` 1.2.0 / app 1.0.3; HANDOFF (canary) accurate. Ready for a fresh session.
+
+---
 
 ## 2026-05-30 (PM) — P0 remediation + v1.0.3 release
 

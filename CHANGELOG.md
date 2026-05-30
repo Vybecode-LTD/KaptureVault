@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+P1 hardening on `main` (not yet released — will ship as the next version). Internal robustness/perf; no change to day-to-day behavior.
+
+### Changed
+- Database reads now resolve columns by name (robust to schema/version drift). (KV-009)
+- The concurrency guard is applied consistently across all database operations. (KV-008)
+- The entry list is capped at the 1000 most recent items and reuses shared brushes — less work per refresh on large vaults. (KV-013, partial)
+
+### Fixed
+- The screenshot annotation editor no longer leaks its image when closed, and "Save As" no longer crashes when the source image is missing. (KV-014, KV-023, KV-018)
+
+---
+
 ## [1.0.3] — 2026-05-30
 
 Security and data-integrity release following a full codebase audit. Addresses the

@@ -1,25 +1,42 @@
 ---
 document: TESTING
-doc-version: 1.1.0
+version: 1.2.0
 app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
-managed-by: codebase-audit
+managed-by: manual-reconciliation
+see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TESTING_PROCEDURES.md]
 ---
 
 # TESTING.md — KaptureVault
 
 ## Current state
 
-**Test project: LIVE as of 2026-05-30** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions, on `KaptureVault.slnx`). **10 tests passing.** Stood up during P0 remediation; the persistence ctor seams (base-dir for `EncryptionService`, connection-string for `DatabaseService`) are in place.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet, on `KaptureVault.slnx`). **30 tests passing** as of 2026-05-30. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob.
 
-Suites so far:
-- `CaptureServiceTests` — KV-005 self-exclusion regression (2)
-- `EncryptionServiceTests` — round-trip, tamper→throw, wrong-key→throw, passthrough (4)
-- `DatabaseServiceSearchTests` — KV-004 encrypted-content search (3)
-- `DatabaseServiceReplaceTests` — KV-003 pre-sync backup retention (1)
+Suite inventory:
+| Suite | Covers | Tests |
+|---|---|---|
+| `Services/CaptureServiceTests` | KV-005 self-exclusion regression | 2 |
+| `Services/EncryptionServiceTests` | KV-002 round-trip / tamper→throw / wrong-key→throw / passthrough | 4 |
+| `Services/DatabaseServiceSearchTests` | KV-004 encrypted-content search | 3 |
+| `Services/DatabaseServiceReplaceTests` | KV-003 pre-sync backup retention | 1 |
+| `Services/DatabaseServiceCrudTests` | KV-009 full-field round-trip, null-expiry, pin/tags, GetAll limit | 4 |
+| `ViewModels/ConverterTests` | KV-033 brush caching + pure text/number converters | 16 |
 
-Still **no CI test job** (only `auto-release.yml`) and broad coverage is low — the suites above target the fixed P0s. Continue per the plan below (LanguageDetector, AppSettings, CaptureEntry, converters, filter-regression). Tracked as **KV-045 / T-16**.
+**Run:** `dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj` (or `dotnet test KaptureVault.slnx`).
+
+### Standing testing directive (binding — see `../../TESTING_PROCEDURES.md`, summarized in `CLAUDE.md`)
+- **Every bug fix gets a regression test that fails before the fix and passes after** (proven RED→GREEN). New file → its test; new public method → test it.
+- Never touch the real `%LOCALAPPDATA%\KaptureVault` vault in tests — use temp dirs / shared in-memory SQLite.
+- **Required C# checks before declaring done (report results — evidence ledger):** `dotnet build`, `dotnet build -c Release`, `dotnet test --collect:"XPlat Code Coverage"`, `dotnet format --verify-no-changes`, `dotnet list package --vulnerable --include-transitive`, `dotnet publish -c Release -r win-x64` (deliverables).
+- 2-strike on the same bug → enter the **DEBUG_PROTOCOL** diagnostic mode (freeze edits, get evidence). `BREAKLOOP` forces it.
+
+### Known gaps (KV-045 / T-16)
+- No `Avalonia.Headless.XUnit` UI smoke tests (app builder / window-open / binding-resolves) yet.
+- No **VM filter regression** test yet (the `AppList`/`TagList` diff-update fix) — high priority since it broke twice.
+- No CI test job (only `auto-release.yml`); `dotnet format` + vulnerable-scan not yet wired into the loop.
+- Coverage % not yet collected/tracked.
 
 ---
 

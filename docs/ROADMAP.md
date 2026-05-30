@@ -1,10 +1,11 @@
 ---
 document: ROADMAP
-doc-version: 1.1.0
+version: 1.2.0
 app-version: 1.0.3
 last-updated: 2026-05-30
 last-audit: 2026-05-30
-managed-by: codebase-audit
+managed-by: manual-reconciliation
+see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT-LOG.md]
 ---
 
 # ROADMAP.md — KaptureVault
@@ -14,9 +15,11 @@ managed-by: codebase-audit
 
 ---
 
-> **Progress 2026-05-30 (shipped in v1.0.3):** ✅ **All P0 done** — T-01 (secrets rotated), T-02 (history purged + verified), T-03/T-04/T-05 fixed test-first. 🟡 T-06 mitigated (pre-sync backup retained; full per-entry merge still open). T-16 started (test project + 10 tests live).
+> **P0 — ✅ complete, shipped in v1.0.3.** T-01 (secrets rotated), T-02 (history purged + verified), T-03/04/05 fixed test-first; T-06 🟡 mitigated.
 >
-> **Next up — P1.** Recommended order: T-07 (DB writes off the hook thread), T-08 (centralized shutdown/teardown), T-09 (entry-list virtualization), T-12 (secret-less OAuth — closes the residual KV-007), then T-16 (broaden tests).
+> **P1 — in progress (unreleased on `main`, will ship as v1.0.4):**
+> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 in progress (test suite 10 → **30**).
+> **Remaining P1, recommended order:** **T-07** (DB writes off the hook thread — top risk), **T-08** (centralized shutdown/teardown), **T-09 remainder + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-12** (secret-less OAuth — closes residual KV-007), **T-11** (PBKDF2/Argon2id), **T-10** (DI for HotkeyService + ViewModels), then continue **T-16**.
 
 ## P0 — Critical / ✅ COMPLETE (shipped v1.0.3)
 
@@ -46,24 +49,24 @@ managed-by: codebase-audit
 
 ## P1 — High (reliability, security hardening, perf hot paths)
 
-| # | Task | Issues | Effort |
-|---|------|--------|--------|
-| T-07 | Move SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task) | KV-012 | M |
-| T-08 | Centralize shutdown/teardown (`ShutdownRequested`/`OnExit`): stop all services, dispose tray + ServiceProvider, run SyncOnClose once | KV-011, KV-010, KV-024 | M |
-| T-09 | Make the entry `ListBox` virtualize: add `LIMIT`/paging, diff-update `Entries`, cache converter brushes | KV-013, KV-032, KV-033 | M |
-| T-10 | Register `HotkeyService` + ViewModels in DI; stop service-locator use in Views | KV-010, KV-015(partial) | M |
-| T-11 | Raise PBKDF2 to ≥600k now; plan Argon2id migration with KDF params in `encryption.json` | KV-006 | S→M |
-| T-12 | Make desktop OAuth client secret-less (native + loopback PKCE); stop bundling `client_secret.json`; remove `FallbackClientId` | KV-007 | M |
-| T-13 | Apply DB concurrency gate consistently (all public methods) | KV-008 | S |
-| T-14 | `SELECT` explicit named columns + `GetOrdinal` in `ReadEntries` | KV-009 | S |
-| T-15 | Dispose annotation-editor base `Bitmap` (`OnClosed`) + `using` the `RenderTargetBitmap` | KV-014, KV-023 | XS |
-| T-16 | **Stand up the test project + first-PR suite** (see `TESTING.md`); regression test for the filter fix | KV-045 | M |
+| # | Status | Task | Issues | Effort |
+|---|--------|------|--------|--------|
+| T-07 | ⬜ next | Move SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task) | KV-012 | M |
+| T-08 | ⬜ | Centralize shutdown/teardown (`ShutdownRequested`/`OnExit`): stop all services, dispose tray + ServiceProvider, run SyncOnClose once | KV-011, KV-010, KV-024 | M |
+| T-09 | 🟡 partial | Make the entry `ListBox` virtualize. **Done:** brush caching + 1000-row cap. **Left:** diff-update `Entries`, debounce, off-UI decrypt | KV-013, KV-032, KV-033 | M |
+| T-10 | ⬜ | Register `HotkeyService` + ViewModels in DI; stop service-locator use in Views | KV-010, KV-015(partial) | M |
+| T-11 | ⬜ | Raise PBKDF2 to ≥600k now; plan Argon2id migration with KDF params in `encryption.json` | KV-006 | S→M |
+| T-12 | ⬜ | Make desktop OAuth client secret-less (native + loopback PKCE); stop bundling `client_secret.json`; remove `FallbackClientId` | KV-007 | M |
+| T-13 | ✅ done | Apply DB concurrency gate consistently (all public methods) | KV-008 | S |
+| T-14 | ✅ done | Read columns by name (case-insensitive map) in `ReadEntries` | KV-009 | S |
+| T-15 | ✅ done | Dispose annotation-editor base `Bitmap` (`OnClosed`) + `using` the `RenderTargetBitmap` + SaveAs guard | KV-014, KV-023, KV-018 | XS |
+| T-16 | 🟡 in progress | Test suite (10 → 30 tests). **Left:** Avalonia headless smoke tests, VM filter regression, CI test job, `dotnet format`/vuln-scan in loop | KV-045 | M |
 
 ## P2 — Medium (correctness, hardening, MVVM hygiene)
 
 | # | Task | Issues | Effort |
 |---|------|--------|--------|
-| T-17 | Guard ScreenshotEditor SaveAs against missing source image (NaN→PixelSize crash) | KV-018 | XS |
+| ~~T-17~~ | ✅ done (folded into T-15) — SaveAs NaN/missing-image guard | KV-018 | XS |
 | T-18 | Replace `SHA256(key)` verification with a known-plaintext verifier / HKDF value | KV-019 | S |
 | T-19 | Zero the master key on disable/lock/shutdown | KV-020 | XS |
 | T-20 | Wrap bulk encrypt/decrypt in a transaction | KV-021 | S |
@@ -88,18 +91,24 @@ managed-by: codebase-audit
 
 ---
 
-## Shipped this session (v1.0.2 — 2026-05-30)
+## Shipped (releases) — see `CHANGELOG.md`
 
-- ✅ App/tag sidebar filter selection fix (diff-update, see CHANGELOG)
-- ✅ Mobile vault viewer web app (`kapture.tools/vault`)
-- ✅ Screenshot save-as-image + annotation editor (v1.0.1)
-- ✅ About dialog, BMP installer icon, release automation (v1.0.1)
-- ✅ Release automation script (`scripts/Invoke-Release.ps1`) + CHANGELOG
+- **v1.0.3** — P0 remediation (KV-005/002/004/003) + OAuth rotation + history purge + test harness.
+- **v1.0.2** — sidebar filter fix; mobile vault viewer (`kapture.tools/vault`).
+- **v1.0.1** — About dialog; screenshot save-as-image + annotation editor; BMP installer icon; release automation + CHANGELOG.
+- **Unreleased (on `main`, → v1.0.4):** P1 hardening — KV-008, KV-009, KV-014/023/018, KV-013 (partial).
 
 ## Carried over from earlier (pre-audit, still relevant)
 
 - Align data paths (legacy split was a pre-fork concern; verify all paths now under `%LOCALAPPDATA%\KaptureVault`)
 - Quick Paste hotkey: `AppSettings` stores a string but `HotkeyService` hardcodes VK constants — needs a parser to honor user config
+
+## Human / one-time (not code — needs the maintainer)
+
+- **Google Cloud Console:** confirm the OLD web secret is deleted (desktop client already recreated); reconfigure the desktop client as **secret-less native + loopback PKCE** (pairs with T-12); finish the OAuth consent screen for `kapture.tools` (authorized domain + Privacy/TOS URLs, exit Testing mode).
+- **GitHub Pages + DNS:** point `kapture.tools` at Pages — A `@` → `185.199.108–111.153`, CNAME `www` → `vybecode-ltd.github.io`; enable Enforce HTTPS. Verify `kapture.tools` in Google Search Console.
+- **Mobile viewer:** paste the web client ID `232322018793-70gd1j2j…` into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
+- **Repo hygiene:** consider moving the repos off the OneDrive path (OneDrive + `.git` is risky).
 
 ---
 
