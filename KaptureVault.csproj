@@ -20,6 +20,15 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
+  <!-- The test project lives under the app directory; keep its sources out of the
+       app's default **/*.cs compile glob (otherwise the app tries to compile the tests). -->
+  <ItemGroup>
+    <Compile Remove="KaptureVault.Tests\**" />
+    <AvaloniaResource Remove="KaptureVault.Tests\**" />
+    <EmbeddedResource Remove="KaptureVault.Tests\**" />
+    <None Remove="KaptureVault.Tests\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="2.88.9" />
     <PackageReference Include="Avalonia" Version="11.3.12" />

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Timers;
 using Kapture.Models;
@@ -10,7 +11,11 @@ public class CaptureService : ICaptureService, IDisposable
 {
     private const int TickIntervalMs = 1_000;
     private const int WindowPollMs = 250;
-    private const string SelfProcessName = "Kapture";
+
+    // KV-005: derive the self-exclusion name from the actual running process so a
+    // future rename can't reintroduce the "captures its own input" drift. In the
+    // published app this resolves to "KaptureVault".
+    private static readonly string SelfProcessName = Process.GetCurrentProcess().ProcessName;
 
     private readonly IKeyboardHookService _hook;
     private readonly IActiveWindowService _windowService;

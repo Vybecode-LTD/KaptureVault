@@ -9,7 +9,9 @@ managed-by: codebase-audit
 
 # BUGS.md — KaptureVault Issue Register
 
-> Source: full multi-agent codebase audit on **2026-05-30** (architecture, data/security, performance, testing, correctness). 45 issues. **None fixed yet — all Open.** See `AUDIT-LOG.md` for methodology and `ROADMAP.md` for the prioritized fix order.
+> Source: full multi-agent codebase audit on **2026-05-30** (architecture, data/security, performance, testing, correctness). 45 issues. See `AUDIT-LOG.md` for methodology and `ROADMAP.md` for the prioritized fix order.
+>
+> **Remediation progress (2026-05-30):** ✅ KV-005, KV-034 fixed (test-first). Test project stood up (was KV-045). In progress: KV-002, KV-004, KV-003.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 
@@ -44,9 +46,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 ## 🟠 High
 
 ### KV-005 · Self-exclusion broken — app captures its own keystrokes & clipboard
-- **Area:** Correctness · **Status:** OPEN · `Services/CaptureService.cs:13`, `Services/ClipboardMonitorService.cs:13`
-- Both define `SelfProcessName = "Kapture"` but the renamed process is **`KaptureVault`** (`ScreenshotService.cs:13` already uses the correct name). Self-exclusion at `CaptureService.cs:166,221` and `ClipboardMonitorService.cs:78` never matches → keystrokes typed into KaptureVault's own UI (tag box, search) get captured; app-set clipboard (Copy, Quick Paste) gets re-captured.
-- **Fix:** Set both constants to `"KaptureVault"` — or derive from `Process.GetCurrentProcess().ProcessName` so a future rename can't reintroduce drift. **Trivial, highest-value functional fix — do first.**
+- **Area:** Correctness · **Status:** ✅ FIXED (2026-05-30) · `Services/CaptureService.cs`, `Services/ClipboardMonitorService.cs`
+- Both defined `SelfProcessName = "Kapture"` but the renamed process is **`KaptureVault`** → self-exclusion never matched; the app logged its own input.
+- **Fix applied:** `SelfProcessName` is now `static readonly = Process.GetCurrentProcess().ProcessName` in both services (rename-safe; resolves to "KaptureVault" in the published app). Regression test: `CaptureServiceTests.Flush_WhenActiveWindowIsKaptureVaultItself_DoesNotCapture` (drives the service with the test runner's own process name as the active window). RED→GREEN verified.
 
 ### KV-006 · PBKDF2 100k iterations below 2026 guidance
 - **Area:** Crypto · **Status:** OPEN · `Services/EncryptionService.cs:14,123-127`
@@ -197,7 +199,7 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 ## ⚪ Low
 
 ### KV-034 · Clipboard dedupe not updated on self-exclusion early return
-`ClipboardMonitorService.cs:78-86` — `_lastClipboardText` stale after self-copy (latent; goes live once KV-005 is fixed). **Fix:** update `_lastClipboardText` before the self return.
+✅ FIXED (2026-05-30) — `ClipboardMonitorService.PollClipboard` now records `_lastClipboardText` on the self-originated path before returning, so the same string later copied from a real app isn't wrongly suppressed. Fixed alongside KV-005.
 
 ### KV-035 · UAC-cancel leaves `CaptureAdminApps=true` if no settings file
 `Program.cs:91-101,124-136` — `TrySaveSettings` no-ops when the file is missing; a failed revert write → UAC re-prompt loop every launch. **Fix:** create the file with the corrected value; log revert-write failures.

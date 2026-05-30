@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="KaptureVault.csproj" />
+  <Project Path="KaptureVault.Tests/KaptureVault.Tests.csproj" />
+</Solution>

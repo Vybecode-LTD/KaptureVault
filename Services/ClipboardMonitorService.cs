@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Kapture.Models;
@@ -10,7 +11,10 @@ public class ClipboardMonitorService : IClipboardMonitorService, IDisposable
 {
     private const int PollIntervalMs = 500;
     private const int CF_UNICODETEXT = 13;
-    private const string SelfProcessName = "Kapture";
+
+    // KV-005: derive from the running process (resolves to "KaptureVault" in the
+    // published app) instead of a hardcoded name that drifted on rename.
+    private static readonly string SelfProcessName = Process.GetCurrentProcess().ProcessName;
 
     private readonly IDatabaseService _db;
     private readonly IActiveWindowService _windowService;
@@ -75,10 +79,19 @@ public class ClipboardMonitorService : IClipboardMonitorService, IDisposable
             // Not consuming it causes the change to be captured later under the wrong app.
             _lastSequenceNumber = currentSeq;
 
-            if (appName.Equals(SelfProcessName, StringComparison.OrdinalIgnoreCase))
-                return;
-
             var text = ReadClipboardText();
+
+            // KV-005 / KV-034: skip clipboard content that KaptureVault itself put on
+            // the clipboard (Copy, Quick Paste), but still record it as the last-seen
+            // text so the same string copied later from a real app isn't wrongly
+            // suppressed by the dedupe check below.
+            if (appName.Equals(SelfProcessName, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.IsNullOrWhiteSpace(text))
+                    _lastClipboardText = text;
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(text)) return;
 
             // Deduplicate: skip if identical to last captured text
