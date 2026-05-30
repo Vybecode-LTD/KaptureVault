@@ -18,12 +18,19 @@ _Nothing yet._
 Reliability and performance hardening from the post-audit P1 pass. Internal robustness/perf; no change to day-to-day behavior.
 
 ### Changed
-- Database reads now resolve columns by name, so a vault from a different app version can't be misread. (KV-009)
-- The concurrency guard is applied consistently across all database operations. (KV-008)
-- The entry list shows the 1,000 most recent items and reuses shared colors — noticeably less work per refresh on large vaults. (KV-013, partial)
+- **A vault created by a different app version could be misread.** Database reads now
+  match columns by name instead of by position, so a schema or version difference can no
+  longer shift the data.
+- **Database access could clash with a cloud-sync swap.** The guard that blocks reads and
+  writes while the local database is being replaced now applies to every database
+  operation, not just some of them.
+- **Large vaults did extra work on every refresh.** The entry list now shows the 1,000
+  most recent items and reuses shared colors, so refreshing stays fast as the vault grows.
 
 ### Fixed
-- The screenshot annotation editor no longer leaks its image when closed, and **Save As** no longer crashes when the source screenshot is missing. (KV-014, KV-023, KV-018)
+- **The screenshot annotation editor leaked memory and could crash on export.** It now
+  releases the screenshot image when the window closes, and "Save As" no longer crashes
+  when the original screenshot file is missing.
 
 ---
 
