@@ -180,6 +180,7 @@ public class DatabaseService : IDatabaseService
 
     public List<CaptureEntry> GetByApp(string appName)
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT * FROM entries WHERE app_name = @app ORDER BY is_pinned DESC, captured_at DESC";
@@ -241,6 +242,7 @@ public class DatabaseService : IDatabaseService
 
     public void UpdatePin(long id, bool isPinned)
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE entries SET is_pinned = @pinned WHERE id = @id";
@@ -251,6 +253,7 @@ public class DatabaseService : IDatabaseService
 
     public void UpdateExpiry(long id, DateTime? expiresAt)
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE entries SET expires_at = @expires WHERE id = @id";
@@ -271,6 +274,7 @@ public class DatabaseService : IDatabaseService
 
     public int PruneOlderThan(int days, bool excludePinned)
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         var cutoff = DateTime.UtcNow.AddDays(-days).ToString("o");
@@ -284,6 +288,7 @@ public class DatabaseService : IDatabaseService
 
     public List<string> GetDistinctApps()
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT DISTINCT app_name FROM entries ORDER BY app_name";
@@ -296,6 +301,7 @@ public class DatabaseService : IDatabaseService
 
     public (int totalEntries, long totalChars, int distinctApps, int clipboardEntries, int screenshotEntries) GetStats()
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
@@ -314,6 +320,7 @@ public class DatabaseService : IDatabaseService
 
     public void UpdateTags(long id, string tags)
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE entries SET tags = @tags WHERE id = @id";
@@ -324,6 +331,7 @@ public class DatabaseService : IDatabaseService
 
     public List<string> GetDistinctTags()
     {
+        ThrowIfReplacing();
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT DISTINCT tags FROM entries WHERE tags != ''";
@@ -341,6 +349,7 @@ public class DatabaseService : IDatabaseService
     public int EncryptAllEntries()
     {
         if (_encryption?.IsActive != true) return 0;
+        ThrowIfReplacing();
         using var conn = Open();
         using var readCmd = conn.CreateCommand();
         readCmd.CommandText = "SELECT id, content FROM entries WHERE content NOT LIKE 'ENC:%'";
@@ -368,6 +377,7 @@ public class DatabaseService : IDatabaseService
     public int DecryptAllEntries()
     {
         if (_encryption?.IsActive != true) return 0;
+        ThrowIfReplacing();
         using var conn = Open();
         using var readCmd = conn.CreateCommand();
         readCmd.CommandText = "SELECT id, content FROM entries WHERE content LIKE 'ENC:%'";

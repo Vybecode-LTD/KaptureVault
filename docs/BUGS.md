@@ -63,9 +63,10 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Register a native/Desktop OAuth client with **no** secret + loopback PKCE; drop the hard gate, stop bundling the file, remove the fallback constant.
 
 ### KV-008 · `ThrowIfReplacing()` gate applied inconsistently → sync-swap races
-- **Area:** Data · **Status:** OPEN · `Services/DatabaseService.cs:94` (+ ~11 ungated public methods)
-- The gate guards `Insert/GetAll/Delete/PruneExpired/CreateBackupCopy` but is **absent** on `GetByApp/Search/UpdatePin/UpdateExpiry/PruneOlderThan/GetDistinctApps/GetStats/UpdateTags/GetDistinctTags/EncryptAllEntries/DecryptAllEntries`. `_dbGate` is only taken by the replace path. A sync download mid-`UpdatePin`/`Search` can throw or read a half-copied file.
-- **Fix:** Route every public op through a shared `_dbGate.WaitAsync` vs. the exclusive replace path, or call `ThrowIfReplacing()` at the top of all public methods. Partial application is worse than none.
+- **Area:** Data · **Status:** ✅ FIXED (2026-05-30, P1) · `Services/DatabaseService.cs`
+- The gate guarded only some public methods; ~11 (incl. `GetByApp/UpdatePin/GetStats/Encrypt/DecryptAllEntries`) were ungated.
+- **Fix applied:** `ThrowIfReplacing()` is now called at the top of **every** public read/write method, so during a sync replace all ops fail fast with a clear "retry shortly" instead of racing a half-copied file.
+- **Residual (minor, deferred):** the check-then-act window still exists (the `_dbGate` semaphore is held only by the replace path, not by readers). A true reader/writer lock would close it fully; low priority given sync is single-device-recommended (KV-003).
 
 ### KV-009 · Fragile positional/ordinal column mapping in `ReadEntries`
 - **Area:** Data · **Status:** ✅ FIXED (2026-05-30, P1) · `Services/DatabaseService.cs`
