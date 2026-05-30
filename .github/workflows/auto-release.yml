@@ -63,9 +63,19 @@ jobs:
             exit 0
           fi
 
+          # Get upload URL for large files (>32MB)
+          echo "Getting upload URL..."
+          UPLOAD_URL=$(curl -s --request GET \
+            --url https://www.virustotal.com/api/v3/files/upload_url \
+            --header "x-apikey: $VT_KEY" | jq -r '.data // empty')
+
+          if [ -z "$UPLOAD_URL" ]; then
+            UPLOAD_URL="https://www.virustotal.com/api/v3/files"
+          fi
+
           echo "Uploading to VirusTotal..."
           RESPONSE=$(curl -s --request POST \
-            --url https://www.virustotal.com/api/v3/files \
+            --url "$UPLOAD_URL" \
             --header "x-apikey: $VT_KEY" \
             --form "file=@$EXE")
 
