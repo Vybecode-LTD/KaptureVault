@@ -1,12 +1,22 @@
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Media.Imaging;
 
 namespace Kapture.ViewModels;
 
 public partial class MainWindowViewModel
 {
+    // KV-033: shared immutable brushes for the per-row entry-list converters. These
+    // converters run for every realized row; returning cached instances instead of
+    // allocating a new SolidColorBrush per call removes a steady source of GC churn.
+    private static readonly ImmutableSolidColorBrush BrushGreen  = new(Color.Parse("#3FB950"));
+    private static readonly ImmutableSolidColorBrush BrushPurple = new(Color.Parse("#D2A8FF"));
+    private static readonly ImmutableSolidColorBrush BrushBlue   = new(Color.Parse("#58A6FF"));
+    private static readonly ImmutableSolidColorBrush BrushRed    = new(Color.Parse("#F85149"));
+    private static readonly ImmutableSolidColorBrush BrushYellow = new(Color.Parse("#D29922"));
+
     public static readonly IValueConverter PreviewConverter = new PreviewTextConverter();
     public static readonly IValueConverter PinLabelConverter = new PinLabelTextConverter();
     public static readonly IValueConverter RecordingColorConverter = new RecordingColorValueConverter();
@@ -90,9 +100,9 @@ public partial class MainWindowViewModel
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
             => value switch
             {
-                "clipboard"  => new SolidColorBrush(Color.Parse("#D2A8FF")),  // purple
-                "screenshot" => new SolidColorBrush(Color.Parse("#58A6FF")),  // blue
-                _            => new SolidColorBrush(Color.Parse("#3FB950")),  // green
+                "clipboard"  => BrushPurple,
+                "screenshot" => BrushBlue,
+                _            => BrushGreen,
             };
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -115,11 +125,11 @@ public partial class MainWindowViewModel
             if (value is int charCount)
             {
                 double ratio = Math.Min(charCount / 5000.0, 1.0);
-                if (ratio > 0.8) return new SolidColorBrush(Color.Parse("#F85149")); // red
-                if (ratio > 0.5) return new SolidColorBrush(Color.Parse("#D29922")); // yellow
-                return new SolidColorBrush(Color.Parse("#3FB950")); // green
+                if (ratio > 0.8) return BrushRed;
+                if (ratio > 0.5) return BrushYellow;
+                return BrushGreen;
             }
-            return new SolidColorBrush(Color.Parse("#3FB950"));
+            return BrushGreen;
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
