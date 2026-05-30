@@ -11,7 +11,8 @@ namespace Kapture.Services.CloudSync;
 public class GoogleDriveProvider : ICloudStorageProvider
 {
     // Fallback client ID used when no client_secret.json is present.
-    private const string FallbackClientId = "232322018793-nnr80bnf7qjgucrqi25kct7f26hvbhaa.apps.googleusercontent.com";
+    // This is a client ID (public, not a secret) — safe to keep in source.
+    private const string FallbackClientId = "232322018793-15r8pqq88382l8qap6jdtc81bdo111ok.apps.googleusercontent.com";
     private const int RedirectPort = 48721;
     private const string RedirectUri = "http://localhost:48721/";
     private const string Scope = "https://www.googleapis.com/auth/drive.file";
