@@ -1,0 +1,55 @@
+name: Tests
+
+# CI test gate (T-16 / KV-045). Runs the xUnit suite on every code push/PR to main.
+# Doc-only and release-artifact pushes are ignored (the latter is auto-release.yml's job).
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'releases/**'
+      - 'installer/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # net9.0-windows requires a Windows runner.
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore KaptureVault.slnx
+
+      - name: Build (Debug, no restore)
+        run: dotnet build KaptureVault.slnx -c Debug --no-restore
+
+      - name: Test (no build) + coverage
+        run: >
+          dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+
+      - name: Upload test results & coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/test-results.trx
+            **/coverage.cobertura.xml
+          if-no-files-found: ignore
