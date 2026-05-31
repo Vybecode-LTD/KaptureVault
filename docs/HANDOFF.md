@@ -45,7 +45,10 @@ Newest first; everything above `bec5d2b` is this session's work:
 
 | Commit | What |
 |---|---|
-| `b9c99d2` | docs(handoff): this canary rewrite _(HEAD)_ |
+| `ad6f9c2` | docs(claude): session log/health/lessons; chore format QuickPasteWindow _(HEAD at handoff; a final handoff-fix commit sits on top)_ |
+| `e9e953d` | docs: reconcile all managed docs to v1.5.0 |
+| `00e7853` | docs: stage v1.0.5 CHANGELOG `[Unreleased]` |
+| `b9c99d2` | docs(handoff): canary rewrite |
 | `b57b22d` | docs(design): F-02 paid Online Vault full design (`docs/F-02-online-vault-design.md`) |
 | `24cd3f2` | ci: Tests workflow (`.github/workflows/tests.yml`) — T-16 partial |
 | `0351500` | refactor(di): register HotkeyService + MainWindowViewModel in DI (T-10, KV-010) |
@@ -55,7 +58,7 @@ Newest first; everything above `bec5d2b` is this session's work:
 | `c487d66` | chore: remove stray .orig backups; ignore *.orig/*.rej |
 | `bec5d2b` | _(origin/main tip — last pushed; session start)_ |
 
-> **8 commits ahead of `origin/main`, unpushed.** SHAs above are from this session's verified `git log` — if yours differ, trust `git log`, not this table. (An earlier 05-31 attempt reported SHAs that were never real.)
+> **~12 commits ahead of `origin/main`, unpushed** (this handoff-fix commit included). SHAs above are from this session's verified `git log` — **if yours differ, trust `git log`, not this table.** (Earlier 05-31 attempts reported SHAs that were never real — the tooling fabricated output; see ⚠️ above.)
 
 ## ✅ What this session delivered (all test-first, RED→GREEN where code)
 
