@@ -39,3 +39,7 @@ screenshots/
 ## OS
 Thumbs.db
 .DS_Store
+
+# Merge/patch backup artifacts
+*.orig
+*.rej
