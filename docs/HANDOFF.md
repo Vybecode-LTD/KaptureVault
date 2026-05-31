@@ -45,8 +45,9 @@ Newest first; everything above `bec5d2b` is this session's work:
 
 | Commit | What |
 |---|---|
-| `f3d8e21` | docs(design): F-02 paid Online Vault full design (`docs/F-02-online-vault-design.md`) |
-| `ab2c8f9` | ci: Tests workflow (`.github/workflows/tests.yml`) — T-16 partial |
+| `b9c99d2` | docs(handoff): this canary rewrite _(HEAD)_ |
+| `b57b22d` | docs(design): F-02 paid Online Vault full design (`docs/F-02-online-vault-design.md`) |
+| `24cd3f2` | ci: Tests workflow (`.github/workflows/tests.yml`) — T-16 partial |
 | `0351500` | refactor(di): register HotkeyService + MainWindowViewModel in DI (T-10, KV-010) |
 | `60a89ca` | docs: mark KV-012/T-07 + KV-006/T-11 fixed; resequence P1 |
 | `5748f9f` | fix(crypto): PBKDF2 → 600k + persisted KDF params (T-11, KV-006) |
@@ -54,7 +55,7 @@ Newest first; everything above `bec5d2b` is this session's work:
 | `c487d66` | chore: remove stray .orig backups; ignore *.orig/*.rej |
 | `bec5d2b` | _(origin/main tip — last pushed; session start)_ |
 
-> **Note:** an earlier (05-31 pt1) attempt produced different commit SHAs that were never real. The SHAs above are the **authoritative** ones from this session's verified `git log`. If you see different SHAs, trust `git log`, not this table.
+> **8 commits ahead of `origin/main`, unpushed.** SHAs above are from this session's verified `git log` — if yours differ, trust `git log`, not this table. (An earlier 05-31 attempt reported SHAs that were never real.)
 
 ## ✅ What this session delivered (all test-first, RED→GREEN where code)
 

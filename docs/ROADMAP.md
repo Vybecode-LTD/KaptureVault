@@ -1,9 +1,9 @@
 ---
 document: ROADMAP
-version: 1.4.0
+version: 1.5.0
 app-version: 1.0.4
-last-updated: 2026-05-30
-last-audit: 2026-05-30
+last-updated: 2026-05-31
+last-audit: 2026-05-31
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT-LOG.md]
 ---
@@ -19,8 +19,9 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 > **P0 — ✅ complete, shipped in v1.0.3.** T-01 (secrets rotated), T-02 (history purged + verified), T-03/04/05 fixed test-first; T-06 🟡 mitigated.
 >
 > **P1 — in progress (first batch shipped in v1.0.4):**
-> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 in progress (test suite 10 → **34**). Release pipeline now single-creator (`auto-release.yml`).
-> **Remaining P1, recommended order:** **T-09 remainder + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-10** (DI for HotkeyService + ViewModels), **T-12** (secret-less OAuth — closes residual KV-007), then **T-16 + T-08 paired** (shutdown/teardown last, so the lifecycle refactor is verifiable via headless tests). _Resequenced 2026-05-31: T-11 pulled early (clean, self-contained); T-08 moved last to pair with T-16._
+> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite 10 → **47**; CI `dotnet test` job added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
+> **Unreleased on `main` (8 commits ahead of origin), slated for v1.0.5:** T-07, T-11, T-10, T-16-CI. **Pinned decision (2026-05-31):** cut **v1.0.5** with this batch before building F-01.
+> **Remaining P1, recommended order:** **T-16 remainder** (Avalonia.Headless.XUnit smoke + VM filter-selection regression — do first, it makes the next two verifiable), **T-09 + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-08** (KV-011/024 shutdown teardown — pairs with T-16), **T-12** (secret-less OAuth — closes residual KV-007, prereq for F-02). _Resequenced 2026-05-31: T-11 + T-10 pulled early (clean wins); T-08/T-09 moved after T-16 so the lifecycle/UI refactors are verifiable via headless tests._
 
 ---
 
@@ -93,13 +94,13 @@ Two new product directions (added 2026-05-30). **F-01 is the immediate next task
 | T-07 | ✅ done | Move SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task) | KV-012 | M |
 | T-08 | ⬜ | Centralize shutdown/teardown (`ShutdownRequested`/`OnExit`): stop all services, dispose tray + ServiceProvider, run SyncOnClose once | KV-011, KV-010, KV-024 | M |
 | T-09 | 🟡 partial | Make the entry `ListBox` virtualize. **Done:** brush caching + 1000-row cap. **Left:** diff-update `Entries`, debounce, off-UI decrypt | KV-013, KV-032, KV-033 | M |
-| T-10 | ⬜ | Register `HotkeyService` + ViewModels in DI; stop service-locator use in Views | KV-010, KV-015(partial) | M |
+| T-10 | ✅ done | Register `HotkeyService` + `MainWindowViewModel` in DI (`ServiceRegistration.cs`); resolved from container, not `new`ed in `App`. View `App.Services` locator cleanup (KV-015) folded into T-22 | KV-010, KV-015(partial) | M |
 | T-11 | ✅ done | PBKDF2 raised to 600k for new vaults; KDF params persisted in `encryption.json` (legacy vaults default to 100k, still open); re-key + Argon2id deferred (needs KV-021/T-20) | KV-006 | S→M |
 | T-12 | ⬜ | Make desktop OAuth client secret-less (native + loopback PKCE); stop bundling `client_secret.json`; remove `FallbackClientId` | KV-007 | M |
 | T-13 | ✅ done | Apply DB concurrency gate consistently (all public methods) | KV-008 | S |
 | T-14 | ✅ done | Read columns by name (case-insensitive map) in `ReadEntries` | KV-009 | S |
 | T-15 | ✅ done | Dispose annotation-editor base `Bitmap` (`OnClosed`) + `using` the `RenderTargetBitmap` + SaveAs guard | KV-014, KV-023, KV-018 | XS |
-| T-16 | 🟡 in progress | Test suite (10 → 30 tests). **Left:** Avalonia headless smoke tests, VM filter regression, CI test job, `dotnet format`/vuln-scan in loop | KV-045 | M |
+| T-16 | 🟡 partial | Test suite (10 → **47** tests); **CI `dotnet test` job added** (`tests.yml`, push/PR to main). **Left:** Avalonia headless smoke tests, VM filter-selection regression, `dotnet format`/vuln-scan in loop | KV-045 | M |
 
 ## P2 — Medium (correctness, hardening, MVVM hygiene)
 

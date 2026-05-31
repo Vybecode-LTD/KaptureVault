@@ -1,9 +1,9 @@
 ---
 document: BUGS
-version: 1.4.0
+version: 1.5.0
 app-version: 1.0.4
-last-updated: 2026-05-30
-last-audit: 2026-05-30
+last-updated: 2026-05-31
+last-audit: 2026-05-31
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT-LOG.md]
 ---
@@ -12,12 +12,12 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 
 > Source: full multi-agent codebase audit on **2026-05-30** (architecture, data/security, performance, testing, correctness). 45 issues. See `AUDIT-LOG.md` for methodology and `ROADMAP.md` for the prioritized fix order.
 >
-> **Remediation progress (2026-05-30):**
+> **Remediation progress (2026-05-31):**
 > - **P0 (shipped v1.0.3):** ✅ KV-001 (secrets rotated + history purged, verified), KV-005/034, KV-002, KV-004. 🟡 KV-003 mitigated.
 > - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
-> - **Tests:** 10 → **34** passing (KV-045 in progress).
-> - **P1 (unreleased on `main`, 2026-05-31):** ✅ KV-012 (hook-thread DB writes → writer task; T-07, commit e5977dd), ✅ KV-006 (PBKDF2 600k + stored KDF params; T-11, commit 5748f9f).
-> - **Next:** KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033, KV-010/015 (DI), KV-007/T-12 (secret-less OAuth).
+> - **P1 (unreleased on `main`, 2026-05-31 → slated for v1.0.5):** ✅ KV-012 (hook-thread DB writes → writer task; T-07, `e5977dd`), ✅ KV-006 (PBKDF2 600k + stored KDF params; T-11, `5748f9f`), ✅ KV-010 (HotkeyService + MainWindowViewModel in DI; T-10, `0351500`). 🟡 KV-045 (CI `dotnet test` job added, `24cd3f2`; headless + VM-filter regression tests still pending).
+> - **Tests:** 10 → **47** passing.
+> - **Next:** KV-013 remainder + KV-032/033 (T-09), KV-011/024 (shutdown teardown, T-08), KV-007 (secret-less OAuth, T-12); KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 

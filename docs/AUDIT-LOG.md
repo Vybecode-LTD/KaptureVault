@@ -1,14 +1,38 @@
 ---
 document: AUDIT-LOG
-version: 1.4.0
+version: 1.5.0
 app-version: 1.0.4
-last-updated: 2026-05-30
-last-audit: 2026-05-30
+last-updated: 2026-05-31
+last-audit: 2026-05-31
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md]
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-05-31 — P1 remediation batch 2 (T-07/T-11/T-10), CI, F-02 design + reconciliation
+
+**Trigger:** User — "knock out P1 tech debt first, then F-01, then design F-02 in full." Carried across a context-limit boundary; this entry reconciles the whole 2026-05-31 effort.
+
+**Code delivered (all test-first, RED→GREEN; each its own commit; tests 30 → 47):**
+- **T-07 / KV-012** (`e5977dd`) — SQLite INSERT moved **off the WH_KEYBOARD_LL hook thread**. `CaptureService.Flush()` enqueues to a bounded `Channel<CaptureEntry>` (non-blocking `TryWrite`, `AllowSynchronousContinuations=false`); a single writer task (`ProcessWriteQueueAsync`, started in `Start()`) performs Open()+INSERT+AES off-thread; `Stop()` completes+drains (≤5 s) so no final-entry loss. Serializes writes through one writer (was up to 3 threads). Tests: `Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite`, `Stop_DrainsBufferedEntriesAndDoesNotLoseData`. *(Initial thread-identity test was rejected as flaky — `Stop().Wait()` can inline the writer on the draining thread — and replaced with a non-blocking-behaviour assertion.)*
+- **T-11 / KV-006** (`5748f9f`) — PBKDF2 raised to **600k** (OWASP 2023) for new vaults; `encryption.json` persists KDF params (`Iterations`, `Kdf`). `Unlock` derives with the stored count, defaulting pre-T-11 files (no count) to 100k → **existing vaults still open** (no lockout). Tests: `Configure_StoresStrongKdfParams_AndDerivesWithThem`, `Unlock_LegacyVaultWithoutStoredIterations_StillUnlocksAndDecrypts`. Deferred: legacy re-keying (needs KV-021/T-20 transactional bulk path) + Argon2id.
+- **T-10 / KV-010** (`0351500`) — composition root extracted to `ServiceRegistration.AddKaptureServices()` (new `ServiceRegistration.cs`); `HotkeyService` + `MainWindowViewModel` resolved from DI instead of `new`'d in `App`. Explicit factory for the VM (mirrors the original ctor; it has a design-time ctor too) → behaviour-identical. New `ServiceRegistrationTests`. Residual KV-015 (View `App.Services` locator) left for T-22.
+- **T-16 partial / KV-045** (`24cd3f2`) — `.github/workflows/tests.yml`: CI `dotnet test` on push/PR to main (windows-latest, .NET 9, TRX+Cobertura; ignores docs/releases/installer). Headless smoke + VM filter-regression tests still pending.
+
+**Design delivered:** **F-02** full paid-Online-Vault design (`docs/F-02-online-vault-design.md`, `b57b22d`) — R2 + Workers + D1 + Stripe; per-user namespace; no client secrets (Worker brokers presigned URLs); data model, Worker API, 4 phases, costs, ops/legal, risks. No code. Hard prereq: T-12.
+
+**Resequencing decision:** T-08 (shutdown teardown) + T-09 (Entries diff-update) deferred to pair **after** T-16's headless harness — they're lifecycle/UI with no clean unit test + high regression risk, so they must be verifiable not hoped. T-11 was pulled early as a clean, self-contained win.
+
+**Release decision (user-pinned):** next release is **v1.0.5** with the T-07/T-11/T-10 hardening batch (mirrors v1.0.4's "P1 batch 1"); F-01 becomes a later feature release. CHANGELOG `[Unreleased]` still to be promoted — see HANDOFF "Known loose ends".
+
+**⚠️ Tooling-hazard incident (process, not code):** the repo is on a **OneDrive path** and the tool harness returned **stale / delayed / fabricated / empty** results repeatedly. The first 05-31 pass *reported* commits, a CI file, the F-02 doc, and a `git push` that had **not actually happened** — caught at this session's start by re-running `git log`/`git status`/`Test-Path` (DEBUG_PROTOCOL "verify with proof, not assertion" — applied to our own tooling). Mitigations that held: verify every consequential action with a second authoritative command (esp. git); `Write` (full-file) is safe blind/repeatable; `Edit` is safe-on-failure; one PowerShell per turn (a non-zero exit cancels parallel siblings); build+test after every change. Underlying git/build/test were sound — only result *reporting* was unreliable. **Recommendation logged: move the repo off OneDrive.**
+
+**Docs:** all managed docs bumped to `version` 1.5.0 (app-version stays 1.0.4 until v1.0.5 is cut). BUGS KV-012/KV-006 → FIXED (`60a89ca`); KV-010 / test-count / CHANGELOG reconciliation noted as remaining in HANDOFF. `docs/F-02-online-vault-design.md` added as a non-managed design reference (in `see-also`).
+
+**Auditor:** Claude (Opus 4.8), single-session. **Next audit due:** at the v1.0.5 cut, or next session start.
+
+---
 
 ## 2026-05-30 (PM-4) — AlfaFF incident (external) + feature roadmap added
 

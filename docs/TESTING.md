@@ -1,9 +1,9 @@
 ---
 document: TESTING
-version: 1.4.0
+version: 1.5.0
 app-version: 1.0.4
-last-updated: 2026-05-30
-last-audit: 2026-05-30
+last-updated: 2026-05-31
+last-audit: 2026-05-31
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TESTING_PROCEDURES.md]
 ---
