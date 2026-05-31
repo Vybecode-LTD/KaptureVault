@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.3.0
+version: 1.4.0
 app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
@@ -9,6 +9,20 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-05-30 (PM-4) — AlfaFF incident (external) + feature roadmap added
+
+**Trigger:** User reported a "fail-closed network-capture filter" in KaptureVault taking the machine offline; then two new feature requests.
+
+**AlfaFF incident — investigated, root-caused, NOT KaptureVault:**
+- Per DEBUG_PROTOCOL, verified the hypothesis against code before changing anything. Searched the entire `Utilities` tree (KaptureVault + the original full Kapture + scaffolding) for `AlfaFF`/WFP/`Fwpm`/`DeviceIoControl`/`.sys`/`fltmc`/driver/packet/TLS-intercept → **zero matches**. KaptureVault's only capture surface is `KeyboardHookService`/`ClipboardMonitorService`/`ScreenshotService` (user-mode); manifest is `asInvoker` (cannot load a boot-start kernel driver); installer ships no driver/SDK. **No code path exists** for KaptureVault to program AlfaFF. Refused to fabricate a fix.
+- Read-only machine investigation identified the real owner: **"Monitoring Software" by PCM** (paycomputermonitoring.com, v3.00.0018, installed 2026-05-14), a commercial surveillance product that bundles `AlfaFF.sys`/`.dll` + `instaff.exe` + `PCMFilterService`/`PCMActivityService` in a disguised path (`…\Common Files\Microsoft Shared\IC\bin\`). User resolved it (reboot; AlfaFF already `Start=Disabled`). **No KaptureVault change.**
+
+**Feature roadmap added** (see `ROADMAP.md → 🚀 FEATURE ROADMAP`): **F-01** export vault DB to local disk (free tier, small); **F-02** paid "Online Vault" epic — accounts + Cloudflare R2 + file hosting + share links, $49/yr. Settled decisions: per-user namespace (not bucket-per-user); one feature-gated app (not two versions); no storage/Stripe secrets in the client (backend brokers presigned URLs — makes T-12 a prerequisite). Stack: R2 + Workers + D1 + Stripe + existing Google sign-in. Not started.
+
+**Docs:** bumped to `version` 1.4.0; HANDOFF re-prioritized to lead with F-01/F-02.
+
+---
 
 ## 2026-05-30 (PM-3) — release pipeline split + v1.0.4
 

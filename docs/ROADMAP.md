@@ -1,6 +1,6 @@
 ---
 document: ROADMAP
-version: 1.3.0
+version: 1.4.0
 app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
@@ -10,8 +10,9 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 
 # ROADMAP.md — KaptureVault
 
-> Prioritized remediation plan from the 2026-05-30 audit. Issue IDs reference `BUGS.md`.
-> Ordering = risk × user-impact × effort. **Do P0 before shipping any further releases.**
+> Two tracks: a **Feature Roadmap** (new product work — the current focus) and the
+> **audit-remediation backlog** (P0 done; P1–P3 tech debt). Issue IDs reference `BUGS.md`;
+> feature IDs are `F-NN`. Ordering = risk × user-impact × effort.
 
 ---
 
@@ -20,6 +21,44 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 > **P1 — in progress (first batch shipped in v1.0.4):**
 > ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 in progress (test suite 10 → **30**). Release pipeline now single-creator (`auto-release.yml`).
 > **Remaining P1, recommended order:** **T-07** (DB writes off the hook thread — top risk), **T-08** (centralized shutdown/teardown), **T-09 remainder + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-12** (secret-less OAuth — closes residual KV-007), **T-11** (PBKDF2/Argon2id), **T-10** (DI for HotkeyService + ViewModels), then continue **T-16**.
+
+---
+
+# 🚀 FEATURE ROADMAP (product — CURRENT FOCUS)
+
+Two new product directions (added 2026-05-30). **F-01 is the immediate next task**; F-02 is a larger, phased initiative. Full feasibility/architecture discussion is recorded in `AUDIT-LOG.md` (2026-05-30 PM-4).
+
+## F-01 · Export vault DB to local disk  *(free tier · ~hours · START HERE)*
+
+**Goal:** let users save a copy of their vault to a file they choose — not only sync to Google Drive.
+- Settings → **"Export Vault Database…"** button → `IStorageProvider.SaveFilePickerAsync` (`.db`) → `DatabaseService.CreateBackupCopy(path)` — **already exists** (`VACUUM INTO`, WAL-safe).
+- If encryption is on, the export is the encrypted SQLite (valid backup; restoring needs the password) — label it so.
+- **Test-first:** in-memory DB → insert rows → `CreateBackupCopy(temp)` → open the copy → assert rows present. Small, self-contained, ships in the free tier.
+
+## F-02 · Paid "Online Vault" — accounts + R2 storage + file hosting  *(epic · multi-week · new backend repo)*
+
+**Goal:** a paid tier (**$49/yr**) where registered users get cloud storage for their vault **and** can upload files (**< 250 MB**), get **share links**, and see bucket items in the vault.
+
+**Three load-bearing decisions (settled in discussion):**
+1. **Per-user *namespace* in ONE shared bucket** (`users/{uid}/…`) — not a bucket-per-user (buckets are account-capped).
+2. **One feature-gated app**, not two versions — free = offline + DB export; paid features unlock on login with an active subscription. One codebase.
+3. **🔒 No storage/Stripe secrets in the desktop client, ever** — a backend brokers short-lived **presigned URLs**. (Same lesson as the KV-001 OAuth leak, higher stakes; makes **T-12** a hard prerequisite and leans on the VERSION_CONTROL secret discipline.)
+
+**Recommended stack:** Cloudflare **R2** (no egress fees — ideal for share links) + **Workers** (backend API) + **D1** (user/file/share metadata) + **Stripe** (subscription); reuse the existing **Google sign-in** for identity. An `R2StorageProvider : ICloudStorageProvider` slots next to `GoogleDriveProvider` for DB sync.
+
+**Phases:**
+| # | Phase | Where |
+|---|-------|-------|
+| 1 | Backend foundation — Worker API + R2 + D1 + Stripe + auth (verify subscription → issue presigned URLs scoped to `users/{uid}/`) | **new backend repo** |
+| 2 | Client online vault — `R2StorageProvider` (DB-sync alt to Drive) + login UI + subscription gate | KaptureVault |
+| 3 | Client file hosting — upload (presigned PUT, 250 MB cap enforced client + server) + file list + share links + files-in-vault | KaptureVault |
+| 4 | Ops — quotas, billing portal, deletion, abuse/DMCA handling | both |
+
+**Reality check:** this turns KaptureVault into a hosted product — a new backend repo, recurring infra cost (R2 cheap + no egress; Workers/D1 ~free at small scale; Stripe ~2.9% + 30¢), and a real operational/legal surface (ToS/privacy updates, share-link abuse/DMCA, data deletion, account management). The economics work; the commitment is the ops surface. **Not yet started** — the fresh session decides whether to design F-02 in full or scaffold Phase 1 after shipping F-01.
+
+---
+
+# 🔧 AUDIT-REMEDIATION BACKLOG
 
 ## P0 — Critical / ✅ COMPLETE (shipped v1.0.3)
 

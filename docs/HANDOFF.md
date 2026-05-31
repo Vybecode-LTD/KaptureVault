@@ -1,6 +1,6 @@
 ---
 document: HANDOFF
-version: 1.3.0
+version: 1.4.0
 app-version: 1.0.4
 last-updated: 2026-05-30
 last-audit: 2026-05-30
@@ -15,7 +15,7 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 ## ▶ Start here (fresh session)
 1. Read `CLAUDE.md` (esp. the **STANDING DIRECTIVES** section: testing / debugging / documentation / release) and this file.
 2. Establish a green baseline: `dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj` → expect **30 passing**.
-3. Pick up at **P1 / T-07** (see priorities below). Work **test-first** (RED→GREEN). End the session with a handoff.
+3. **Build the new features (current focus):** start with **F-01 — Export vault DB to local disk** (quick win, test-first), then decide on **F-02 — paid Online Vault** (design-in-full or scaffold Phase 1 backend). See `ROADMAP.md → 🚀 FEATURE ROADMAP`. The P1 remediation backlog continues in parallel/after. Work **test-first** (RED→GREEN); end with a handoff.
 
 ## TL;DR
 
@@ -31,7 +31,8 @@ A full audit landed 2026-05-30 (45 issues). **All P0 fixed + shipped in v1.0.3**
 - **Release (3-stage, single creator):** `scripts/Invoke-Release.ps1` builds/packages/version-bumps/commits-CHANGELOG/**pushes** (it no longer creates the release). The pushed `releases/latest/*.exe` triggers `.github/workflows/auto-release.yml`, which VirusTotal-scans and **creates the GitHub Release** (~30 s). The `kapture.tools` site reads the latest release + `CHANGELOG.md` live from GitHub (`download.js`/`changelog.js`) — nothing pushed to it. **Do not re-add `gh release create` to the script** (it would race the workflow). Stable URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
 - **Security:** all OAuth secrets rotated; `Utilities` history purged + verified clean. New creds in gitignored `client_secret.json` / `kaptureweb_clientsecret.json` + `%LOCALAPPDATA%`. Desktop client ID `…15r8pqq8…`. **Residual:** the new secret is still bundled in the installer → close via T-12 before wide release.
 - **Mobile viewer:** static web app `docs/vault/` (→ `kapture.tools/vault`). Needs the web client ID `…70gd1j2j…` pasted into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
-- **Docs:** all managed docs reconciled at shared `version` 1.2.0 (app 1.0.3), cross-linked via `see-also`.
+- **Docs:** all managed docs reconciled at shared `version` 1.4.0 (app 1.0.4), cross-linked via `see-also`.
+- **Resolved incident (not a KaptureVault bug):** a report blamed KaptureVault for an `AlfaFF.sys` network filter taking the machine offline (browser TLS dropped). **Verified false** — KaptureVault has *zero* network/WFP/driver code (it only hooks keyboard/clipboard/screenshot, runs `asInvoker`). Root cause was a **third-party surveillance product** ("Monitoring Software" by PCM, paycomputermonitoring.com) that bundles AlfaFF. No KaptureVault change. Detail in `AUDIT-LOG.md` (PM-4). *If a "network capture filter" request resurfaces — it isn't ours.*
 
 ## What shipped / done recently
 
@@ -39,13 +40,19 @@ A full audit landed 2026-05-30 (45 issues). **All P0 fixed + shipped in v1.0.3**
 - **v1.0.3 (P0 + security):** self-exclusion (KV-005/034), decrypt-integrity (KV-002), encrypted-search (KV-004), pre-sync backup retention (KV-003), test harness, **OAuth rotation + history purge** (KV-001).
 - **v1.0.1–1.0.2:** Capture Admin Apps, About dialog, screenshot save-as-image + annotation editor, BMP installer icon, `kapture.tools` wiring, release automation, sidebar filter fix, mobile vault viewer, full audit + `docs/` set.
 
-## ⚠️ Top priorities for the next session — remaining P1 (from `ROADMAP.md`)
+## ⚠️ Top priorities for the next session — FEATURES (from `ROADMAP.md → 🚀 FEATURE ROADMAP`)
 
-1. **T-07 / KV-012** — move the SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task). **Biggest latency risk** (input stutter / hook eviction) and the riskiest change (rewires `CaptureService` threading + its tests) — give it focused attention.
-2. **T-08 / KV-011, KV-010, KV-024** — centralize shutdown/teardown (`ShutdownRequested`/`OnExit`): stop all services, dispose tray + `HotkeyService` + `ServiceProvider`, run SyncOnClose once. Today only the tray-Quit path cleans up.
-3. **T-09 remainder / KV-013, KV-032, KV-033** — diff-update `Entries` (apply the sidebar pattern, preserve order + selection), debounce `Refresh()`, move whole-table decrypt off the UI thread. (Brush caching + 1000-row cap already done.)
-4. **T-12 / KV-007, KV-006** — secret-less desktop OAuth (native + loopback PKCE), stop bundling `client_secret.json`; bump PBKDF2 ≥600k / plan Argon2id (store KDF params in `encryption.json` so existing vaults still unlock). **Do before wide distribution.**
-5. **T-16 / KV-045** — Avalonia headless smoke tests, the **VM filter regression** test, CI test job, wire `dotnet format` + vulnerable-scan into the loop.
+The user's stated next focus is the two new features. Lead with these:
+
+1. **F-01 — Export vault DB to local disk** *(free tier, ~hours, START HERE).* Settings button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy(path)` (already exists, `VACUUM INTO`). Test-first. Quick win for momentum.
+2. **F-02 — Paid "Online Vault" (accounts + Cloudflare R2 + file hosting, $49/yr)** *(epic).* Decide first: **design F-02 in full**, or **scaffold Phase 1 backend** (new repo: Worker + R2 + D1 + Stripe + auth). Three non-negotiables: per-user *namespace* (not bucket-per-user); one feature-gated app (not two versions); **no storage/Stripe secrets in the client** — backend brokers presigned URLs (this makes **T-12** a prerequisite). Full breakdown + phases in `ROADMAP.md`.
+
+### Also outstanding — audit-remediation backlog (tech debt; do alongside/after features, *before wide distribution*)
+- **T-07 / KV-012** — move the SQLite INSERT off the keyboard-hook thread (top latency risk; riskiest change).
+- **T-08 / KV-011/010/024** — centralize shutdown/teardown (dispose tray + HotkeyService + ServiceProvider; SyncOnClose once).
+- **T-09 remainder / KV-013/032/033** — diff-update `Entries`, debounce `Refresh()`, decrypt off the UI thread.
+- **T-12 / KV-007/006** — secret-less OAuth + stop bundling `client_secret.json`; PBKDF2≥600k/Argon2id. **Prerequisite for F-02's backend security model.**
+- **T-16 / KV-045** — headless smoke tests, VM filter regression test, CI test job.
 
 When ready, **"release it"** to cut v1.0.4 with the P1 work.
 
