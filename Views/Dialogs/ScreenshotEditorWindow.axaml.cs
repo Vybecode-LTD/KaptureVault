@@ -200,87 +200,87 @@ public partial class ScreenshotEditorWindow : Window
         switch (_tool)
         {
             case AnnotationTool.Pen:
-            {
-                _penPoints.Clear();
-                _penPoints.Add(pos);
-                _activePenPath = new Avalonia.Controls.Shapes.Path
                 {
-                    Stroke = _currentBrush,
-                    StrokeThickness = _strokeThickness,
-                    StrokeLineCap = PenLineCap.Round,
-                    StrokeJoin = PenLineJoin.Round,
-                    IsHitTestVisible = false,
-                    Data = BuildPenGeometry(),
-                };
-                AnnotationCanvas.Children.Add(_activePenPath);
-                break;
-            }
+                    _penPoints.Clear();
+                    _penPoints.Add(pos);
+                    _activePenPath = new Avalonia.Controls.Shapes.Path
+                    {
+                        Stroke = _currentBrush,
+                        StrokeThickness = _strokeThickness,
+                        StrokeLineCap = PenLineCap.Round,
+                        StrokeJoin = PenLineJoin.Round,
+                        IsHitTestVisible = false,
+                        Data = BuildPenGeometry(),
+                    };
+                    AnnotationCanvas.Children.Add(_activePenPath);
+                    break;
+                }
             case AnnotationTool.Rectangle:
-            {
-                var rect = new Avalonia.Controls.Shapes.Rectangle
                 {
-                    Stroke = _currentBrush,
-                    Fill = Brushes.Transparent,
-                    StrokeThickness = _strokeThickness,
-                    Width = 0,
-                    Height = 0,
-                    IsHitTestVisible = false
-                };
-                Canvas.SetLeft(rect, pos.X);
-                Canvas.SetTop(rect, pos.Y);
-                AnnotationCanvas.Children.Add(rect);
-                _previewShape = rect;
-                break;
-            }
+                    var rect = new Avalonia.Controls.Shapes.Rectangle
+                    {
+                        Stroke = _currentBrush,
+                        Fill = Brushes.Transparent,
+                        StrokeThickness = _strokeThickness,
+                        Width = 0,
+                        Height = 0,
+                        IsHitTestVisible = false
+                    };
+                    Canvas.SetLeft(rect, pos.X);
+                    Canvas.SetTop(rect, pos.Y);
+                    AnnotationCanvas.Children.Add(rect);
+                    _previewShape = rect;
+                    break;
+                }
             case AnnotationTool.Ellipse:
-            {
-                var ellipse = new Avalonia.Controls.Shapes.Ellipse
                 {
-                    Stroke = _currentBrush,
-                    Fill = Brushes.Transparent,
-                    StrokeThickness = _strokeThickness,
-                    Width = 0,
-                    Height = 0,
-                    IsHitTestVisible = false
-                };
-                Canvas.SetLeft(ellipse, pos.X);
-                Canvas.SetTop(ellipse, pos.Y);
-                AnnotationCanvas.Children.Add(ellipse);
-                _previewShape = ellipse;
-                break;
-            }
+                    var ellipse = new Avalonia.Controls.Shapes.Ellipse
+                    {
+                        Stroke = _currentBrush,
+                        Fill = Brushes.Transparent,
+                        StrokeThickness = _strokeThickness,
+                        Width = 0,
+                        Height = 0,
+                        IsHitTestVisible = false
+                    };
+                    Canvas.SetLeft(ellipse, pos.X);
+                    Canvas.SetTop(ellipse, pos.Y);
+                    AnnotationCanvas.Children.Add(ellipse);
+                    _previewShape = ellipse;
+                    break;
+                }
             case AnnotationTool.Arrow:
-            {
-                var arrow = BuildArrowPath(_dragStart, pos);
-                AnnotationCanvas.Children.Add(arrow);
-                _previewShape = arrow;
-                break;
-            }
-            case AnnotationTool.Highlight:
-            {
-                var r = _currentColor.R;
-                var g = _currentColor.G;
-                var b = _currentColor.B;
-                var highlight = new Avalonia.Controls.Shapes.Rectangle
                 {
-                    Stroke = Brushes.Transparent,
-                    Fill = new SolidColorBrush(Color.FromArgb(70, r, g, b)),
-                    Width = 0,
-                    Height = 0,
-                    IsHitTestVisible = false
-                };
-                Canvas.SetLeft(highlight, pos.X);
-                Canvas.SetTop(highlight, pos.Y);
-                AnnotationCanvas.Children.Add(highlight);
-                _previewShape = highlight;
-                break;
-            }
+                    var arrow = BuildArrowPath(_dragStart, pos);
+                    AnnotationCanvas.Children.Add(arrow);
+                    _previewShape = arrow;
+                    break;
+                }
+            case AnnotationTool.Highlight:
+                {
+                    var r = _currentColor.R;
+                    var g = _currentColor.G;
+                    var b = _currentColor.B;
+                    var highlight = new Avalonia.Controls.Shapes.Rectangle
+                    {
+                        Stroke = Brushes.Transparent,
+                        Fill = new SolidColorBrush(Color.FromArgb(70, r, g, b)),
+                        Width = 0,
+                        Height = 0,
+                        IsHitTestVisible = false
+                    };
+                    Canvas.SetLeft(highlight, pos.X);
+                    Canvas.SetTop(highlight, pos.Y);
+                    AnnotationCanvas.Children.Add(highlight);
+                    _previewShape = highlight;
+                    break;
+                }
             case AnnotationTool.Text:
-            {
-                PlaceTextBox(pos);
-                _isDrawing = false;
-                break;
-            }
+                {
+                    PlaceTextBox(pos);
+                    _isDrawing = false;
+                    break;
+                }
         }
     }
 
@@ -304,27 +304,27 @@ public partial class ScreenshotEditorWindow : Window
             case AnnotationTool.Rectangle:
             case AnnotationTool.Ellipse:
             case AnnotationTool.Highlight:
-            {
-                if (_previewShape == null) break;
-                var x = Math.Min(_dragStart.X, pos.X);
-                var y = Math.Min(_dragStart.Y, pos.Y);
-                var w = Math.Abs(pos.X - _dragStart.X);
-                var h = Math.Abs(pos.Y - _dragStart.Y);
-                Canvas.SetLeft(_previewShape, x);
-                Canvas.SetTop(_previewShape, y);
-                _previewShape.Width = w;
-                _previewShape.Height = h;
-                break;
-            }
+                {
+                    if (_previewShape == null) break;
+                    var x = Math.Min(_dragStart.X, pos.X);
+                    var y = Math.Min(_dragStart.Y, pos.Y);
+                    var w = Math.Abs(pos.X - _dragStart.X);
+                    var h = Math.Abs(pos.Y - _dragStart.Y);
+                    Canvas.SetLeft(_previewShape, x);
+                    Canvas.SetTop(_previewShape, y);
+                    _previewShape.Width = w;
+                    _previewShape.Height = h;
+                    break;
+                }
 
             case AnnotationTool.Arrow:
-            {
-                if (_previewShape != null)
-                    AnnotationCanvas.Children.Remove(_previewShape);
-                _previewShape = BuildArrowPath(_dragStart, pos);
-                AnnotationCanvas.Children.Add(_previewShape);
-                break;
-            }
+                {
+                    if (_previewShape != null)
+                        AnnotationCanvas.Children.Remove(_previewShape);
+                    _previewShape = BuildArrowPath(_dragStart, pos);
+                    AnnotationCanvas.Children.Add(_previewShape);
+                    break;
+                }
         }
     }
 

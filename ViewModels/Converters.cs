@@ -11,10 +11,10 @@ public partial class MainWindowViewModel
     // KV-033: shared immutable brushes for the per-row entry-list converters. These
     // converters run for every realized row; returning cached instances instead of
     // allocating a new SolidColorBrush per call removes a steady source of GC churn.
-    private static readonly ImmutableSolidColorBrush BrushGreen  = new(Color.Parse("#3FB950"));
+    private static readonly ImmutableSolidColorBrush BrushGreen = new(Color.Parse("#3FB950"));
     private static readonly ImmutableSolidColorBrush BrushPurple = new(Color.Parse("#D2A8FF"));
-    private static readonly ImmutableSolidColorBrush BrushBlue   = new(Color.Parse("#58A6FF"));
-    private static readonly ImmutableSolidColorBrush BrushRed    = new(Color.Parse("#F85149"));
+    private static readonly ImmutableSolidColorBrush BrushBlue = new(Color.Parse("#58A6FF"));
+    private static readonly ImmutableSolidColorBrush BrushRed = new(Color.Parse("#F85149"));
     private static readonly ImmutableSolidColorBrush BrushYellow = new(Color.Parse("#D29922"));
 
     public static readonly IValueConverter PreviewConverter = new PreviewTextConverter();
@@ -100,9 +100,9 @@ public partial class MainWindowViewModel
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
             => value switch
             {
-                "clipboard"  => BrushPurple,
+                "clipboard" => BrushPurple,
                 "screenshot" => BrushBlue,
-                _            => BrushGreen,
+                _ => BrushGreen,
             };
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
