@@ -1,7 +1,7 @@
 ---
 document: AUDIT-LOG
-version: 1.5.0
-app-version: 1.0.4
+version: 1.6.0
+app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
 managed-by: manual-reconciliation
@@ -9,6 +9,29 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-05-31 (PM) — v1.0.5 release, format-debt closure + CI hardening, KV-007 decision, doc reconciliation
+
+**Trigger:** User — "read & give a rundown." That established a verified baseline, then drove the rest of the session: cut **v1.0.5**, close the open `dotnet format` debt and the **KV-007/T-12** question, and re-reconcile every managed doc. This is a *later same-day event* than the P1-batch-2 entry below (which staged v1.0.5 but did not cut it).
+
+**Baseline re-verified first (proof, not assertion):** `git ls-remote` (HEAD `d92952d` = `origin/main`), `git status` (tree clean), `dotnet build` Debug+Release (0 warnings / 0 errors), `dotnet test` (**47 passed / 0 failed / 0 skipped**), `dotnet list package --vulnerable` (none). Only after that did any change proceed.
+
+**v1.0.5 cut (single-creator pipeline held):** `scripts/Invoke-Release.ps1` built/packaged/bumped/committed-CHANGELOG/**pushed**; `.github/workflows/auto-release.yml` (the **single** release creator, `github-actions[bot]`) then VirusTotal-scanned the installer and created the **GitHub Release**. Tag **`v1.0.5` = commit `ffc3c9d`**. `CHANGELOG.md` has the `[1.0.5] — 2026-05-31` section. **v1.0.5 = P1 hardening batch 2:** T-07/KV-012 (SQLite INSERT moved off the WH_KEYBOARD_LL hook thread → bounded `Channel<CaptureEntry>` + single writer task; `Stop()` drains), T-11/KV-006 (PBKDF2 → 600k + persisted KDF params; legacy vaults default to 100k and still open), T-10/KV-010 (`HotkeyService` + `MainWindowViewModel` resolved from DI via `ServiceRegistration.AddKaptureServices()`).
+
+**Corrected doc/tooling drift (DEBUG_PROTOCOL "proof, not assertion" — applied to our own docs & tooling):** prior docs carried two false claims, both OneDrive fabrication-hazard artifacts caught by re-running authoritative commands:
+- **"~11–12 commits unpushed"** — FALSE. `git ls-remote` showed HEAD already on `origin/main`; nothing was unpushed. The earlier "push didn't happen" was a stale/fabricated harness result, not reality.
+- **"format-clean"** — FALSE. `dotnet format --verify-no-changes` failed with ~130 pre-existing whitespace violations. The repo was *not* clean.
+Both were corrected at the point of discovery rather than carried forward — the same "verify with verbatim command output, never trust a prior summary" discipline we apply to code, turned on our own documentation and tooling.
+
+**Format-debt closure + CI hardening (completes the format/vuln half of T-16/KV-045):** the ~130 whitespace failures were fixed across two commits — app **`51dc9fd`** + test project **`12b7122`** — and the whole solution now verifies clean. The gates are now **CI-enforced**: `.github/workflows/tests.yml` (commit **`d92952d`**) runs, on every push/PR to `main` (windows-latest, .NET 9), `dotnet build` → `dotnet format --verify-no-changes` → `dotnet list package --vulnerable --include-transitive` → `dotnet test` (TRX + Cobertura). **VERIFIED GREEN on GitHub** — Actions run **26725669973**, all steps ✓, 2m6s. Remaining T-16 work: `Avalonia.Headless.XUnit` UI smoke + a `MainWindowViewModel` filter-selection regression test.
+
+**KV-007 / T-12 decision (user) — DEFER secret-less OAuth to F-02 Phase 1 (backend broker):** investigated `GoogleDriveProvider` (it *hard-requires* `_clientSecret` — `AuthenticateAsync` refuses without it, and it's sent in the token exchange) and confirmed via Google's docs that the desktop token endpoint still expects `client_secret`. Conclusion: a purely client-side secret-less fix isn't safely confirmable, so the correct fix is the **F-02 backend** brokering the OAuth code/refresh exchange — the client then holds only the public client ID + PKCE and **no secret**. The v1.0.5 installer still bundles `client_secret.json` meanwhile (a Google-"non-confidential", PKCE-protected desktop credential); **distribution should not widen on that assumption.** T-12 is no longer a standalone pre-distribution P1 — it is folded into F-02 Phase 1.
+
+**Documentation reconciliation (this pass):** all managed docs bumped to shared **`version` 1.6.0** and **`app-version` 1.0.5** (was 1.5.0 / 1.0.4; CLAUDE.md had lagged at 1.4.0 and was brought to 1.6.0). Reconciled to ground truth across CLAUDE.md, CHANGELOG.md, ROADMAP.md, BUGS.md, TESTING.md, HANDOFF.md: v1.0.5 marked **shipped** (not staged); test count **47** everywhere (no stale "30"); KV-012/KV-006 ✅ FIXED-in-v1.0.5 and KV-010 🟡 partial (DI done, disposal still needs T-08); KV-007/T-12 uniformly **deferred-to-F-02**; T-16 shown as format/vuln-CI-done with headless + VM-filter regression remaining; CHANGELOG has the `[1.0.5]` entry + tag link. Cross-document checks: frontmatter versions uniform (CHANGELOG has none by design); ROADMAP↔code, BUGS↔code, TESTING↔suite (7 suites / 47 tests), CLAUDE↔reality, HANDOFF↔state all consistent; cross-links resolve (`tests.yml` and `docs/F-02-online-vault-design.md` both verified present on disk). No CRITICAL/HIGH reconciliation failures; no drift left needing manual review.
+
+**Auditor:** Claude (Opus 4.8), single session. **Next audit due:** next session start, or at the next release.
+
+---
 
 ## 2026-05-31 — P1 remediation batch 2 (T-07/T-11/T-10), CI, F-02 design + reconciliation
 

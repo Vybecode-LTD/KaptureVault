@@ -1,7 +1,7 @@
 ---
 document: TESTING
-version: 1.5.0
-app-version: 1.0.4
+version: 1.6.0
+app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
 managed-by: manual-reconciliation
@@ -12,17 +12,22 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet, on `KaptureVault.slnx`). **30 tests passing** as of 2026-05-30. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet, on `KaptureVault.slnx`). **47 tests passing** as of 2026-05-31. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob.
 
 Suite inventory:
 | Suite | Covers | Tests |
 |---|---|---|
-| `Services/CaptureServiceTests` | KV-005 self-exclusion regression | 2 |
-| `Services/EncryptionServiceTests` | KV-002 round-trip / tamper→throw / wrong-key→throw / passthrough | 4 |
+| `Services/CaptureServiceTests` | KV-005 self-exclusion regression; KV-012/T-07 non-blocking flush (`Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite`) + drain-on-stop (`Stop_DrainsBufferedEntriesAndDoesNotLoseData`) | 4 |
+| `Services/EncryptionServiceTests` | KV-002 round-trip / tamper→throw / wrong-key→throw / passthrough; KV-006/T-11 strong-KDF persistence (`Configure_StoresStrongKdfParams_AndDerivesWithThem`) + legacy-vault unlock (`Unlock_LegacyVaultWithoutStoredIterations_StillUnlocksAndDecrypts`) | 6 |
 | `Services/DatabaseServiceSearchTests` | KV-004 encrypted-content search | 3 |
 | `Services/DatabaseServiceReplaceTests` | KV-003 pre-sync backup retention | 1 |
 | `Services/DatabaseServiceCrudTests` | KV-009 full-field round-trip, null-expiry, pin/tags, GetAll limit | 4 |
+| `Services/ServiceRegistrationTests` | KV-010/T-10 DI composition (`HotkeyService` + `MainWindowViewModel` resolve from `ServiceRegistration.cs`) | 13 |
 | `ViewModels/ConverterTests` | KV-033 brush caching + pure text/number converters | 16 |
+
+**Total: 47 tests.**
+
+**CI: LIVE.** `.github/workflows/tests.yml` runs on every push/PR to `main` (windows-latest, .NET 9) and enforces, in order: `dotnet build` → `dotnet format --verify-no-changes` → `dotnet list package --vulnerable --include-transitive` (fails the run on any vulnerable package) → `dotnet test` (TRX + Cobertura coverage). Verified green on GitHub (Actions run 26725669973, all steps passing).
 
 **Run:** `dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj` (or `dotnet test KaptureVault.slnx`).
 
@@ -35,7 +40,6 @@ Suite inventory:
 ### Known gaps (KV-045 / T-16)
 - No `Avalonia.Headless.XUnit` UI smoke tests (app builder / window-open / binding-resolves) yet.
 - No **VM filter regression** test yet (the `AppList`/`TagList` diff-update fix) — high priority since it broke twice.
-- No CI test job (only `auto-release.yml`); `dotnet format` + vulnerable-scan not yet wired into the loop.
 - Coverage % not yet collected/tracked.
 
 ---

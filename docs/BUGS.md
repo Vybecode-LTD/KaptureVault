@@ -1,7 +1,7 @@
 ---
 document: BUGS
-version: 1.5.0
-app-version: 1.0.4
+version: 1.6.0
+app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
 managed-by: manual-reconciliation
@@ -15,8 +15,8 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > **Remediation progress (2026-05-31):**
 > - **P0 (shipped v1.0.3):** ✅ KV-001 (secrets rotated + history purged, verified), KV-005/034, KV-002, KV-004. 🟡 KV-003 mitigated.
 > - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
-> - **P1 (unreleased on `main`, 2026-05-31 → slated for v1.0.5):** ✅ KV-012 (hook-thread DB writes → writer task; T-07, `e5977dd`), ✅ KV-006 (PBKDF2 600k + stored KDF params; T-11, `5748f9f`), ✅ KV-010 (HotkeyService + MainWindowViewModel in DI; T-10, `0351500`). 🟡 KV-045 (CI `dotnet test` job added, `24cd3f2`; headless + VM-filter regression tests still pending).
-> - **Tests:** 10 → **47** passing.
+> - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, 🟡 KV-010 (DI done; disposal still needs T-08).
+> - **Tests:** 10 → **47** passing. CI (`tests.yml`) now runs `dotnet test` + `dotnet format --verify-no-changes` + `dotnet list package --vulnerable`, verified green (run 26725669973). 🟡 KV-045: headless (Avalonia.Headless.XUnit) smoke tests + a MainWindowViewModel filter-selection regression test still pending.
 > - **Next:** KV-013 remainder + KV-032/033 (T-09), KV-011/024 (shutdown teardown, T-08), KV-007 (secret-less OAuth, T-12); KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
@@ -59,14 +59,15 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix applied:** `SelfProcessName` is now `static readonly = Process.GetCurrentProcess().ProcessName` in both services (rename-safe; resolves to "KaptureVault" in the published app). Regression test: `CaptureServiceTests.Flush_WhenActiveWindowIsKaptureVaultItself_DoesNotCapture` (drives the service with the test runner's own process name as the active window). RED→GREEN verified.
 
 ### KV-006 · PBKDF2 100k iterations below 2026 guidance
-- **Area:** Crypto · **Status:** ✅ FIXED (2026-05-31, T-11, commit 5748f9f) · `Services/EncryptionService.cs`
+- **Area:** Crypto · **Status:** ✅ **FIXED — shipped in v1.0.5** (2026-05-31, T-11, commit 5748f9f) · `Services/EncryptionService.cs`
 - 100k PBKDF2-HMAC-SHA256 is ~6× under current OWASP (600k+); Argon2id is the modern recommendation. `vault.db` + `encryption.json` sit together in LocalAppData → a leaked pair is GPU-brute-forceable.
-- **Fix (shipped):** New vaults derive at **600k**; `encryption.json` persists the KDF params (`Iterations`, `Kdf`). `Unlock` derives with the stored count, defaulting pre-T-11 files (no count) to 100k, so existing vaults still open. Argon2id + re-keying legacy vaults deferred (needs the transactional bulk path, KV-021/T-20).
+- **Fix (shipped in v1.0.5):** New vaults derive at **600k**; `encryption.json` persists the KDF params (`Iterations`, `Kdf`). `Unlock` derives with the stored count, defaulting pre-T-11 files (no count) to 100k, so existing vaults still open. Argon2id + re-keying legacy vaults deferred (needs the transactional bulk path, KV-021/T-20).
 
 ### KV-007 · OAuth client secret bundled in installer + hardcoded fallback
-- **Area:** Security · **Status:** OPEN · `Services/CloudSync/GoogleDriveProvider.cs:14,81-86`, `installer/KaptureVaultSetup.iss:101-105`
-- App uses PKCE but still *hard-requires* `_clientSecret`, ships `client_secret.json` into Program Files unprotected, and has a hardcoded `FallbackClientId`. A secret shipped to every user is not secret.
-- **Fix:** Register a native/Desktop OAuth client with **no** secret + loopback PKCE; drop the hard gate, stop bundling the file, remove the fallback constant.
+- **Area:** Security · **Status:** OPEN — **deferred to F-02 (decision 2026-05-31)** · `Services/CloudSync/GoogleDriveProvider.cs:15,82-87,113`, `installer/KaptureVaultSetup.iss:101-105`
+- App uses PKCE but still *hard-requires* `_clientSecret` (`AuthenticateAsync` refuses without it; it's sent in the token exchange at :113), ships `client_secret.json` into Program Files, and has a hardcoded `FallbackClientId` (that constant is a client **ID** — public, not a secret). A secret shipped to every user is not secret.
+- **2026-05-31 DECISION (user):** fix **deferred to F-02 Phase 1 (backend broker)**, not a quick client-side change. Rationale: Google's desktop token endpoint still expects `client_secret` (PKCE alone secret-less was not confirmable without risking sync for all users), so the correct fix is the F-02 backend that brokers the OAuth code/refresh exchange — the client then holds only the public client ID + PKCE and never a secret. Re-confirmed the bundling persists (the v1.0.5 installer compresses `client_secret.json`). Until F-02 ships, the bundled value is a Google-"non-confidential" desktop credential (PKCE-protected); **do not widen distribution on that assumption.**
+- **Fix (via F-02 Phase 1):** backend brokers token exchange; client keeps only the public client ID + PKCE; stop bundling `client_secret.json`; remove the `FallbackClientId` constant.
 
 ### KV-008 · `ThrowIfReplacing()` gate applied inconsistently → sync-swap races
 - **Area:** Data · **Status:** ✅ FIXED (2026-05-30, P1) · `Services/DatabaseService.cs`
@@ -80,9 +81,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix applied:** `ReadEntries` builds a case-insensitive name→ordinal map from the reader once and reads every field by name (optional post-migration columns tolerated). Test: `DatabaseServiceCrudTests` (all-field round-trip + null-expiry + pin/tags).
 
 ### KV-010 · `HotkeyService` created outside DI, never disposed
-- **Area:** Lifecycle · **Status:** OPEN · `App.axaml.cs:140-143`, `Services/HotkeyService.cs`
+- **Area:** Lifecycle · **Status:** 🟡 PARTIAL (2026-05-31, T-10, v1.0.5) · `App.axaml.cs:140-143`, `Services/HotkeyService.cs`
 - `new HotkeyService()` owns a message-only HWND + background STA thread; only `Stop()` on the Quit path, never `Dispose()`, never touched on restart/cancel shutdowns → orphaned global hotkey registration.
-- **Fix:** Register as a DI singleton; ensure teardown on every shutdown path (see KV-011).
+- **Fix:** Register as a DI singleton; ensure teardown on every shutdown path (see KV-011). HotkeyService + MainWindowViewModel now resolved from DI via ServiceRegistration (shipped v1.0.5). Residual: HotkeyService disposal + provider teardown on all shutdown paths still pending T-08.
 
 ### KV-011 · Service teardown only on tray-Quit path
 - **Area:** Lifecycle · **Status:** OPEN · `App.axaml.cs:266-288`, `Views/SettingsWindow.axaml.cs:237,250,278`, `App.axaml.cs:84`
@@ -90,9 +91,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Centralize teardown in `ShutdownRequested`/`OnExit`; dispose the provider there (KV-024); run sync-on-close once regardless of trigger.
 
 ### KV-012 · Synchronous WAL+AES SQLite INSERT on the keyboard-hook thread
-- **Area:** Performance · **Status:** ✅ FIXED (2026-05-31, T-07, commit e5977dd) · `Services/CaptureService.cs`
+- **Area:** Performance · **Status:** ✅ **FIXED — shipped in v1.0.5** (2026-05-31, T-07, commit e5977dd) · `Services/CaptureService.cs`
 - When the buffer hit `MaxBufferSize` mid-typing, `Flush()` ran `Open()` + INSERT + AES **inside the WH_KEYBOARD_LL callback**, degrading system-wide input latency and risking hook eviction (`LowLevelHooksTimeout`).
-- **Fix (shipped):** `Flush()` now hands the entry to a bounded `Channel<CaptureEntry>` (non-blocking `TryWrite`, `AllowSynchronousContinuations=false`); a single writer task (`ProcessWriteQueueAsync`, started in `Start()`) performs Open()+INSERT+AES off the hook thread. `Stop()` completes + drains the channel (<=5s) so the final buffered entry isn't lost; inserts are now serialized through one writer.
+- **Fix (shipped in v1.0.5):** `Flush()` now hands the entry to a bounded `Channel<CaptureEntry>` (non-blocking `TryWrite`, `AllowSynchronousContinuations=false`); a single writer task (`ProcessWriteQueueAsync`, started in `Start()`) performs Open()+INSERT+AES off the hook thread. `Stop()` completes + drains the channel (<=5s) so the final buffered entry isn't lost; inserts are now serialized through one writer.
 - **Tests:** `CaptureServiceTests.Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite` (RED->GREEN) + `Stop_DrainsBufferedEntriesAndDoesNotLoseData`.
 
 ### KV-013 · Entry `ListBox` effectively non-virtualized

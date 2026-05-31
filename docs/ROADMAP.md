@@ -1,7 +1,7 @@
 ---
 document: ROADMAP
-version: 1.5.0
-app-version: 1.0.4
+version: 1.6.0
+app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
 managed-by: manual-reconciliation
@@ -18,10 +18,10 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 
 > **P0 — ✅ complete, shipped in v1.0.3.** T-01 (secrets rotated), T-02 (history purged + verified), T-03/04/05 fixed test-first; T-06 🟡 mitigated.
 >
-> **P1 — in progress (first batch shipped in v1.0.4):**
-> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite 10 → **47**; CI `dotnet test` job added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
-> **Unreleased on `main` (8 commits ahead of origin), slated for v1.0.5:** T-07, T-11, T-10, T-16-CI. **Pinned decision (2026-05-31):** cut **v1.0.5** with this batch before building F-01.
-> **Remaining P1, recommended order:** **T-16 remainder** (Avalonia.Headless.XUnit smoke + VM filter-selection regression — do first, it makes the next two verifiable), **T-09 + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-08** (KV-011/024 shutdown teardown — pairs with T-16), **T-12** (secret-less OAuth — closes residual KV-007, prereq for F-02). _Resequenced 2026-05-31: T-11 + T-10 pulled early (clean wins); T-08/T-09 moved after T-16 so the lifecycle/UI refactors are verifiable via headless tests._
+> **P1 — in progress (batch 1 shipped in v1.0.4; batch 2 shipped in v1.0.5):**
+> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite 10 → **47**; CI `dotnet test` + `dotnet format --verify` + `--vulnerable` scan added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
+> **Shipped in v1.0.5 (2026-05-31):** the **T-07 + T-11 + T-10** batch (DB-writes-off-hook-thread, PBKDF2 600k + KDF params, DI via `ServiceRegistration`), plus the `dotnet format`/`--vulnerable` CI gates from T-16.
+> **Remaining P1, recommended order:** **T-16 remainder** (Avalonia.Headless.XUnit smoke + VM filter-selection regression — do first, it makes the next two verifiable; the `dotnet format --verify`/`--vulnerable`-into-CI part is now done), **T-09 + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-08** (KV-011/024 shutdown teardown — pairs with T-16). T-12 (secret-less OAuth, residual KV-007) is **folded into F-02 Phase 1** (backend broker), no longer a standalone P1. _Resequenced 2026-05-31: T-11 + T-10 pulled early (clean wins); T-08/T-09 moved after T-16 so the lifecycle/UI refactors are verifiable via headless tests._
 
 ---
 
@@ -96,11 +96,11 @@ Two new product directions (added 2026-05-30). **F-01 is the immediate next task
 | T-09 | 🟡 partial | Make the entry `ListBox` virtualize. **Done:** brush caching + 1000-row cap. **Left:** diff-update `Entries`, debounce, off-UI decrypt | KV-013, KV-032, KV-033 | M |
 | T-10 | ✅ done | Register `HotkeyService` + `MainWindowViewModel` in DI (`ServiceRegistration.cs`); resolved from container, not `new`ed in `App`. View `App.Services` locator cleanup (KV-015) folded into T-22 | KV-010, KV-015(partial) | M |
 | T-11 | ✅ done | PBKDF2 raised to 600k for new vaults; KDF params persisted in `encryption.json` (legacy vaults default to 100k, still open); re-key + Argon2id deferred (needs KV-021/T-20) | KV-006 | S→M |
-| T-12 | ⬜ | Make desktop OAuth client secret-less (native + loopback PKCE); stop bundling `client_secret.json`; remove `FallbackClientId` | KV-007 | M |
+| T-12 | ⬜ → **folded into F-02** | Secret-less client OAuth. **Decided 2026-05-31: defer to F-02 Phase 1 (backend broker)** — Google's desktop token endpoint still expects the secret, so the backend brokers the exchange and the client holds none. Stop bundling `client_secret.json` + remove `FallbackClientId` as part of that work | KV-007 | M |
 | T-13 | ✅ done | Apply DB concurrency gate consistently (all public methods) | KV-008 | S |
 | T-14 | ✅ done | Read columns by name (case-insensitive map) in `ReadEntries` | KV-009 | S |
 | T-15 | ✅ done | Dispose annotation-editor base `Bitmap` (`OnClosed`) + `using` the `RenderTargetBitmap` + SaveAs guard | KV-014, KV-023, KV-018 | XS |
-| T-16 | 🟡 partial | Test suite (10 → **47** tests); **CI `dotnet test` job added** (`tests.yml`, push/PR to main). **Left:** Avalonia headless smoke tests, VM filter-selection regression, `dotnet format`/vuln-scan in loop | KV-045 | M |
+| T-16 | 🟡 partial | test suite 47; CI `dotnet test` + **`dotnet format --verify` + `--vulnerable` scan** all live in tests.yml (green). Left: Avalonia headless smoke + VM filter regression. | KV-045 | M |
 
 ## P2 — Medium (correctness, hardening, MVVM hygiene)
 
@@ -133,6 +133,7 @@ Two new product directions (added 2026-05-30). **F-01 is the immediate next task
 
 ## Shipped (releases) — see `CHANGELOG.md`
 
+- **v1.0.5** — P1 hardening batch 2 (T-07 DB-writes-off-hook-thread, T-11 PBKDF2 600k + KDF params, T-10 DI via ServiceRegistration); plus `dotnet format` debt closed (app+tests) and `dotnet format`/`--vulnerable` gates added to the Tests CI workflow.
 - **v1.0.4** — P1 hardening batch 1 (KV-008, KV-009, KV-014/023/018, KV-013 partial); release pipeline now single-creator via `auto-release.yml` (VirusTotal + sliced-changelog notes).
 - **v1.0.3** — P0 remediation (KV-005/002/004/003) + OAuth rotation + history purge + test harness.
 - **v1.0.2** — sidebar filter fix; mobile vault viewer (`kapture.tools/vault`).

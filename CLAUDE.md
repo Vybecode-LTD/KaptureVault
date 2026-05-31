@@ -1,9 +1,9 @@
 ---
 document: CLAUDE
-version: 1.4.0
-app-version: 1.0.4
-last-updated: 2026-05-30
-last-audit: 2026-05-30
+version: 1.6.0
+app-version: 1.0.5
+last-updated: 2026-05-31
+last-audit: 2026-05-31
 managed-by: manual-reconciliation
 ---
 
@@ -24,7 +24,7 @@ managed-by: manual-reconciliation
 | `docs/AUDIT-LOG.md` | Audit + reconciliation history |
 | `CHANGELOG.md` | Versioned release history (+ Unreleased section) |
 
-All managed docs share **one `version`** (currently **1.5.0**) and carry YAML frontmatter. App version (`1.0.4`; **v1.0.5 staged, unreleased on `main`**) is tracked separately via `app-version`. *(There is also a non-managed design reference, `docs/F-02-online-vault-design.md`, with no shared version.)*
+All managed docs share **one `version`** (currently **1.6.0**) and carry YAML frontmatter. App version (`1.0.5` (shipped 2026-05-31)) is tracked separately via `app-version`. *(There is also a non-managed design reference, `docs/F-02-online-vault-design.md`, with no shared version.)*
 
 ---
 
@@ -34,7 +34,7 @@ All managed docs share **one `version`** (currently **1.5.0**) and carry YAML fr
 
 It does **NOT** contain the original app's system-tweak suite — there are no Tweaks/Services/Dashboard/Profiles/Startup/Scheduler/Privacy sections, no `SystemTweaks/`, and no `ITweak` infrastructure. It runs as a standard user (`asInvoker`), not admin.
 
-- **Version:** 1.0.4 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
+- **Version:** 1.0.5 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
 - **Repo root (= project root):** `C:\Users\vybec\OneDrive\Documents\Development\Utilities\KaptureVault`
 - **Remote:** `github.com/Vybecode-LTD/KaptureVault` (private) · **Site:** `kapture.tools`
 - **Environment:** Windows 11, Claude Code
@@ -192,8 +192,10 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - ✅ Test suite live (`KaptureVault.Tests`, 10 tests) — was KV-045.
 
 **P1 shipped in v1.0.4:** ✅ KV-008, KV-009, KV-014/023/018, KV-013 (partial).
-**P1 done 2026-05-31 (unreleased on `main`, staged for v1.0.5):** ✅ KV-012 (DB writes off the keyboard-hook thread → bounded `Channel` + writer task; T-07), ✅ KV-006 (PBKDF2 600k + persisted KDF params, legacy vaults still open; T-11), 🟡 KV-010 (HotkeyService + MainWindowViewModel in DI; T-10 — disposal half still needs T-08), 🟡 KV-045 (CI `dotnet test` job added; headless + VM-filter regression tests pending; T-16). Tests **30 → 47**.
-**Remaining P1, before wide distribution:** finish the entry-list virtualization / Entries diff-update (KV-013/032/033, T-09), centralize shutdown/teardown (KV-011/024, T-08 — pair with T-16), **secret-less OAuth + stop bundling `client_secret.json`** (KV-007/T-12 — closes the residual KV-001 exposure, prereq for F-02). See `docs/ROADMAP.md` (P1) and `docs/HANDOFF.md` to pick up.
+**P1 shipped in v1.0.5 (released 2026-05-31):** ✅ KV-012 (DB writes off the keyboard-hook thread → bounded `Channel` + writer task; T-07), ✅ KV-006 (PBKDF2 600k + persisted KDF params, legacy vaults still open; T-11), 🟡 KV-010 (HotkeyService + MainWindowViewModel now resolved from DI; T-10 — disposal-on-all-shutdown-paths half still needs T-08).
+**Dev-infra debt CLOSED + CI-GATED:** the pre-existing `dotnet format` whitespace debt is fixed (app `51dc9fd` + test project `12b7122`, both clean) and `.github/workflows/tests.yml` now runs `dotnet format --verify-no-changes` + `dotnet list package --vulnerable` on push/PR to `main` (verified green on GitHub, Actions run 26725669973). This completes the **format/vuln half of T-16/KV-045**. Tests **30 → 47**; no vulnerable packages.
+**KV-007/T-12 DEFERRED to F-02 (decision 2026-05-31):** secret-less OAuth is moved to F-02 Phase 1 (a backend broker) — Google's desktop token endpoint still expects `client_secret`, so the backend brokers and the client holds none. The installer still bundles `client_secret.json` meanwhile (Google-"non-confidential", PKCE-protected).
+**Remaining P1, before wide distribution:** **T-16 remainder** — `Avalonia.Headless.XUnit` UI smoke + `MainWindowViewModel` filter-selection regression tests (the format/vuln CI half is now done); **T-09** (Entries diff-update / entry-list virtualization, KV-013/032/033); **T-08** (centralize shutdown/teardown, KV-011/024 — pairs with T-16's headless harness). **T-12/KV-007 is folded into F-02.** Then **F-01** (local DB export). See `docs/ROADMAP.md` (P1) and `docs/HANDOFF.md` to pick up.
 
 ---
 
@@ -203,6 +205,7 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - **Never do DB/crypto work on the WH_KEYBOARD_LL hook thread** — it degrades system input latency and risks hook eviction. (KV-012 **FIXED** 2026-05-31, T-07: `CaptureService.Flush()` `TryWrite`s to a bounded `Channel<CaptureEntry>`; a writer task does the INSERT off-thread; `Stop()` drains it. Pattern to keep: never block the hook callback — hand work to a channel/writer.)
 - **Bumping a KDF iteration count silently locks out every existing vault** unless the old count is stored — the derived key changes, so the key-hash check fails. **Persist KDF params** (`Iterations`, `Kdf`) and derive with the stored value; default missing = the old count (100k). (KV-006/T-11.)
 - **A drained `Channel` writer can run inline on the thread that calls `Stop().Wait()`** (TPL inlining), so a "did the insert run on a different thread?" test is flaky — assert the *non-blocking behaviour* (a slow/gated write must not block the producer) instead.
+- **Docs can silently drift from reality** — this session a "format-clean" claim (code had ~130 whitespace failures) and an "unpushed" claim (already pushed) were both false. Verify doc claims against the build/`git ls-remote`, not prior summaries (DEBUG_PROTOCOL "proof, not assertion" applied to our own docs).
 - **⚠️ TOOLING / ONEDRIVE HAZARD (2026-05-31):** with the repo on a OneDrive path, the agent harness returned **stale / delayed / fabricated / empty** tool output — twice reporting commits, files, and a `git push` that never happened. **Verify every consequential action (esp. git) with a second authoritative command** (`git log` / `git status` / `Test-Path`) before relying on it — DEBUG_PROTOCOL's "proof, not assertion," applied to the tooling itself. `Write` (full-file) is safe blind/repeatable; `Edit` is safe-on-failure (errors, never corrupts); run ONE PowerShell per turn (a non-zero exit cancels parallel siblings); **`Edit` needs an in-session `Read` of the file first.** Consider moving the repo off OneDrive.
 - **Self-exclusion / process identity:** derive from `Process.GetCurrentProcess().ProcessName`, never hardcode the app name (a rename silently broke self-exclusion — KV-005).
 - **AES-GCM decrypt must throw on auth failure**, never return ciphertext as plaintext (silent swallow defeated integrity — KV-002).
@@ -220,4 +223,5 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - **2026-05-30 (v1.0.3):** **P0 remediation, test-first** — self-exclusion (KV-005/034), decrypt integrity (KV-002), encrypted search (KV-004), Drive pre-sync backup retention (KV-003). Stood up `KaptureVault.Tests` (10 tests) + `KaptureVault.slnx` with persistence seams. **Security:** rotated all Google OAuth secrets, new desktop client ID `…15r8pqq8…`, updated `FallbackClientId`; purged the committed secret from `Utilities` git history (filter-repo) and verified clean. Released v1.0.3.
 - **2026-05-30 (P1 → v1.0.4):** Hardening — named-column DB reads (KV-009), annotation editor bitmap/RTB disposal + SaveAs guard (KV-014/023/018), consistent `ThrowIfReplacing()` gate (KV-008), cached row brushes + 1000-row entry cap (KV-013 partial). Tests 10 → **30**. **Release pipeline:** removed `gh release create` from the script — `auto-release.yml` is now the single release creator (VirusTotal scan + GitHub Release with the version's CHANGELOG section sliced into the notes). **Released v1.0.4** (workflow-created, verified). Docs reconciled to `version` 1.3.0.
 - **2026-05-30 (incident + feature planning):** Investigated an "AlfaFF network filter offline" report → **verified it is NOT KaptureVault** (zero network/WFP/driver code; `asInvoker`); root cause was third-party PCM surveillance software. No code change. Added the **Feature Roadmap** (F-01 local DB export; F-02 paid Online Vault — R2 + Workers + D1 + Stripe). Re-did the handoff to lead with F-01/F-02; docs bumped to `version` 1.4.0.
-- **2026-05-31 (P1 batch 2 + F-02 design):** Test-first, each its own commit (tests **30 → 47**, build 0/0): **T-07/KV-012** — SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task; `e5977dd`); **T-11/KV-006** — PBKDF2 → 600k + persisted KDF params, legacy vaults still open (`5748f9f`); **T-10/KV-010** — `HotkeyService` + `MainWindowViewModel` resolved from DI via new `ServiceRegistration.cs` (`0351500`); **T-16 partial/KV-045** — `.github/workflows/tests.yml` CI test job (`24cd3f2`). Wrote the full **F-02 design** (`docs/F-02-online-vault-design.md`, `b57b22d`). Reconciled all managed docs to `version` 1.5.0. **Resequenced:** T-08 (teardown) + T-09 (Entries diff-update) deferred to pair after T-16's headless harness (lifecycle/UI, high regression risk, need verifiability). **Pinned decision: next release is v1.0.5** with the T-07/T-11/T-10 batch (CHANGELOG `[Unreleased]` staged). **~12 commits unpushed on `main`.** ⚠️ Hit a OneDrive/tooling-hazard (fabricated tool output) — see Lessons; mitigated by verifying git state with a second command. **Next session:** re-verify (`git log -14`, `dotnet test` → 47), push, cut v1.0.5, then T-16 remainder → T-09 → T-08 → T-12 → F-01.
+- **2026-05-31 (P1 batch 2 + F-02 design):** Test-first, each its own commit (tests **30 → 47**, build 0/0): **T-07/KV-012** — SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task; `e5977dd`); **T-11/KV-006** — PBKDF2 → 600k + persisted KDF params, legacy vaults still open (`5748f9f`); **T-10/KV-010** — `HotkeyService` + `MainWindowViewModel` resolved from DI via new `ServiceRegistration.cs` (`0351500`); **T-16 partial/KV-045** — `.github/workflows/tests.yml` CI test job (`24cd3f2`). Wrote the full **F-02 design** (`docs/F-02-online-vault-design.md`, `b57b22d`). Reconciled all managed docs to `version` 1.5.0. **Resequenced:** T-08 (teardown) + T-09 (Entries diff-update) deferred to pair after T-16's headless harness (lifecycle/UI, high regression risk, need verifiability). **Pinned decision: next release is v1.0.5** with the T-07/T-11/T-10 batch (CHANGELOG `[Unreleased]` staged).
+- **2026-05-31 (v1.0.5 release + CI hardening):** Released **v1.0.5** (P1 batch 2: T-07 hook-thread DB writes, T-11 PBKDF2 600k, T-10 DI) via Invoke-Release.ps1 → auto-release.yml. Closed pre-existing `dotnet format` whitespace debt (app `51dc9fd` + tests `12b7122`) and **wired `dotnet format --verify` + `dotnet list --vulnerable` gates into `tests.yml` CI** (verified green, run 26725669973) — the format/vuln half of T-16. **KV-007/T-12 decision:** defer secret-less OAuth to F-02 Phase 1 (backend broker). Corrected false doc drift caught this session (the prior "~12 commits unpushed" and "format-clean" claims were both wrong — OneDrive tooling-hazard artifacts). HEAD `d92952d`.
