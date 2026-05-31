@@ -39,17 +39,7 @@ public partial class App : Application
 
             // DI setup
             var services = new ServiceCollection();
-            services.AddSingleton<ISettingsService, SettingsService>();
-            services.AddSingleton<IEncryptionService, EncryptionService>();
-            services.AddSingleton<IDatabaseService>(sp =>
-                new DatabaseService(sp.GetRequiredService<IEncryptionService>()));
-            services.AddSingleton<IKeyboardHookService, KeyboardHookService>();
-            services.AddSingleton<IActiveWindowService, ActiveWindowService>();
-            services.AddSingleton<ICaptureService, CaptureService>();
-            services.AddSingleton<IClipboardMonitorService, ClipboardMonitorService>();
-            services.AddSingleton<IScreenshotService, ScreenshotService>();
-            services.AddSingleton<CloudSyncManager>();
-            services.AddSingleton<IStartupService, StartupService>();
+            services.AddKaptureServices();
             _serviceProvider = services.BuildServiceProvider();
 
 
@@ -107,13 +97,7 @@ public partial class App : Application
             }
 
             // Create main VM
-            var vm = new MainWindowViewModel(
-                _serviceProvider.GetRequiredService<IDatabaseService>(),
-                _serviceProvider.GetRequiredService<ICaptureService>(),
-                _serviceProvider.GetRequiredService<IClipboardMonitorService>(),
-                _serviceProvider.GetRequiredService<IStartupService>(),
-                _serviceProvider.GetRequiredService<ISettingsService>(),
-                _serviceProvider.GetRequiredService<IScreenshotService>());
+            var vm = _serviceProvider.GetRequiredService<MainWindowViewModel>();
 
             // Create main window
             _mainWindow = new MainWindow { DataContext = vm };
@@ -137,7 +121,7 @@ public partial class App : Application
             // Start quick paste hotkey (Ctrl+Shift+V)
             if (settingsService.Settings.QuickPasteEnabled)
             {
-                _hotkeyService = new HotkeyService();
+                _hotkeyService = _serviceProvider.GetRequiredService<HotkeyService>();
                 _hotkeyService.OnHotkeyPressed += () =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(ShowQuickPaste);
                 _hotkeyService.Start();
@@ -221,15 +205,15 @@ public partial class App : Application
         RequestedThemeVariant = def.BaseVariant == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
 
         // Programmatically replace all themed brush resources
-        Resources["AppBgBrush"]       = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.BgPrimary));
-        Resources["AppBgSecondary"]   = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.BgSecondary));
-        Resources["AppBgTertiary"]    = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.BgTertiary));
-        Resources["AppBorderBrush"]   = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.Border));
-        Resources["AppTextPrimary"]   = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.TextPrimary));
+        Resources["AppBgBrush"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.BgPrimary));
+        Resources["AppBgSecondary"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.BgSecondary));
+        Resources["AppBgTertiary"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.BgTertiary));
+        Resources["AppBorderBrush"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.Border));
+        Resources["AppTextPrimary"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.TextPrimary));
         Resources["AppTextSecondary"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.TextSecondary));
-        Resources["AccentBrush"]      = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.Accent));
+        Resources["AccentBrush"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.Accent));
         Resources["AccentHoverBrush"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.AccentHover));
-        Resources["AccentDimBrush"]   = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.AccentDim));
+        Resources["AccentDimBrush"] = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(def.AccentDim));
     }
 
     private void SetupTrayIcon(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm)
