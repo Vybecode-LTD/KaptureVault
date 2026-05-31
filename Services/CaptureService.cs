@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Channels;
 using System.Timers;
 using Kapture.Models;
 using Microsoft.Extensions.Logging;
@@ -40,6 +41,14 @@ public class CaptureService : ICaptureService, IDisposable
     private Timer? _idleTimer;
     private Timer? _windowPollTimer;
 
+    // KV-012/T-07: the keyboard-hook callback (and the poll timers) must never block on a
+    // SQLite write. Flush() hands the built entry to this bounded queue; a single writer
+    // task performs Open()+INSERT+AES off the hook thread. Bounded + non-blocking TryWrite
+    // means a stalled DB can never back-pressure into the WH_KEYBOARD_LL callback.
+    private const int WriteQueueCapacity = 1024;
+    private Channel<CaptureEntry>? _writeQueue;
+    private Task? _writerTask;
+
     public bool IsRecording => !_isPaused && _hook is not null;
     public event Action? OnEntryFlushed;
 
@@ -54,6 +63,16 @@ public class CaptureService : ICaptureService, IDisposable
 
     public void Start()
     {
+        // Spin up the write pipeline before any keystroke can arrive (KV-012/T-07).
+        _writeQueue = Channel.CreateBounded<CaptureEntry>(new BoundedChannelOptions(WriteQueueCapacity)
+        {
+            SingleReader = true,
+            SingleWriter = false, // Flush() is reached from the hook + both poll timers
+            FullMode = BoundedChannelFullMode.Wait, // TryWrite returns false (never blocks) when full
+            AllowSynchronousContinuations = false, // never run the writer inline on the producer (hook) thread
+        });
+        _writerTask = Task.Run(() => ProcessWriteQueueAsync(_writeQueue.Reader));
+
         _hook.OnCharTyped += OnChar;
         _hook.OnBackspace += OnBackspace;
         _hook.OnEnter += OnEnter;
@@ -87,6 +106,15 @@ public class CaptureService : ICaptureService, IDisposable
         _hook.OnTab -= OnTab;
         _hook.Stop();
         Flush();
+
+        // Drain the write queue so a shutdown doesn't drop the final buffered entry.
+        // Completing the writer lets the loop finish naturally; the bounded wait keeps
+        // shutdown from hanging if the DB is wedged (e.g. mid sync-replace).
+        _writeQueue?.Writer.TryComplete();
+        try { _writerTask?.Wait(TimeSpan.FromSeconds(5)); }
+        catch (AggregateException) { /* per-item write failures are already logged */ }
+        _writerTask = null;
+        _writeQueue = null;
     }
 
     public void Pause()
@@ -236,15 +264,33 @@ public class CaptureService : ICaptureService, IDisposable
             IsPinned = false
         };
 
-        try
+        // KV-012/T-07: hand off to the writer task — never touch SQLite on this thread,
+        // which may be the WH_KEYBOARD_LL hook callback. TryWrite never blocks; if the
+        // queue is somehow saturated we drop (and log) rather than stall input.
+        var queue = _writeQueue;
+        if (queue is null)
+            return; // not running (Start() hasn't created the pipeline)
+
+        if (!queue.Writer.TryWrite(entry))
+            _log?.LogWarning("Capture write queue full — dropped {CharCount} chars from {App}", entry.CharCount, entry.AppName);
+    }
+
+    // KV-012/T-07: the single consumer of the write queue. Runs on a Task (thread-pool),
+    // so the Open()+INSERT+AES cost is paid here, never on the hook/timer threads.
+    private async Task ProcessWriteQueueAsync(ChannelReader<CaptureEntry> reader)
+    {
+        await foreach (var entry in reader.ReadAllAsync().ConfigureAwait(false))
         {
-            _db.Insert(entry);
-            OnEntryFlushed?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            // Don't crash the hook thread, but log the data loss
-            _log?.LogError(ex, "Failed to flush {CharCount} chars from {App} — data dropped", entry.CharCount, entry.AppName);
+            try
+            {
+                _db.Insert(entry);
+                OnEntryFlushed?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                // One failed write must not tear down the writer; log the data loss.
+                _log?.LogError(ex, "Failed to persist {CharCount} chars from {App} — data dropped", entry.CharCount, entry.AppName);
+            }
         }
     }
 
