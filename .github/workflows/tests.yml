@@ -37,6 +37,22 @@ jobs:
       - name: Build (Debug, no restore)
         run: dotnet build KaptureVault.slnx -c Debug --no-restore
 
+      # Format gate (T-16): the whole solution must be `dotnet format` clean.
+      # Fails the run on any whitespace/style drift so it can't silently return.
+      - name: Format check (dotnet format --verify-no-changes)
+        run: dotnet format KaptureVault.slnx --verify-no-changes --no-restore
+
+      # Vulnerability gate (T-16): `dotnet list package --vulnerable` exits 0 even
+      # when it finds something, so we scan the output and fail the run explicitly.
+      - name: Vulnerable package scan
+        shell: bash
+        run: |
+          dotnet list KaptureVault.slnx package --vulnerable --include-transitive | tee vuln.txt
+          if grep -qiE "has the following vulnerable" vuln.txt; then
+            echo "::error::Vulnerable NuGet packages detected — see scan output above"
+            exit 1
+          fi
+
       - name: Test (no build) + coverage
         run: >
           dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj
