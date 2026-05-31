@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Kapture.Services;
 using Xunit;
@@ -80,6 +83,70 @@ public class EncryptionServiceTests : IDisposable
         var svc = NewConfiguredService();
 
         svc.Decrypt("just plain text").Should().Be("just plain text");
+    }
+
+    [Fact]
+    public void Configure_StoresStrongKdfParams_AndDerivesWithThem()
+    {
+        // KV-006/T-11: new vaults must use a strong PBKDF2 count (OWASP 2023 floor = 600k)
+        // and PERSIST it, so the key can be re-derived after the default changes again.
+        var svc = NewConfiguredService("kdf-pass");
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(_tempDir, "encryption.json")));
+        var root = doc.RootElement;
+        var iterations = root.GetProperty("Iterations").GetInt32();
+        iterations.Should().BeGreaterThanOrEqualTo(600_000, "PBKDF2 must meet the OWASP 2023 floor");
+
+        // Prove Configure actually derived the key with the stored params (not some other count).
+        var salt = Convert.FromBase64String(root.GetProperty("Salt").GetString()!);
+        using var kdf = new Rfc2898DeriveBytes("kdf-pass", salt, iterations, HashAlgorithmName.SHA256);
+        var expectedHash = Convert.ToBase64String(SHA256.HashData(kdf.GetBytes(32)));
+        root.GetProperty("KeyHash").GetString().Should().Be(expectedHash);
+
+        // And the round-trip still works.
+        svc.Decrypt(svc.Encrypt("secret")).Should().Be("secret");
+    }
+
+    [Fact]
+    public void Unlock_LegacyVaultWithoutStoredIterations_StillUnlocksAndDecrypts()
+    {
+        // A pre-T-11 vault: encryption.json had only Salt + KeyHash (no Iterations), key
+        // derived at the old 100k count. After the bump it MUST still open and read its
+        // existing entries — no data lockout.
+        const string password = "legacy-pass";
+        var salt = RandomNumberGenerator.GetBytes(16);
+        byte[] legacyKey;
+        using (var kdf = new Rfc2898DeriveBytes(password, salt, 100_000, HashAlgorithmName.SHA256))
+            legacyKey = kdf.GetBytes(32);
+
+        Directory.CreateDirectory(_tempDir);
+        var legacyMeta =
+            $$"""{"Salt":"{{Convert.ToBase64String(salt)}}","KeyHash":"{{Convert.ToBase64String(SHA256.HashData(legacyKey))}}"}""";
+        File.WriteAllText(Path.Combine(_tempDir, "encryption.json"), legacyMeta);
+
+        var svc = new EncryptionService(_tempDir);
+        svc.IsConfigured.Should().BeTrue();
+        svc.Unlock(password).Should().BeTrue("a legacy 100k vault must still unlock after the iteration bump");
+
+        // An entry encrypted under the legacy key must remain readable.
+        var legacyCipher = EncryptWithKey(legacyKey, "legacy entry");
+        svc.Decrypt(legacyCipher).Should().Be("legacy entry");
+    }
+
+    // Builds an ENC: blob in EncryptionService's wire format (nonce[12] + tag[16] + cipher).
+    private static string EncryptWithKey(byte[] key, string plaintext)
+    {
+        var pt = Encoding.UTF8.GetBytes(plaintext);
+        var nonce = RandomNumberGenerator.GetBytes(12);
+        var cipher = new byte[pt.Length];
+        var tag = new byte[16];
+        using var aes = new AesGcm(key, 16);
+        aes.Encrypt(nonce, pt, cipher, tag);
+        var combined = new byte[12 + 16 + cipher.Length];
+        nonce.CopyTo(combined, 0);
+        tag.CopyTo(combined, 12);
+        cipher.CopyTo(combined, 28);
+        return "ENC:" + Convert.ToBase64String(combined);
     }
 
     private static string FlipLastByte(string encrypted)

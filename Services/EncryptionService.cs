@@ -21,7 +21,11 @@ public class EncryptionService : IEncryptionService
     private const int KeySize = 32; // AES-256
     private const int NonceSize = 12; // AES-GCM standard
     private const int TagSize = 16; // AES-GCM standard
-    private const int Iterations = 100_000;
+    // KV-006/T-11: PBKDF2-HMAC-SHA256 work factor. New vaults use the OWASP 2023 floor
+    // (600k); the count is persisted in encryption.json so the key can always be
+    // re-derived. Vaults created before T-11 stored no count and used 100k.
+    private const int CurrentIterations = 600_000;
+    private const int LegacyIterations = 100_000;
     private const string EncryptedPrefix = "ENC:";
 
     private readonly string _metaDir;
@@ -48,14 +52,17 @@ public class EncryptionService : IEncryptionService
     public void Configure(string password)
     {
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
-        _key = DeriveKey(password, salt);
+        _key = DeriveKey(password, salt, CurrentIterations);
 
-        // Store salt + password hash for verification
+        // Store salt + key hash + the KDF params used, so the key can be re-derived even
+        // after the iteration floor changes again (KV-006/T-11).
         var hash = SHA256.HashData(_key);
         var meta = new EncryptionMeta
         {
             Salt = Convert.ToBase64String(salt),
-            KeyHash = Convert.ToBase64String(hash)
+            KeyHash = Convert.ToBase64String(hash),
+            Kdf = "PBKDF2-SHA256",
+            Iterations = CurrentIterations
         };
 
         Directory.CreateDirectory(_metaDir);
@@ -70,7 +77,9 @@ public class EncryptionService : IEncryptionService
         if (meta == null) return false;
 
         var salt = Convert.FromBase64String(meta.Salt);
-        var candidateKey = DeriveKey(password, salt);
+        // Legacy vaults (pre-T-11) stored no iteration count → they used 100k.
+        var iterations = meta.Iterations > 0 ? meta.Iterations : LegacyIterations;
+        var candidateKey = DeriveKey(password, salt, iterations);
         var candidateHash = Convert.ToBase64String(SHA256.HashData(candidateKey));
 
         if (candidateHash != meta.KeyHash)
@@ -153,9 +162,9 @@ public class EncryptionService : IEncryptionService
         return Encoding.UTF8.GetString(plaintext);
     }
 
-    private static byte[] DeriveKey(string password, byte[] salt)
+    private static byte[] DeriveKey(string password, byte[] salt, int iterations)
     {
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, Iterations, HashAlgorithmName.SHA256);
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
         return pbkdf2.GetBytes(KeySize);
     }
 
@@ -176,5 +185,9 @@ public class EncryptionService : IEncryptionService
     {
         public string Salt { get; set; } = string.Empty;
         public string KeyHash { get; set; } = string.Empty;
+        // KV-006/T-11: persisted KDF params. Absent in pre-T-11 files → Iterations
+        // deserializes to 0, which Unlock treats as the legacy 100k count.
+        public string Kdf { get; set; } = "PBKDF2-SHA256";
+        public int Iterations { get; set; }
     }
 }
