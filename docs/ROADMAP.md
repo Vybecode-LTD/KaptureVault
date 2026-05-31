@@ -19,8 +19,8 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 > **P0 — ✅ complete, shipped in v1.0.3.** T-01 (secrets rotated), T-02 (history purged + verified), T-03/04/05 fixed test-first; T-06 🟡 mitigated.
 >
 > **P1 — in progress (first batch shipped in v1.0.4):**
-> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 in progress (test suite 10 → **30**). Release pipeline now single-creator (`auto-release.yml`).
-> **Remaining P1, recommended order:** **T-07** (DB writes off the hook thread — top risk), **T-08** (centralized shutdown/teardown), **T-09 remainder + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-12** (secret-less OAuth — closes residual KV-007), **T-11** (PBKDF2/Argon2id), **T-10** (DI for HotkeyService + ViewModels), then continue **T-16**.
+> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 in progress (test suite 10 → **34**). Release pipeline now single-creator (`auto-release.yml`).
+> **Remaining P1, recommended order:** **T-09 remainder + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-10** (DI for HotkeyService + ViewModels), **T-12** (secret-less OAuth — closes residual KV-007), then **T-16 + T-08 paired** (shutdown/teardown last, so the lifecycle refactor is verifiable via headless tests). _Resequenced 2026-05-31: T-11 pulled early (clean, self-contained); T-08 moved last to pair with T-16._
 
 ---
 
@@ -90,11 +90,11 @@ Two new product directions (added 2026-05-30). **F-01 is the immediate next task
 
 | # | Status | Task | Issues | Effort |
 |---|--------|------|--------|--------|
-| T-07 | ⬜ next | Move SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task) | KV-012 | M |
+| T-07 | ✅ done | Move SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task) | KV-012 | M |
 | T-08 | ⬜ | Centralize shutdown/teardown (`ShutdownRequested`/`OnExit`): stop all services, dispose tray + ServiceProvider, run SyncOnClose once | KV-011, KV-010, KV-024 | M |
 | T-09 | 🟡 partial | Make the entry `ListBox` virtualize. **Done:** brush caching + 1000-row cap. **Left:** diff-update `Entries`, debounce, off-UI decrypt | KV-013, KV-032, KV-033 | M |
 | T-10 | ⬜ | Register `HotkeyService` + ViewModels in DI; stop service-locator use in Views | KV-010, KV-015(partial) | M |
-| T-11 | ⬜ | Raise PBKDF2 to ≥600k now; plan Argon2id migration with KDF params in `encryption.json` | KV-006 | S→M |
+| T-11 | ✅ done | PBKDF2 raised to 600k for new vaults; KDF params persisted in `encryption.json` (legacy vaults default to 100k, still open); re-key + Argon2id deferred (needs KV-021/T-20) | KV-006 | S→M |
 | T-12 | ⬜ | Make desktop OAuth client secret-less (native + loopback PKCE); stop bundling `client_secret.json`; remove `FallbackClientId` | KV-007 | M |
 | T-13 | ✅ done | Apply DB concurrency gate consistently (all public methods) | KV-008 | S |
 | T-14 | ✅ done | Read columns by name (case-insensitive map) in `ReadEntries` | KV-009 | S |

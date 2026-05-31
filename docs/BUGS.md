@@ -15,8 +15,9 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > **Remediation progress (2026-05-30):**
 > - **P0 (shipped v1.0.3):** ✅ KV-001 (secrets rotated + history purged, verified), KV-005/034, KV-002, KV-004. 🟡 KV-003 mitigated.
 > - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
-> - **Tests:** 10 → **30** passing (KV-045 in progress).
-> - **Next:** KV-012 (hook-thread DB writes), KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033, KV-007/006/T-12 (secret-less OAuth).
+> - **Tests:** 10 → **34** passing (KV-045 in progress).
+> - **P1 (unreleased on `main`, 2026-05-31):** ✅ KV-012 (hook-thread DB writes → writer task; T-07, commit e5977dd), ✅ KV-006 (PBKDF2 600k + stored KDF params; T-11, commit 5748f9f).
+> - **Next:** KV-011/010/024 (shutdown teardown), KV-013 remainder + KV-032/033, KV-010/015 (DI), KV-007/T-12 (secret-less OAuth).
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 
@@ -58,9 +59,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix applied:** `SelfProcessName` is now `static readonly = Process.GetCurrentProcess().ProcessName` in both services (rename-safe; resolves to "KaptureVault" in the published app). Regression test: `CaptureServiceTests.Flush_WhenActiveWindowIsKaptureVaultItself_DoesNotCapture` (drives the service with the test runner's own process name as the active window). RED→GREEN verified.
 
 ### KV-006 · PBKDF2 100k iterations below 2026 guidance
-- **Area:** Crypto · **Status:** OPEN · `Services/EncryptionService.cs:14,123-127`
+- **Area:** Crypto · **Status:** ✅ FIXED (2026-05-31, T-11, commit 5748f9f) · `Services/EncryptionService.cs`
 - 100k PBKDF2-HMAC-SHA256 is ~6× under current OWASP (600k+); Argon2id is the modern recommendation. `vault.db` + `encryption.json` sit together in LocalAppData → a leaked pair is GPU-brute-forceable.
-- **Fix:** Raise to ≥600k as a stopgap; migrate to Argon2id (e.g. `Konscious.Security.Cryptography`). Store KDF params in `encryption.json` so vaults upgrade per-user.
+- **Fix (shipped):** New vaults derive at **600k**; `encryption.json` persists the KDF params (`Iterations`, `Kdf`). `Unlock` derives with the stored count, defaulting pre-T-11 files (no count) to 100k, so existing vaults still open. Argon2id + re-keying legacy vaults deferred (needs the transactional bulk path, KV-021/T-20).
 
 ### KV-007 · OAuth client secret bundled in installer + hardcoded fallback
 - **Area:** Security · **Status:** OPEN · `Services/CloudSync/GoogleDriveProvider.cs:14,81-86`, `installer/KaptureVaultSetup.iss:101-105`
@@ -89,9 +90,10 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Centralize teardown in `ShutdownRequested`/`OnExit`; dispose the provider there (KV-024); run sync-on-close once regardless of trigger.
 
 ### KV-012 · Synchronous WAL+AES SQLite INSERT on the keyboard-hook thread
-- **Area:** Performance · **Status:** OPEN · `Services/CaptureService.cs:236` (← `OnChar`→`Flush` at `:112`), `KeyboardHookService.cs:46-54`
-- When the buffer hits `MaxBufferSize` mid-typing, `Flush()` runs `Open()` (new connection + `PRAGMA journal_mode=WAL`) + INSERT + AES **inside the WH_KEYBOARD_LL callback**. Blocking that callback degrades system-wide input latency and risks hook eviction (`LowLevelHooksTimeout`).
-- **Fix:** Hand flushed text to a bounded `Channel<CaptureEntry>`; run inserts on a dedicated writer task. Never do DB/crypto on the hook thread.
+- **Area:** Performance · **Status:** ✅ FIXED (2026-05-31, T-07, commit e5977dd) · `Services/CaptureService.cs`
+- When the buffer hit `MaxBufferSize` mid-typing, `Flush()` ran `Open()` + INSERT + AES **inside the WH_KEYBOARD_LL callback**, degrading system-wide input latency and risking hook eviction (`LowLevelHooksTimeout`).
+- **Fix (shipped):** `Flush()` now hands the entry to a bounded `Channel<CaptureEntry>` (non-blocking `TryWrite`, `AllowSynchronousContinuations=false`); a single writer task (`ProcessWriteQueueAsync`, started in `Start()`) performs Open()+INSERT+AES off the hook thread. `Stop()` completes + drains the channel (<=5s) so the final buffered entry isn't lost; inserts are now serialized through one writer.
+- **Tests:** `CaptureServiceTests.Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite` (RED->GREEN) + `Stop_DrainsBufferedEntriesAndDoesNotLoseData`.
 
 ### KV-013 · Entry `ListBox` effectively non-virtualized
 - **Area:** Performance · **Status:** 🟡 PARTIAL (2026-05-30, P1) · `MainWindowViewModel.cs`, `Services/DatabaseService.cs`, `ViewModels/Converters.cs`
