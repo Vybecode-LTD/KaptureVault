@@ -1,6 +1,6 @@
 ---
 document: ROADMAP
-version: 1.6.0
+version: 1.7.0
 app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
@@ -19,45 +19,47 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 > **P0 — ✅ complete, shipped in v1.0.3.** T-01 (secrets rotated), T-02 (history purged + verified), T-03/04/05 fixed test-first; T-06 🟡 mitigated.
 >
 > **P1 — in progress (batch 1 shipped in v1.0.4; batch 2 shipped in v1.0.5):**
-> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite 10 → **47**; CI `dotnet test` + `dotnet format --verify` + `--vulnerable` scan added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
+> ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite now **49** — was 47 at the v1.0.5 cut, +2 from F-01's `DatabaseServiceBackupTests`; CI `dotnet test` + `dotnet format --verify` + `--vulnerable` scan added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
 > **Shipped in v1.0.5 (2026-05-31):** the **T-07 + T-11 + T-10** batch (DB-writes-off-hook-thread, PBKDF2 600k + KDF params, DI via `ServiceRegistration`), plus the `dotnet format`/`--vulnerable` CI gates from T-16.
-> **Remaining P1, recommended order:** **T-16 remainder** (Avalonia.Headless.XUnit smoke + VM filter-selection regression — do first, it makes the next two verifiable; the `dotnet format --verify`/`--vulnerable`-into-CI part is now done), **T-09 + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-08** (KV-011/024 shutdown teardown — pairs with T-16). T-12 (secret-less OAuth, residual KV-007) is **folded into F-02 Phase 1** (backend broker), no longer a standalone P1. _Resequenced 2026-05-31: T-11 + T-10 pulled early (clean wins); T-08/T-09 moved after T-16 so the lifecycle/UI refactors are verifiable via headless tests._
+> **Remaining P1, recommended order:** **T-16 remainder** (Avalonia.Headless.XUnit smoke + VM filter-selection regression — do first, it makes the next two verifiable; the `dotnet format --verify`/`--vulnerable`-into-CI part is now done), **T-09 + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-08** (KV-011/024 shutdown teardown — pairs with T-16). **T-12 (secret-less OAuth, residual KV-007) is RETIRED** — F-02 Phase 1's backend now brokers the OAuth exchange (built 2026-05-31, repo `kapturevault-backend`), so the client-side secret-less auth lands in **F-02 Phase 2** client work, not as a standalone P1. _Resequenced 2026-05-31: T-11 + T-10 pulled early (clean wins); T-08/T-09 moved after T-16 so the lifecycle/UI refactors are verifiable via headless tests._
 
 ---
 
 # 🚀 FEATURE ROADMAP (product — CURRENT FOCUS)
 
-Two new product directions (added 2026-05-30). **F-01 is the immediate next task**; F-02 is a larger, phased initiative. Full feasibility/architecture discussion is recorded in `AUDIT-LOG.md` (2026-05-30 PM-4).
+Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0.6)**; F-02 is a larger, phased initiative — **Phase 1 (backend foundation) is now DONE**. Full feasibility/architecture discussion is recorded in `AUDIT-LOG.md` (2026-05-30 PM-4).
 
-## F-01 · Export vault DB to local disk  *(free tier · ✅ IMPLEMENTED 2026-05-31 — unreleased)*
+## F-01 · Export vault DB to local disk  *(free tier · ✅ IMPLEMENTED 2026-05-31 — unreleased, ships v1.0.6)*
 
-> **✅ Done (2026-05-31, on `main`, unreleased):** `ExportVaultDatabaseCommand` + an **Export DB** toolbar button (`MainWindowViewModel` / `MainWindow.axaml`) → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off the UI thread (handles `VACUUM INTO`'s no-pre-existing-file rule; encrypted vaults export as-is, noted in the tooltip). Regression tests: `DatabaseServiceBackupTests` (standalone copy with every row + empty-vault). Tests 47 → **49**. Ships in the next release. The spec below is the original design, now realized.
+> **✅ Done (2026-05-31, on `main`, unreleased — ships in v1.0.6):** `ExportVaultDatabaseCommand` + an **Export DB** toolbar button (`MainWindowViewModel` / `MainWindow.axaml`) → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off the UI thread (handles `VACUUM INTO`'s no-pre-existing-file rule; encrypted vaults export as-is, noted in the tooltip). Regression tests: `DatabaseServiceBackupTests` (standalone copy with every row + empty-vault). Tests 47 → **49**. Ships in the next release (**v1.0.6**). The spec below is the original design, now realized.
 
 **Goal:** let users save a copy of their vault to a file they choose — not only sync to Google Drive.
 - Settings → **"Export Vault Database…"** button → `IStorageProvider.SaveFilePickerAsync` (`.db`) → `DatabaseService.CreateBackupCopy(path)` — **already exists** (`VACUUM INTO`, WAL-safe).
 - If encryption is on, the export is the encrypted SQLite (valid backup; restoring needs the password) — label it so.
 - **Test-first:** in-memory DB → insert rows → `CreateBackupCopy(temp)` → open the copy → assert rows present. Small, self-contained, ships in the free tier.
 
-## F-02 · Paid "Online Vault" — accounts + R2 storage + file hosting  *(epic · multi-week · new backend repo)*
+## F-02 · Paid "Online Vault" — accounts + R2 storage + file hosting  *(epic · multi-week · separate private backend repo)*
 
 **Goal:** a paid tier (**$49/yr**) where registered users get cloud storage for their vault **and** can upload files (**< 250 MB**), get **share links**, and see bucket items in the vault.
 
 **Three load-bearing decisions (settled in discussion):**
 1. **Per-user *namespace* in ONE shared bucket** (`users/{uid}/…`) — not a bucket-per-user (buckets are account-capped).
 2. **One feature-gated app**, not two versions — free = offline + DB export; paid features unlock on login with an active subscription. One codebase.
-3. **🔒 No storage/Stripe secrets in the desktop client, ever** — a backend brokers short-lived **presigned URLs**. (Same lesson as the KV-001 OAuth leak, higher stakes; makes **T-12** a hard prerequisite and leans on the VERSION_CONTROL secret discipline.)
+3. **🔒 No storage/Stripe secrets in the desktop client, ever** — a backend brokers short-lived **presigned URLs** (and now the OAuth token exchange). (Same lesson as the KV-001 OAuth leak, higher stakes; leans on the VERSION_CONTROL secret discipline. **The backend now exists** — see Phase 1 below — so the client-side secret-less auth that was T-12/KV-007 lands in Phase 2.)
 
 **Recommended stack:** Cloudflare **R2** (no egress fees — ideal for share links) + **Workers** (backend API) + **D1** (user/file/share metadata) + **Stripe** (subscription); reuse the existing **Google sign-in** for identity. An `R2StorageProvider : ICloudStorageProvider` slots next to `GoogleDriveProvider` for DB sync.
 
-**Phases:**
-| # | Phase | Where |
-|---|-------|-------|
-| 1 | Backend foundation — Worker API + R2 + D1 + Stripe + auth (verify subscription → issue presigned URLs scoped to `users/{uid}/`) | **new backend repo** |
-| 2 | Client online vault — `R2StorageProvider` (DB-sync alt to Drive) + login UI + subscription gate | KaptureVault |
-| 3 | Client file hosting — upload (presigned PUT, 250 MB cap enforced client + server) + file list + share links + files-in-vault | KaptureVault |
-| 4 | Ops — quotas, billing portal, deletion, abuse/DMCA handling | both |
+**Backend repo (NEW, off OneDrive):** `kapturevault-backend` — `https://github.com/Vybecode-LTD/kapturevault-backend`, on disk `C:\dev\kapturevault-backend`. Separate private repo (deliberately not on the OneDrive path; see the OneDrive tooling hazard in `CLAUDE.md` Lessons).
 
-**Reality check:** this turns KaptureVault into a hosted product — a new backend repo, recurring infra cost (R2 cheap + no egress; Workers/D1 ~free at small scale; Stripe ~2.9% + 30¢), and a real operational/legal surface (ToS/privacy updates, share-link abuse/DMCA, data deletion, account management). The economics work; the commitment is the ops surface. **Not yet started** — the fresh session decides whether to design F-02 in full or scaffold Phase 1 after shipping F-01.
+**Phases:**
+| # | Phase | Where | Status |
+|---|-------|-------|--------|
+| 1 | Backend foundation — Worker API + R2 + D1 + Stripe + auth (verify subscription → issue presigned URLs scoped to `users/{uid}/`) | **`kapturevault-backend`** | **✅ DONE (2026-05-31, repo `kapturevault-backend`)** — Cloudflare Worker: Google-auth sessions, Stripe billing + webhook→D1 state machine, presigned R2 URLs scoped to `users/{uid}/`, entitlement gate, D1 schema; **19 vitest tests + tsc + GitHub CI green**. Retires T-12/KV-007 (backend brokers the OAuth exchange). |
+| 2 | Client online vault — `R2StorageProvider` (DB-sync alt to Drive) + login UI + subscription gate **+ secret-less client OAuth (ex-T-12/KV-007, now via the backend broker)** | KaptureVault | ⏳ **NEXT** |
+| 3 | Client file hosting — upload (presigned PUT, 250 MB cap enforced client + server) + file list + share links + files-in-vault | KaptureVault | ⬜ |
+| 4 | Ops — quotas, billing portal, deletion, abuse/DMCA handling | both | ⬜ |
+
+**Reality check:** this turns KaptureVault into a hosted product — a separate backend repo (`kapturevault-backend`), recurring infra cost (R2 cheap + no egress; Workers/D1 ~free at small scale; Stripe ~2.9% + 30¢), and a real operational/legal surface (ToS/privacy updates, share-link abuse/DMCA, data deletion, account management). The economics work; the commitment is the ops surface. **Phase 1 is started AND done** (backend foundation built + 19 tests + CI green, 2026-05-31); **Phase 2 (client `R2StorageProvider` + login + subscription gate, including the secret-less client OAuth folded in from T-12/KV-007) is next**, then Phase 3 (client file hosting), then Phase 4 (ops).
 
 ---
 
@@ -98,11 +100,11 @@ Two new product directions (added 2026-05-30). **F-01 is the immediate next task
 | T-09 | 🟡 partial | Make the entry `ListBox` virtualize. **Done:** brush caching + 1000-row cap. **Left:** diff-update `Entries`, debounce, off-UI decrypt | KV-013, KV-032, KV-033 | M |
 | T-10 | ✅ done | Register `HotkeyService` + `MainWindowViewModel` in DI (`ServiceRegistration.cs`); resolved from container, not `new`ed in `App`. View `App.Services` locator cleanup (KV-015) folded into T-22 | KV-010, KV-015(partial) | M |
 | T-11 | ✅ done | PBKDF2 raised to 600k for new vaults; KDF params persisted in `encryption.json` (legacy vaults default to 100k, still open); re-key + Argon2id deferred (needs KV-021/T-20) | KV-006 | S→M |
-| T-12 | ⬜ → **folded into F-02** | Secret-less client OAuth. **Decided 2026-05-31: defer to F-02 Phase 1 (backend broker)** — Google's desktop token endpoint still expects the secret, so the backend brokers the exchange and the client holds none. Stop bundling `client_secret.json` + remove `FallbackClientId` as part of that work | KV-007 | M |
+| ~~T-12~~ | ✅ RETIRED → **F-02** | Secret-less client OAuth. **Retired 2026-05-31:** F-02 Phase 1's backend (repo `kapturevault-backend`, built + CI green) now **brokers the Google token exchange**, so the client holds no secret. The client-side change (stop bundling `client_secret.json`, remove `FallbackClientId`) is now **F-02 Phase 2 client work** — no longer a standalone P1. | KV-007 | M |
 | T-13 | ✅ done | Apply DB concurrency gate consistently (all public methods) | KV-008 | S |
 | T-14 | ✅ done | Read columns by name (case-insensitive map) in `ReadEntries` | KV-009 | S |
 | T-15 | ✅ done | Dispose annotation-editor base `Bitmap` (`OnClosed`) + `using` the `RenderTargetBitmap` + SaveAs guard | KV-014, KV-023, KV-018 | XS |
-| T-16 | 🟡 partial | test suite 47; CI `dotnet test` + **`dotnet format --verify` + `--vulnerable` scan** all live in tests.yml (green). Left: Avalonia headless smoke + VM filter regression. | KV-045 | M |
+| T-16 | 🟡 partial | test suite now **49** (47 at the v1.0.5 cut + 2 from F-01); CI `dotnet test` + **`dotnet format --verify` + `--vulnerable` scan** all live in tests.yml (green). Left: Avalonia headless smoke + VM filter regression. | KV-045 | M |
 
 ## P2 — Medium (correctness, hardening, MVVM hygiene)
 
@@ -148,10 +150,10 @@ Two new product directions (added 2026-05-30). **F-01 is the immediate next task
 
 ## Human / one-time (not code — needs the maintainer)
 
-- **Google Cloud Console:** confirm the OLD web secret is deleted (desktop client already recreated); reconfigure the desktop client as **secret-less native + loopback PKCE** (pairs with T-12); finish the OAuth consent screen for `kapture.tools` (authorized domain + Privacy/TOS URLs, exit Testing mode).
+- **Google Cloud Console:** confirm the OLD web secret is deleted (desktop client already recreated); reconfigure the desktop client as **secret-less native + loopback PKCE** (now part of F-02 Phase 2 client work — the `kapturevault-backend` broker handles the token exchange); finish the OAuth consent screen for `kapture.tools` (authorized domain + Privacy/TOS URLs, exit Testing mode).
 - **GitHub Pages + DNS:** point `kapture.tools` at Pages — A `@` → `185.199.108–111.153`, CNAME `www` → `vybecode-ltd.github.io`; enable Enforce HTTPS. Verify `kapture.tools` in Google Search Console.
 - **Mobile viewer:** paste the web client ID `232322018793-70gd1j2j…` into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
-- **Repo hygiene:** consider moving the repos off the OneDrive path (OneDrive + `.git` is risky).
+- **Repo hygiene:** consider moving the KaptureVault repo off the OneDrive path (OneDrive + `.git` is risky). *(The new `kapturevault-backend` repo is already off OneDrive at `C:\dev\kapturevault-backend`.)*
 
 ---
 

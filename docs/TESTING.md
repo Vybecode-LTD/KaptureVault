@@ -1,6 +1,6 @@
 ---
 document: TESTING
-version: 1.6.0
+version: 1.7.0
 app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
@@ -12,7 +12,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet, on `KaptureVault.slnx`). **47 tests passing** as of 2026-05-31. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet, on `KaptureVault.slnx`). **49 tests passing** as of 2026-05-31. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob.
 
 Suite inventory:
 | Suite | Covers | Tests |
@@ -22,10 +22,13 @@ Suite inventory:
 | `Services/DatabaseServiceSearchTests` | KV-004 encrypted-content search | 3 |
 | `Services/DatabaseServiceReplaceTests` | KV-003 pre-sync backup retention | 1 |
 | `Services/DatabaseServiceCrudTests` | KV-009 full-field round-trip, null-expiry, pin/tags, GetAll limit | 4 |
+| `Services/DatabaseServiceBackupTests` | F-01 local DB export: `CreateBackupCopy` writes a standalone copy containing every row; empty-vault backup is still a valid vault | 2 |
 | `Services/ServiceRegistrationTests` | KV-010/T-10 DI composition (`HotkeyService` + `MainWindowViewModel` resolve from `ServiceRegistration.cs`) | 13 |
 | `ViewModels/ConverterTests` | KV-033 brush caching + pure text/number converters | 16 |
 
-**Total: 47 tests.**
+**Total: 49 tests.**
+
+> **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **19 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Those are **not** part of the .NET `KaptureVault.Tests` count above.
 
 **CI: LIVE.** `.github/workflows/tests.yml` runs on every push/PR to `main` (windows-latest, .NET 9) and enforces, in order: `dotnet build` → `dotnet format --verify-no-changes` → `dotnet list package --vulnerable --include-transitive` (fails the run on any vulnerable package) → `dotnet test` (TRX + Cobertura coverage). Verified green on GitHub (Actions run 26725669973, all steps passing).
 

@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.6.0
+version: 1.7.0
 app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
@@ -9,6 +9,24 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-05-31 (PM-2) — F-01 shipped to main + F-02 Phase 1 backend built
+
+**Trigger:** Continuation of the same-day session, *after* the v1.0.5 reconciliation (the PM entry below). Two deliverables landed and a final reconciliation pass took the managed doc set to **`version` 1.7.0** (app-version stays **1.0.5** — F-01 is unreleased).
+
+**Ground truth re-verified first (proof, not assertion — OneDrive tooling hazard):** client `git ls-remote` HEAD **`ddc3ce4` = `origin/main`**; working tree carries only the in-flight doc edits (CLAUDE/HANDOFF/ROADMAP/TESTING already at 1.7.0, this AUDIT-LOG + BUGS being brought up now); `git ls-files` confirms `DatabaseServiceBackupTests.cs`, `ServiceRegistrationTests.cs`, `tests.yml`, `auto-release.yml`, and `docs/F-02-online-vault-design.md` all present (a parallel `Glob` returned empty — a known OneDrive reporting artifact, *not* missing files; git is authoritative). Backend repo present at `C:\dev\kapturevault-backend` with commits `4758a50` + `8795110`. Client test count **49** confirmed by attribute + `[InlineData]` expansion (Capture 4 / Encryption 6 / Search 3 / Replace 1 / Crud 4 / **Backup 2** / ServiceRegistration 13 / Converter 16 = 49); backend **19** `it/test` cases across 4 spec files.
+
+**F-01 (Export Vault Database) IMPLEMENTED — on `main`, UNRELEASED (ships v1.0.6):** an **Export DB** toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` (WAL-safe `VACUUM INTO`) run **off the UI thread**; encrypted vaults export as-is (restoring needs the password; labelled in the tooltip). Regression: `DatabaseServiceBackupTests` (2 — standalone copy with every row opened as an independent file connection + empty-vault still a valid DB). Commit **`ddc3ce4`** (= HEAD = `origin/main`). Client tests **47 → 49**. Staged under CHANGELOG **`[Unreleased]`** → promotes to **v1.0.6**; not yet released.
+
+**F-02 Phase 1 — BACKEND BUILT in a NEW separate private repo `kapturevault-backend`:** `https://github.com/Vybecode-LTD/kapturevault-backend`, on disk `C:\dev\kapturevault-backend` — **deliberately off OneDrive** (the tooling-hazard mitigation). A Cloudflare **Worker** (TypeScript) providing: Google-token verify → first-party **session JWT**; **Stripe** billing + webhook → **D1** subscription state machine; **presigned R2 URLs scoped to `users/{uid}/`**; an **entitlement gate**; and the **D1 schema**. **19 vitest tests + `tsc --noEmit` clean + GitHub Actions CI green** — commits **`4758a50`** (foundation) + **`8795110`** (router/store/billing/webhook/presign). No client code yet; it cannot run live until the human cloud prereqs are filled (Cloudflare R2/Workers/D1, Stripe keys + $49/yr price id, Google OIDC client) — see HANDOFF.
+
+**Decision — KV-007 / T-12 RETIRES via the backend broker (lands in F-02 Phase 2):** with `kapturevault-backend` now brokering Google's desktop token exchange, the client will hold only the public client ID + PKCE and **no `client_secret`**. T-12 is therefore no longer a standalone P1 — the client-side cutover (stop bundling `client_secret.json`, remove `FallbackClientId`) is **F-02 Phase 2** client work. The v1.0.5 installer still bundles `client_secret.json` meanwhile (a Google-"non-confidential", PKCE-protected desktop credential); **do not widen distribution on that assumption** until Phase 2 ships.
+
+**Documentation reconciliation (this pass) — doc set → `version` 1.7.0:** all managed docs now carry shared **`version` 1.7.0** + **`app-version` 1.0.5** (CLAUDE/HANDOFF/ROADMAP/TESTING were bumped earlier this session; AUDIT-LOG + BUGS brought up in this pass — BUGS had lagged at 1.6.0). Reconciled to ground truth across CLAUDE.md, CHANGELOG.md, ROADMAP.md, BUGS.md, TESTING.md, HANDOFF.md: F-01 uniformly **implemented-but-unreleased (ships v1.0.6)**; client test count **49** everywhere; F-02 Phase 1 backend **DONE** in the separate `kapturevault-backend` repo (19 tests + tsc + CI); **KV-007/T-12 retired-via-F-02-backend** (Phase 2), not a standalone open task. Cross-document checks: frontmatter versions uniform (CHANGELOG has none by design); ROADMAP↔code, BUGS↔code, TESTING↔suite (8 suites / 49 tests), CLAUDE↔reality, HANDOFF↔state all consistent; cross-links resolve (`tests.yml`, `auto-release.yml`, `docs/F-02-online-vault-design.md` all verified on disk via `git ls-files`). No CRITICAL/HIGH reconciliation failures; nothing left needing manual review beyond the carried-over human cloud prereqs for F-02 live testing.
+
+**Auditor:** Claude (Opus 4.8), single session. **Next audit due:** next session start, or at the next release (v1.0.6).
+
+---
 
 ## 2026-05-31 (PM) — v1.0.5 release, format-debt closure + CI hardening, KV-007 decision, doc reconciliation
 

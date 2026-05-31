@@ -1,6 +1,6 @@
 ---
 document: BUGS
-version: 1.6.0
+version: 1.7.0
 app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
@@ -16,8 +16,8 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > - **P0 (shipped v1.0.3):** ✅ KV-001 (secrets rotated + history purged, verified), KV-005/034, KV-002, KV-004. 🟡 KV-003 mitigated.
 > - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
 > - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, 🟡 KV-010 (DI done; disposal still needs T-08).
-> - **Tests:** 10 → **47** passing. CI (`tests.yml`) now runs `dotnet test` + `dotnet format --verify-no-changes` + `dotnet list package --vulnerable`, verified green (run 26725669973). 🟡 KV-045: headless (Avalonia.Headless.XUnit) smoke tests + a MainWindowViewModel filter-selection regression test still pending.
-> - **Next:** KV-013 remainder + KV-032/033 (T-09), KV-011/024 (shutdown teardown, T-08), KV-007 (secret-less OAuth, T-12); KV-015 View-locator cleanup folded into T-22.
+> - **Tests:** 10 → 47 (at the v1.0.5 cut) → **49 now** (F-01 added `DatabaseServiceBackupTests`, 2). CI (`tests.yml`) runs `dotnet test` + `dotnet format --verify-no-changes` + `dotnet list package --vulnerable`, verified green (run 26725669973). 🟡 KV-045: headless (Avalonia.Headless.XUnit) smoke tests + a MainWindowViewModel filter-selection regression test still pending.
+> - **Next:** KV-013 remainder + KV-032/033 (T-09), KV-011/024 (shutdown teardown, T-08); KV-007 secret-less OAuth **retired → F-02 Phase 2** (backend broker built); KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 
@@ -67,6 +67,7 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Area:** Security · **Status:** OPEN — **deferred to F-02 (decision 2026-05-31)** · `Services/CloudSync/GoogleDriveProvider.cs:15,82-87,113`, `installer/KaptureVaultSetup.iss:101-105`
 - App uses PKCE but still *hard-requires* `_clientSecret` (`AuthenticateAsync` refuses without it; it's sent in the token exchange at :113), ships `client_secret.json` into Program Files, and has a hardcoded `FallbackClientId` (that constant is a client **ID** — public, not a secret). A secret shipped to every user is not secret.
 - **2026-05-31 DECISION (user):** fix **deferred to F-02 Phase 1 (backend broker)**, not a quick client-side change. Rationale: Google's desktop token endpoint still expects `client_secret` (PKCE alone secret-less was not confirmable without risking sync for all users), so the correct fix is the F-02 backend that brokers the OAuth code/refresh exchange — the client then holds only the public client ID + PKCE and never a secret. Re-confirmed the bundling persists (the v1.0.5 installer compresses `client_secret.json`). Until F-02 ships, the bundled value is a Google-"non-confidential" desktop credential (PKCE-protected); **do not widen distribution on that assumption.**
+- **F-02 Phase 1 backend now built** (repo kapturevault-backend, 2026-05-31) — the secret-less client cutover lands in F-02 Phase 2.
 - **Fix (via F-02 Phase 1):** backend brokers token exchange; client keeps only the public client ID + PKCE; stop bundling `client_secret.json`; remove the `FallbackClientId` constant.
 
 ### KV-008 · `ThrowIfReplacing()` gate applied inconsistently → sync-swap races

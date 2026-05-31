@@ -1,6 +1,6 @@
 ---
 document: HANDOFF
-version: 1.6.0
+version: 1.7.0
 app-version: 1.0.5
 last-updated: 2026-05-31
 last-audit: 2026-05-31
@@ -18,56 +18,63 @@ This repo lives on a OneDrive path; tooling can return stale/fabricated output (
 
 ```powershell
 cd C:\Users\vybec\OneDrive\Documents\Development\Utilities\KaptureVault
-git ls-remote origin refs/heads/main refs/tags/v1.0.5   # main expected = d92952d; tag v1.0.5 should exist
+git ls-remote origin refs/heads/main                     # main expected = ddc3ce4
 git status --porcelain                                   # expect CLEAN
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 47 passing
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 49 passing
 ```
 
-**If those match, the repo is healthy** (v1.0.5 shipped, tree clean) — proceed to "Next moves". If they don't, the tooling may be lying; reconcile against the "Recent commit stack" below before editing anything.
+**If those match, the client repo is healthy** (v1.0.5 shipped, F-01 merged-but-unreleased, tree clean) — proceed to "Next moves". If they don't, the tooling may be lying; reconcile against the "Recent commit stack" below before editing anything.
+
+**Backend lives in a SEPARATE repo** (off OneDrive): `C:\dev\kapturevault-backend` (own git + GitHub remote `github.com/Vybecode-LTD/kapturevault-backend`, private). Verify with `npm test` there → **19 vitest passing**. See "Related repos / human prereqs".
 
 ## TL;DR
 
-KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **v1.0.5 SHIPPED** (P1 hardening batch 2 + format-debt closure + CI format/vuln gates). `dotnet test` → **47 passing**; build Debug+Release **0/0**. HEAD `d92952d` = `origin/main` (verified), tree clean. **KV-007 (secret-less OAuth) deferred to F-02** (backend broker).
+KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **v1.0.5 SHIPPED** this session (tag `v1.0.5` = `ffc3c9d`, GitHub Release created by the workflow). **F-01 (Export Vault Database) DONE but UNRELEASED** (on main, CHANGELOG `[Unreleased]`; ships in **v1.0.6**). **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **49 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD `ddc3ce4` = `origin/main` (verified), tree clean. The latest *released* version is **v1.0.5**; the next *new* release will be **v1.0.6** (it promotes the staged F-01).
 
 ## ⚠️ CRITICAL — environment hazard (OneDrive path)
 
-The repo lives on a **OneDrive path** and the tool harness has repeatedly returned **stale, delayed, fabricated, or empty** tool output — including reporting commits, files, a CI workflow, and a `git push` as DONE when none had happened, and going **dark (empty results)** on the read/verify channel mid-task while `Write`/`git commit` kept working.
+The client repo lives on a **OneDrive path** and the tool harness has repeatedly returned **stale, delayed, fabricated, or empty** tool output — including reporting commits, files, a CI workflow, and a `git push` as DONE when none had happened, and going **dark (empty results)** on the read/verify channel mid-task while `Write`/`git commit` kept working.
 
-**Mitigations that worked:** (1) verify every consequential action with a SECOND authoritative command before relying on it — *especially git* (`git log` / `git status` / `git ls-remote` / `Test-Path`); (2) `Write` (full-file overwrite) is safe blind and safe to repeat; (3) targeted `Edit` is safe-on-failure (errors, never corrupts) but needs an in-session `Read` first; (4) run ONE PowerShell per turn (a non-zero exit cancels parallel siblings); (5) build+test after every change. **The actual filesystem/git/build/test operations were sound — only result *reporting* was unreliable.**
-**STRONGLY consider cloning the repo to a non-OneDrive path (e.g. `C:\dev\KaptureVault`) for the next session** — faster, and removes the most likely root cause.
+**Mitigations that worked:** (1) verify every consequential action with a SECOND authoritative command before relying on it — *especially git* (`git log` / `git status` / `git ls-remote` / `Test-Path`); (2) `Write` (full-file overwrite) is safe blind and safe to repeat; (3) targeted `Edit` is safe-on-failure (errors, never corrupts) but needs an in-session `Read` first; (4) run ONE PowerShell per turn (a non-zero exit cancels parallel siblings); (5) build+test after every change. **The actual filesystem/git/build/test operations were sound — only result *reporting* was unreliable.** The **backend repo is already off OneDrive** (`C:\dev\kapturevault-backend`) and did not exhibit this. **STRONGLY consider cloning the client repo to a non-OneDrive path too** (e.g. `C:\dev\KaptureVault`).
 
 ## ✅ What shipped this session (2026-05-31)
 
-- **v1.0.5 RELEASED** — tag `v1.0.5` = commit `ffc3c9d`; GitHub Release created by `auto-release.yml` (the single release creator). CHANGELOG has a `[1.0.5] — 2026-05-31` section. This shipped the **P1 hardening batch 2**:
-  - **T-07 / KV-012** — SQLite INSERT moved **off** the WH_KEYBOARD_LL hook thread: `CaptureService.Flush()` `TryWrite`s to a bounded `Channel<CaptureEntry>`; a single writer task does the INSERT off-thread; `Stop()` drains it.
-  - **T-11 / KV-006** — PBKDF2-HMAC-SHA256 → **600k** (OWASP 2023 floor) + **persisted KDF params** (`Iterations`, `Kdf`); legacy vaults (no stored count) default to 100k so they still unlock.
-  - **T-10 / KV-010** — `HotkeyService` + `MainWindowViewModel` resolved from **DI** (composition root in `ServiceRegistration.cs`) instead of `new`'d in `App`.
-- **Format debt CLOSED + CI-gated** — app `51dc9fd` + tests `12b7122` `dotnet format`-clean; `tests.yml` CI now runs `dotnet test` + `dotnet format --verify-no-changes` + `dotnet list package --vulnerable`, **verified GREEN** (run 26725669973). This completes the **format/vuln half of T-16**.
-- **KV-007 / T-12 decision** — **DEFER** secret-less OAuth to **F-02 Phase 1** (the backend broker removes the client secret entirely). Installer keeps bundling `client_secret.json` in the meantime.
+- **F-01 (Export Vault Database) — DONE** (commit `ddc3ce4`, currently **UNRELEASED**, ships in v1.0.6): Export DB toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` run **off-thread**; covered by `DatabaseServiceBackupTests`. Client test count **47 → 49**. CHANGELOG entry is staged under `[Unreleased]`.
+- **F-02 Phase 1 — BACKEND DONE** in a SEPARATE private repo **`kapturevault-backend`** (`github.com/Vybecode-LTD/kapturevault-backend`; on disk `C:\dev\kapturevault-backend`, **off OneDrive**). Cloudflare Worker providing: Google-auth sessions, Stripe billing + webhook → D1 subscription state machine, presigned R2 URLs scoped to `users/{uid}/`, an entitlement gate, and the D1 schema. **19 vitest tests + `tsc` + GitHub CI green** (commits `4758a50`, `8795110`). This **retires KV-007 / T-12** — the backend broker holds the OAuth/token secrets, so the client carries none.
+- (Earlier this session, already released) **v1.0.5** — P1 hardening batch 2 (T-07 hook-thread DB writes, T-11 PBKDF2 600k, T-10 DI) + `dotnet format`/vuln CI gates in `tests.yml` (the format/vuln half of T-16).
 
-## Recent commit stack (`origin/main`, 2026-05-31 — verify with `git log --oneline`)
+## Recent commit stack (client `origin/main`, 2026-05-31 — verify with `git log --oneline`)
 
 Newest first; HEAD = `origin/main` (verified via `git ls-remote`). **If yours differ, trust `git log`, not this table** (tooling has fabricated SHAs before — see ⚠️).
 
 | Commit | What |
 |---|---|
-| `d92952d` | ci: format + vuln gates in tests.yml *(HEAD = origin/main)* |
+| `ddc3ce4` | feat: Export Vault Database (F-01) + `DatabaseServiceBackupTests` *(HEAD = origin/main; UNRELEASED → v1.0.6)* |
+| `d92952d` | ci: format + vuln gates in tests.yml |
 | `12b7122` | chore: format tests project |
 | `ffc3c9d` | release: v1.0.5 *(tag v1.0.5 here)* |
 | `51dc9fd` | chore: format app project |
-| `b08ae0a` | _(v1.0.5 batch)_ |
-| `a89ea13` | _(v1.0.5 batch)_ |
 | `0351500` | refactor(di): HotkeyService + MainWindowViewModel in DI (T-10, KV-010) |
 | `5748f9f` | fix(crypto): PBKDF2 → 600k + persisted KDF params (T-11, KV-006) |
 | `e5977dd` | fix(capture): SQLite INSERT off the keyboard-hook thread (T-07, KV-012) |
 
+**Backend repo** (`C:\dev\kapturevault-backend`, own history): `8795110`, `4758a50` — F-02 Phase 1 (Worker + Stripe webhook + R2 presign + D1 schema + 19 vitest).
+
 ## Next moves (recommended order)
 
-1. **T-16 remainder** — `Avalonia.Headless.XUnit` smoke test + a `MainWindowViewModel` filter-selection regression test. **Do FIRST** — it's the harness that makes T-09/T-08 verifiable. (Format/vuln half is already done + CI-gated.)
-2. **T-09 / KV-013/032/033** — **diff-update** `Entries` (NEVER `Clear()` a selection-bound list — see Lessons), debounce `Refresh()`, decrypt off the UI thread. `MainWindowViewModel.cs`; AppList/TagList already diff-update — replicate for Entries.
-3. **T-08 / KV-011/024** — **centralize shutdown/teardown.** Only the tray Quit handler stops services; four other `Shutdown()` paths bypass it, and `ServiceProvider` is never disposed. Fix: one **idempotent `TeardownAsync`** (via `ShutdownRequested`) that disposes `HotkeyService` + `ServiceProvider`; bounded/background sync-on-close so shutdown can't hang. **Pair with T-16** for verifiability.
-4. **F-01** — Settings → "Export Vault Database…" → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy(path)` (already exists, `VACUUM INTO`). Test-first; quick win.
-5. **F-02** — paid **Online Vault** (R2 + Workers + D1 + Stripe; `docs/F-02-online-vault-design.md`). **Now ABSORBS T-12/KV-007:** the backend broker removes the bundled client secret, so secret-less OAuth ships as part of F-02 Phase 1 rather than as a standalone desktop change.
+1. **F-02 Phase 2 (client side)** — wire the desktop app to the backend: `R2StorageProvider : ICloudStorageProvider` (ask the Worker for a presigned URL, then PUT/GET bytes to R2) + Google sign-in UI → `POST /auth/session` (store session + refresh in DPAPI `CloudTokenStore`) + `IEntitlementService` reading `/me` + a subscription gate on the Online Vault. **Blocked on the human prereqs below** for live testing, but the client code can be built/unit-tested against a mocked Worker first.
+2. **OR cut v1.0.6 first** — ship the already-done **F-01** (promote `[Unreleased]` → `[1.0.6]`, run `Invoke-Release.ps1 -BumpType minor`). Quick, decouples the shipped F-01 from the larger F-02 client work.
+3. **Older client backlog** (post-F-02 or interleaved): **T-16 remainder** — `Avalonia.Headless.XUnit` UI smoke + `MainWindowViewModel` filter-selection regression test (the harness that makes T-09/T-08 verifiable); **T-09 / KV-013/032/033** — **diff-update** `Entries` (NEVER `Clear()` a selection-bound list — see Lessons), debounce `Refresh()`, decrypt off the UI thread; **T-08 / KV-011/024** — one **idempotent `TeardownAsync`** (via `ShutdownRequested`) that disposes `HotkeyService` + `ServiceProvider` (four shutdown paths bypass the current teardown). Pair T-09/T-08 with T-16.
+
+## Related repos / human prereqs (NEW — for F-02 live)
+
+The backend (`C:\dev\kapturevault-backend`) is code-complete + CI-green but **cannot run live** until a human provides the cloud accounts and fills the placeholders:
+
+1. **Cloudflare account** with **R2 + Workers + D1** enabled.
+2. **Stripe** test **and** live keys + the **$49/yr price id**.
+3. A **Google OIDC sign-in client** (web/installed) for `/auth/session`.
+
+Then, in the backend repo: fill `wrangler.toml` `REPLACE_WITH_*` (account id, R2 bucket, D1 db id, price id, Google client id), `wrangler secret put` the secrets (Stripe keys, webhook signing secret, session-signing key), and `npm run db:schema:remote` to apply the D1 schema. **Until then, F-02 stays Phase 1 (local/mocked tests only).**
 
 ## Release pipeline reminder (unchanged)
 
@@ -75,16 +82,20 @@ Newest first; HEAD = `origin/main` (verified via `git ls-remote`). **If yours di
 
 ## Blockers / human-only (carried over)
 
-- **Google Cloud Console:** finish the OAuth consent screen for `kapture.tools` (authorized domain + TOS/Privacy URLs, exit Testing mode). **Secret-less OAuth now lands via the F-02 backend broker (KV-007)** — the Cloud Console reconfigure happens as part of that backend work, not standalone.
+- **Google Cloud Console:** finish the OAuth consent screen for `kapture.tools` (authorized domain + TOS/Privacy URLs, exit Testing mode). **Secret-less OAuth now lands via the F-02 backend broker (KV-007 retired)** — the Cloud Console reconfigure happens as part of wiring the Google OIDC client above, not standalone.
 - **GitHub Pages + DNS:** point `kapture.tools` at Pages (A `@` → 185.199.108–111.153; CNAME `www` → `vybecode-ltd.github.io`), enforce HTTPS; verify in Google Search Console.
 - **Mobile viewer:** paste the web client ID `…70gd1j2j…` into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
-- **Repo hygiene:** move the repo off the OneDrive path (see ⚠️ above).
+- **F-02 cloud accounts / placeholders:** see "Related repos / human prereqs" above.
+- **Repo hygiene:** move the client repo off the OneDrive path (see ⚠️ above); the backend repo is already off it.
 
 ## Build / run quick reference
 
 ```powershell
+# Client
 dotnet build -c Debug
-.\bin\Debug\net9.0-windows\win-x64\KaptureVault.exe   # kill any running (maybe elevated) instance first
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 47 passing
+.\bin\Debug\net9.0-windows\win-x64\KaptureVault.exe        # kill any running (maybe elevated) instance first
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 49 passing
+# Backend (C:\dev\kapturevault-backend)
+npm test                                                   # 19 vitest passing
 ```
 Inno Setup ISCC: `C:\Users\vybec\AppData\Local\Programs\Inno Setup 6\ISCC.exe`.
