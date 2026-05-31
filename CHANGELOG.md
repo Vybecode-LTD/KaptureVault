@@ -9,7 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+Reliability, security, and architecture hardening from the post-audit P1 pass (batch 2).
+Staged for **v1.0.5**. Internal robustness/security; no change to day-to-day behavior.
+
+### Changed
+- **Typing no longer waits on the database.** When a long burst of captured text was
+  saved, the database write happened directly on the system-wide keyboard hook, which
+  could add input lag and risk Windows dropping the hook. Saving now happens on a
+  background worker, so keystroke capture stays responsive no matter how busy the disk is.
+- **Stronger encryption key strengthening.** New encrypted vaults now derive their key with
+  600,000 PBKDF2 iterations (up from 100,000, matching current OWASP guidance), and the
+  settings used are recorded so the vault still opens after future changes. Existing vaults
+  keep working and open exactly as before.
+
+### Fixed
+- **The Quick-Paste hotkey and main window are now created through the app's service
+  container,** removing a hand-wired object that could leak its background thread on some
+  exit paths. No visible change; groundwork for cleaner shutdown.
 
 ---
 
