@@ -29,7 +29,9 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 
 Two new product directions (added 2026-05-30). **F-01 is the immediate next task**; F-02 is a larger, phased initiative. Full feasibility/architecture discussion is recorded in `AUDIT-LOG.md` (2026-05-30 PM-4).
 
-## F-01 · Export vault DB to local disk  *(free tier · ~hours · START HERE)*
+## F-01 · Export vault DB to local disk  *(free tier · ✅ IMPLEMENTED 2026-05-31 — unreleased)*
+
+> **✅ Done (2026-05-31, on `main`, unreleased):** `ExportVaultDatabaseCommand` + an **Export DB** toolbar button (`MainWindowViewModel` / `MainWindow.axaml`) → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off the UI thread (handles `VACUUM INTO`'s no-pre-existing-file rule; encrypted vaults export as-is, noted in the tooltip). Regression tests: `DatabaseServiceBackupTests` (standalone copy with every row + empty-vault). Tests 47 → **49**. Ships in the next release. The spec below is the original design, now realized.
 
 **Goal:** let users save a copy of their vault to a file they choose — not only sync to Google Drive.
 - Settings → **"Export Vault Database…"** button → `IStorageProvider.SaveFilePickerAsync` (`.db`) → `DatabaseService.CreateBackupCopy(path)` — **already exists** (`VACUUM INTO`, WAL-safe).

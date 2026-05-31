@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Export your entire vault to a file you choose.** A new **Export DB** button in the
+  toolbar saves a complete, standalone backup copy of the vault database (`.db`) to any
+  location — independent of Google Drive sync (free tier). If encryption is enabled the
+  backup is encrypted and restoring it needs your password. Uses a WAL-safe `VACUUM INTO`
+  copy and runs off the UI thread.
+
+---
+
 ## [1.0.5] — 2026-05-31
 
 Reliability, security, and architecture hardening from the post-audit P1 pass (batch 2).

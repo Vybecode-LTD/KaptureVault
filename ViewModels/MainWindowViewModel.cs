@@ -443,6 +443,40 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task ExportVaultDatabase()
+    {
+        var topLevel = GetTopLevel();
+        if (topLevel == null) return;
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Vault Database",
+            DefaultExtension = "db",
+            SuggestedFileName = $"KaptureVault-backup-{DateTime.Now:yyyyMMdd_HHmmss}.db",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("SQLite Database") { Patterns = ["*.db"] }
+            ]
+        });
+
+        if (file == null) return;
+
+        try
+        {
+            var path = file.Path.LocalPath;
+            // VACUUM INTO fails if the destination already exists; the save dialog has
+            // already confirmed any overwrite with the user, so removing it is intended.
+            if (File.Exists(path)) File.Delete(path);
+            await Task.Run(() => _db.CreateBackupCopy(path));
+            ShowToast("Vault database exported");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Export failed: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
     private void TogglePin()
     {
         if (SelectedEntry == null) return;
