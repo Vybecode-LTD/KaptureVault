@@ -72,8 +72,14 @@ public class DatabaseServiceCrudTests : IDisposable
         var db = NewDb();
         db.Insert(new CaptureEntry
         {
-            AppName = "notepad", WindowTitle = "t", Content = "hi", CharCount = 2,
-            CapturedAt = DateTime.UtcNow, ExpiresAt = null, EntryType = "keyboard", Tags = ""
+            AppName = "notepad",
+            WindowTitle = "t",
+            Content = "hi",
+            CharCount = 2,
+            CapturedAt = DateTime.UtcNow,
+            ExpiresAt = null,
+            EntryType = "keyboard",
+            Tags = ""
         });
 
         db.GetAll().Single().ExpiresAt.Should().BeNull();
@@ -85,8 +91,13 @@ public class DatabaseServiceCrudTests : IDisposable
         var db = NewDb();
         db.Insert(new CaptureEntry
         {
-            AppName = "notepad", WindowTitle = "t", Content = "hi", CharCount = 2,
-            CapturedAt = DateTime.UtcNow, EntryType = "keyboard", Tags = ""
+            AppName = "notepad",
+            WindowTitle = "t",
+            Content = "hi",
+            CharCount = 2,
+            CapturedAt = DateTime.UtcNow,
+            EntryType = "keyboard",
+            Tags = ""
         });
         var id = db.GetAll().Single().Id;
 
@@ -107,8 +118,13 @@ public class DatabaseServiceCrudTests : IDisposable
         for (var i = 0; i < 5; i++)
             db.Insert(new CaptureEntry
             {
-                AppName = "app", WindowTitle = "t", Content = $"entry {i}", CharCount = 1,
-                CapturedAt = baseTime.AddMinutes(i), EntryType = "keyboard", Tags = ""
+                AppName = "app",
+                WindowTitle = "t",
+                Content = $"entry {i}",
+                CharCount = 1,
+                CapturedAt = baseTime.AddMinutes(i),
+                EntryType = "keyboard",
+                Tags = ""
             });
 
         var limited = db.GetAll(limit: 2);
