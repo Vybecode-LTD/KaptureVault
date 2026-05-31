@@ -7,10 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.5] — 2026-05-31
 
 Reliability, security, and architecture hardening from the post-audit P1 pass (batch 2).
-Staged for **v1.0.5**. Internal robustness/security; no change to day-to-day behavior.
+Internal robustness/security; no change to day-to-day behavior.
 
 ### Changed
 - **Typing no longer waits on the database.** When a long burst of captured text was
@@ -157,6 +157,7 @@ clipboard, and screenshot capture plus settings).
   features were the only thing that needed elevation) and switched startup from a
   scheduled task to the per-user `Run` registry key.
 
+[1.0.5]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.5
 [1.0.4]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.4
 [1.0.3]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.3
 [1.0.2]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.2
