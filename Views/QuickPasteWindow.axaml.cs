@@ -23,9 +23,9 @@ public static class QuickPasteConverters
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
             => value switch
             {
-                "clipboard"  => new SolidColorBrush(Color.Parse("#D2A8FF")),
+                "clipboard" => new SolidColorBrush(Color.Parse("#D2A8FF")),
                 "screenshot" => new SolidColorBrush(Color.Parse("#58A6FF")),
-                _            => new SolidColorBrush(Color.Parse("#3FB950")),
+                _ => new SolidColorBrush(Color.Parse("#3FB950")),
             };
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
     }
