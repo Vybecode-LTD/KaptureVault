@@ -133,6 +133,12 @@ Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0
 | T-32 | Verify capture can't insert while locked-but-configured (+ test) | KV-042 | S |
 | T-33 | Remove dead `ViewLocator` reflection (or back with keyed DI) | KV-043 | XS |
 
+## Infra / repo consolidation
+
+| # | Task | Notes | Effort |
+|---|------|-------|--------|
+| T-34 | **Investigate consolidating the kapture.tools website into the main repo (if feasible).** The marketing site lives in a **separate** repo `Kapture.Tools-Website` (`C:\DEV\Kapture.Tools-Website`), deployed via an external host (no GitHub Pages); the app repo's `docs/` is a redundant legacy landing page that still carries a stale `kapture.tools` CNAME. **Approach:** decide monorepo-vs-separate, then either `git subtree` the site into `KaptureVault/site/` (preserves history) or copy it in, repoint the host (likely Cloudflare Pages) at the main repo/subdir, and retire the `docs/` page + duplicate CNAME. **Caveats:** only one repo can serve the `kapture.tools` custom domain; don't break the live site; the host build config is external. May legitimately stay separate if that's cleaner — this is an investigate-and-decide task. | — (website repo) | M |
+
 ---
 
 ## Shipped (releases) — see `CHANGELOG.md`
