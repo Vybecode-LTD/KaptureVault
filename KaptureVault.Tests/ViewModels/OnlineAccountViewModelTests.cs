@@ -25,7 +25,7 @@ public class OnlineAccountViewModelTests
         _settings.Settings.Returns(_appSettings);
         var config = configured
             ? new OnlineVaultConfig { ApiBaseUrl = "https://api.kapture.tools", GoogleClientId = "client-123" }
-            : new OnlineVaultConfig(); // placeholder defaults -> not configured
+            : new OnlineVaultConfig { ApiBaseUrl = "REPLACE_WITH_API", GoogleClientId = "REPLACE_WITH_ID" }; // explicit not-configured (defaults are now real)
         return new OnlineAccountViewModel(_account, _opener, config, _settings);
     }
 
