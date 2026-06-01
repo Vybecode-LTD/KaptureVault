@@ -233,8 +233,7 @@ public partial class SettingsWindow : Window
             });
 
             // Elevated instance is starting up — shut this one down.
-            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
-                ?.Shutdown();
+            (Application.Current as App)?.ShutdownForRestart();
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) // UAC cancelled
         {
@@ -246,8 +245,7 @@ public partial class SettingsWindow : Window
 
             // We already released the mutex above — the app can keep running but
             // single-instance protection is gone for this session. Safest: shutdown.
-            (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
-                ?.Shutdown();
+            (Application.Current as App)?.ShutdownForRestart();
         }
         catch
         {
@@ -274,7 +272,6 @@ public partial class SettingsWindow : Window
         }
         catch { /* if the relaunch fails the user can start it manually */ }
 
-        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
-            ?.Shutdown();
+        (Application.Current as App)?.ShutdownForRestart();
     }
 }

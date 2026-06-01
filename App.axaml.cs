@@ -26,6 +26,11 @@ public partial class App : Application
     private TrayIcon? _trayIcon;
     private bool _quickPasteOpen;
 
+    // T-08 (KV-011/KV-024): single idempotent teardown wired to ShutdownRequested.
+    private ShutdownCoordinator? _shutdown;
+    private bool _teardownDone;
+    private bool _syncOnShutdown = true;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -70,7 +75,9 @@ public partial class App : Application
 
                     if (!dialog.WasConfirmed)
                     {
-                        // User cancelled — quit app
+                        // User cancelled — dispose the container we built (no services started
+                        // yet), then quit. ShutdownRequested isn't wired this early, so dispose here.
+                        (_serviceProvider as IDisposable)?.Dispose();
                         desktop.Shutdown();
                         return;
                     }
@@ -135,6 +142,14 @@ public partial class App : Application
                     syncManager.SetActiveProvider(settingsService.Settings.CloudSyncProvider);
                 syncManager.StartPeriodicSync(settingsService.Settings.CloudSyncIntervalMinutes);
             }
+
+            // T-08: route every exit through one idempotent teardown. The tray Quit, the
+            // encryption-cancel path, SettingsWindow's restart paths, and an OS shutdown all end
+            // up calling desktop.Shutdown(), which fires ShutdownRequested -> OnShutdownRequested.
+            _shutdown = new ShutdownCoordinator(
+                _capture, _clipboardMonitor, _screenshotService, settingsService,
+                ct => _serviceProvider!.GetRequiredService<CloudSyncManager>().SyncAsync(ct));
+            desktop.ShutdownRequested += OnShutdownRequested;
 
             // Set up tray icon
             SetupTrayIcon(desktop, vm);
@@ -247,29 +262,9 @@ public partial class App : Application
         var separator = new NativeMenuItemSeparator();
 
         var quitItem = new NativeMenuItem("Quit");
-        quitItem.Click += async (_, _) =>
-        {
-            _capture?.Stop();
-            _clipboardMonitor?.Stop();
-            _screenshotService?.Stop();
-            _hotkeyService?.Stop();
-
-            // Sync on close if enabled
-            var settings = _serviceProvider?.GetService<ISettingsService>();
-            if (settings?.Settings is { CloudSyncEnabled: true, SyncOnClose: true })
-            {
-                var syncManager = _serviceProvider?.GetService<CloudSyncManager>();
-                if (syncManager is not null)
-                {
-                    using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    try { await syncManager.SyncAsync(cts.Token); }
-                    catch { /* Don't block shutdown on sync failure */ }
-                }
-            }
-
-            _trayIcon?.Dispose();
-            desktop.Shutdown();
-        };
+        // All teardown (stop services, sync-on-close, dispose tray + ServiceProvider) runs once in
+        // OnShutdownRequested — see T-08.
+        quitItem.Click += (_, _) => desktop.Shutdown();
 
         _trayIcon = new TrayIcon
         {
@@ -285,6 +280,38 @@ public partial class App : Application
             _mainWindow?.Activate();
             vm.Refresh();
         };
+    }
+
+    // T-08: the single teardown chokepoint. Every exit path calls Shutdown(), which fires this.
+    // We cancel the first pass, run the (async, bounded) teardown, then re-issue Shutdown(); the
+    // second pass sees _teardownDone and proceeds. Idempotent and safe from any exit path.
+    private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    {
+        if (_teardownDone) return;
+        e.Cancel = true;
+        try
+        {
+            if (_shutdown is not null)
+                await _shutdown.TeardownAsync(_syncOnShutdown, TimeSpan.FromSeconds(10));
+        }
+        catch { /* never let a teardown failure wedge shutdown */ }
+        finally
+        {
+            _trayIcon?.Dispose();
+            (_serviceProvider as IDisposable)?.Dispose(); // KV-024: also disposes HotkeyService + CloudSyncManager
+            _teardownDone = true;
+            (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// Exit for SettingsWindow's elevate/de-elevate restart: tear down WITHOUT sync-on-close
+    /// (a restart is not a quit) before the replacement process takes over.
+    /// </summary>
+    public void ShutdownForRestart()
+    {
+        _syncOnShutdown = false;
+        (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
     }
 
     private void UpdateTrayIcon(bool isRecording)
