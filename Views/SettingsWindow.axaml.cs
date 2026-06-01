@@ -31,6 +31,10 @@ public partial class SettingsWindow : Window
         _syncManager = App.Services.GetService<CloudSyncManager>();
         UpdateCloudStatus();
 
+        // F-02: the Online Vault account panel binds to its own view model (resolved from DI),
+        // separate from this window's SettingsViewModel DataContext.
+        OnlineVaultPanel.DataContext = App.Services.GetService<OnlineAccountViewModel>();
+
         // Snapshot the current value so Save_Click can detect a change.
         if (DataContext is SettingsViewModel vm)
             _originalCaptureAdminApps = vm.CaptureAdminApps;
