@@ -1,7 +1,7 @@
 ---
 document: AUDIT-LOG
-version: 1.8.0
-app-version: 1.0.6
+version: 1.9.0
+app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
 managed-by: manual-reconciliation
@@ -9,6 +9,18 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-01 (PM-2) — v1.0.7 released + kapture.tools "Freeware" rebrand + visibility/doc fixes
+
+**Released v1.0.7** (tag `v1.0.7` = `2d09aa3`; GitHub Release via `auto-release.yml`) — ships the P1 hardening batch (T-16/T-09/T-08) that was staged in CHANGELOG `[Unreleased]`. Tests CI green.
+
+**kapture.tools** is served from a **separate repo** `Kapture.Tools-Website` (cloned to `C:\DEV\Kapture.Tools-Website`), NOT this repo's `docs/`. Changes there: hero badge "Free & Open Source" → **"v{version} - Freeware"**, auto-updated from the KaptureVault Releases API via the existing `download.js` (`42b6199`); fixed the stale download card (v1.0.0 + wrong-repo href → v1.0.7 + KaptureVault asset, `de75682`). That repo has **no GitHub Pages** (404) — it deploys via an external host wired to the repo (verify the live deploy).
+
+**Doc fixes:** the misdirected `docs/index.html` footer edit (that page is a redundant, now-superseded landing page with its own stale `kapture.tools` CNAME) was reverted (`8c33a0b`). Corrected this repo's visibility in CLAUDE.md — **private → public** (gh confirms PUBLIC; the `kapturevault-backend` repo stays private). Managed docs bumped to **version 1.9.0 / app-version 1.0.7**; HANDOFF Start-here de-pinned from an exact SHA (the OneDrive hazard that motivated it is retired).
+
+**Auditor:** Claude (Opus 4.8). **Next:** F-02 Phase 2 and/or the P2 backlog.
+
+---
 
 ## 2026-06-01 (PM) — v1.0.6 released, P1 backlog (T-16/T-09/T-08) completed, docs → v1.8.0
 

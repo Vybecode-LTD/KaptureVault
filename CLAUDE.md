@@ -1,7 +1,7 @@
 ---
 document: CLAUDE
-version: 1.8.0
-app-version: 1.0.6
+version: 1.9.0
+app-version: 1.0.7
 last-updated: 2026-05-31
 last-audit: 2026-05-31
 managed-by: manual-reconciliation
@@ -24,7 +24,7 @@ managed-by: manual-reconciliation
 | `docs/AUDIT-LOG.md` | Audit + reconciliation history |
 | `CHANGELOG.md` | Versioned release history (+ Unreleased section) |
 
-All managed docs share **one `version`** (currently **1.8.0**) and carry YAML frontmatter. App version (`1.0.6` (shipped 2026-06-01)) is tracked separately via `app-version`. *(There is also a non-managed design reference, `docs/F-02-online-vault-design.md`, with no shared version.)*
+All managed docs share **one `version`** (currently **1.9.0**) and carry YAML frontmatter. App version (`1.0.7` (shipped 2026-06-01)) is tracked separately via `app-version`. *(There is also a non-managed design reference, `docs/F-02-online-vault-design.md`, with no shared version.)*
 
 > **Note:** the paid **Online Vault backend (F-02)** lives in a separate **private** repo `kapturevault-backend` (`C:\dev\kapturevault-backend`, off OneDrive — github.com/Vybecode-LTD/kapturevault-backend), not in this client repo.
 
@@ -36,9 +36,9 @@ All managed docs share **one `version`** (currently **1.8.0**) and carry YAML fr
 
 It does **NOT** contain the original app's system-tweak suite — there are no Tweaks/Services/Dashboard/Profiles/Startup/Scheduler/Privacy sections, no `SystemTweaks/`, and no `ITweak` infrastructure. It runs as a standard user (`asInvoker`), not admin.
 
-- **Version:** 1.0.6 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
+- **Version:** 1.0.7 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
 - **Repo root (= project root):** `C:\DEV\Utilities\KaptureVault` *(moved off OneDrive 2026-06-01; was `…\OneDrive\Documents\Development\Utilities\KaptureVault`)*
-- **Remote:** `github.com/Vybecode-LTD/KaptureVault` (private) · **Site:** `kapture.tools`
+- **Remote:** `github.com/Vybecode-LTD/KaptureVault` (public) · **Site:** `kapture.tools`
 - **Backend repo (F-02 paid Online Vault):** `github.com/Vybecode-LTD/kapturevault-backend` (private) at `C:\dev\kapturevault-backend` (off OneDrive)
 - **Environment:** Windows 11, Claude Code
 

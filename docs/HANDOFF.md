@@ -1,7 +1,7 @@
 ---
 document: HANDOFF
-version: 1.8.0
-app-version: 1.0.6
+version: 1.9.0
+app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
 managed-by: manual-reconciliation
@@ -18,18 +18,18 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 
 ```powershell
 cd C:\DEV\Utilities\KaptureVault
-git ls-remote origin refs/heads/main                     # main expected = bf3658c
 git status --porcelain                                   # expect CLEAN
+git ls-remote origin refs/heads/main                     # should equal your local HEAD (git log -1)
 dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 71 passing
 ```
 
-**If those match, the client repo is healthy** (v1.0.6 shipped, the whole P1 backlog done on main/unreleased, tree clean) — proceed to "Next moves".
+**If those match, the client repo is healthy** (v1.0.7 shipped — it shipped the P1 backlog; tree clean) — proceed to "Next moves".
 
 **Backend lives in a SEPARATE repo** (off OneDrive): `C:\dev\kapturevault-backend` (own git + GitHub remote `github.com/Vybecode-LTD/kapturevault-backend`, private). Verify with `npm test` there → **19 vitest passing**. See "Related repos / human prereqs".
 
 ## TL;DR
 
-KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Repo now lives at `C:\DEV\Utilities\KaptureVault` (off OneDrive).** **v1.0.6 SHIPPED** (tag `v1.0.6` = `aee32b5`, GitHub Release by the workflow) — it shipped **F-01 (Export Vault Database)**. The **entire P1 audit backlog is now COMPLETE on `main` (unreleased → v1.0.7):** T-16 (Avalonia.Headless.XUnit harness + VM regressions), T-09 (Entries diff-update + debounce + off-UI decrypt), T-08 (centralized shutdown teardown). **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **71 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD `bf3658c` = `origin/main`, tree clean. Latest *released* = **v1.0.6**; the P1 batch ships next as **v1.0.7** whenever a release is cut.
+KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Repo lives at `C:\DEV\Utilities\KaptureVault` (off OneDrive); public repo.** **Latest release: v1.0.7** (tag `v1.0.7` = `2d09aa3`) — it shipped the **P1 audit backlog**: T-16 (Avalonia.Headless.XUnit harness + VM regressions), T-09 (Entries diff-update + debounce + off-UI decrypt), T-08 (centralized shutdown teardown); **v1.0.6** before it shipped **F-01 (Export Vault Database)**. **All P0 + P1 audit issues resolved.** **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **71 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD = `origin/main`, tree clean. **Next: F-02 Phase 2** (client Online Vault) and/or the P2 backlog.
 
 ## ✅ RESOLVED — former OneDrive hazard (repo moved 2026-06-01)
 

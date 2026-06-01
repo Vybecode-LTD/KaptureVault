@@ -1,7 +1,7 @@
 ---
 document: TESTING
-version: 1.8.0
-app-version: 1.0.6
+version: 1.9.0
+app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
 managed-by: manual-reconciliation
