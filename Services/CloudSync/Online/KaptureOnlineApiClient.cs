@@ -35,6 +35,10 @@ public sealed class KaptureOnlineApiClient : IKaptureOnlineApiClient
     public Task<OnlineSession> AuthSessionAsync(string googleIdToken, CancellationToken ct = default) =>
         SendAsync<OnlineSession>(HttpMethod.Post, "/auth/session", session: null, new { id_token = googleIdToken }, ct);
 
+    public Task<OnlineSession> AuthWithCodeAsync(string code, string codeVerifier, string redirectUri, CancellationToken ct = default) =>
+        SendAsync<OnlineSession>(HttpMethod.Post, "/auth/google", session: null,
+            new { code, code_verifier = codeVerifier, redirect_uri = redirectUri }, ct);
+
     public Task<RefreshedSession> RefreshSessionAsync(string refreshToken, CancellationToken ct = default) =>
         SendAsync<RefreshedSession>(HttpMethod.Post, "/auth/refresh", session: null, new { refresh = refreshToken }, ct);
 
@@ -69,6 +73,12 @@ public sealed class KaptureOnlineApiClient : IKaptureOnlineApiClient
 
         var meta = JsonSerializer.Deserialize<VaultMeta>(body, JsonOpts);
         return new VaultMetaResult(meta is not null, meta);
+    }
+
+    public async Task PutVaultMetaAsync(string session, VaultMeta meta, CancellationToken ct = default)
+    {
+        using var resp = await RawSendAsync(HttpMethod.Put, "/vault/meta", session, meta, ct);
+        await ThrowIfFailedAsync(resp, ct);
     }
 
     private async Task<T> SendAsync<T>(HttpMethod method, string path, string? session, object? body, CancellationToken ct)

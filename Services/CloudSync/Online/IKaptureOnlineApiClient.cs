@@ -14,6 +14,12 @@ public interface IKaptureOnlineApiClient
     /// <summary><c>POST /auth/session</c> — exchange a verified Google ID token for a session.</summary>
     Task<OnlineSession> AuthSessionAsync(string googleIdToken, CancellationToken ct = default);
 
+    /// <summary>
+    /// <c>POST /auth/google</c> — the secret-less sign-in path: hand the backend a desktop PKCE
+    /// authorization code; it brokers the Google exchange (holding the secret) and returns a session.
+    /// </summary>
+    Task<OnlineSession> AuthWithCodeAsync(string code, string codeVerifier, string redirectUri, CancellationToken ct = default);
+
     /// <summary><c>POST /auth/refresh</c> — rotate a session token using the refresh token.</summary>
     Task<RefreshedSession> RefreshSessionAsync(string refreshToken, CancellationToken ct = default);
 
@@ -34,4 +40,7 @@ public interface IKaptureOnlineApiClient
 
     /// <summary><c>GET /vault/meta</c> — the remote vault's meta for conflict checks, or not-exists.</summary>
     Task<VaultMetaResult> GetVaultMetaAsync(string session, CancellationToken ct = default);
+
+    /// <summary><c>PUT /vault/meta</c> — write the vault meta (mtime/sha/size) after an upload.</summary>
+    Task PutVaultMetaAsync(string session, VaultMeta meta, CancellationToken ct = default);
 }

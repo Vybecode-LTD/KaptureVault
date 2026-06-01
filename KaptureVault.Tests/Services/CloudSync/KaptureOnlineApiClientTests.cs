@@ -58,6 +58,46 @@ public class KaptureOnlineApiClientTests
     }
 
     [Fact]
+    public async Task AuthWithCodeAsync_PostsPkceCodeAndVerifier_AndParsesSession()
+    {
+        var (client, handler) = Make((_, _) =>
+            Json(HttpStatusCode.OK, """{"session":"s.jwt","refresh":"r.jwt","uid":"u-9","expiresIn":3600}"""));
+
+        var result = await client.AuthWithCodeAsync("auth-code-abc", "verifier-123", "http://localhost:48722/");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/auth/google");
+        handler.LastBody.Should().Contain("auth-code-abc")
+            .And.Contain("code_verifier").And.Contain("verifier-123")
+            .And.Contain("redirect_uri");
+        result.Uid.Should().Be("u-9");
+        result.Refresh.Should().Be("r.jwt");
+    }
+
+    [Fact]
+    public async Task PutVaultMetaAsync_PutsMetaJson_WithBearer()
+    {
+        var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK, """{"ok":true}"""));
+
+        await client.PutVaultMetaAsync("sess-123", new VaultMeta("2026-06-01T12:00:00.000Z", "shahash", 2048, 1));
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Put);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/vault/meta");
+        handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-123");
+        handler.LastBody.Should().Contain("mtime").And.Contain("sha256").And.Contain("2048");
+    }
+
+    [Fact]
+    public async Task PutVaultMetaAsync_WhenNotEntitled_ThrowsPaymentRequired()
+    {
+        var (client, _) = Make((_, _) => Json(HttpStatusCode.PaymentRequired, """{"error":"subscription required"}"""));
+
+        Func<Task> act = () => client.PutVaultMetaAsync("sess", new VaultMeta("t", "s", 1, 1));
+
+        (await act.Should().ThrowAsync<OnlineApiException>()).Which.IsPaymentRequired.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task GetMeAsync_SendsBearer_AndParsesSubscriptionAndEntitlement()
     {
         var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK,
