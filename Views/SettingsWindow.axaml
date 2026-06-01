@@ -40,6 +40,37 @@
                     </Border>
                 </StackPanel>
 
+                <!-- General (Run on startup binds to the main view model's command; Export DB is
+                     handled in code-behind so its file picker parents to this window) -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="General" FontSize="15" Classes="section-header"/>
+                    <Border Classes="card">
+                        <StackPanel x:Name="GeneralPanel" x:DataType="vm:MainWindowViewModel" Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Run on startup"/>
+                                    <TextBlock Text="Launch KaptureVault automatically when you sign in to Windows"
+                                               FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Command="{Binding ToggleStartupCommand}" Content="{Binding StartupButtonText}"
+                                        VerticalAlignment="Center" Padding="12,6" FontSize="12"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Export vault database"/>
+                                    <TextBlock Text="Save a complete backup copy of the vault (.db) to a file you choose. If encryption is on, the backup is encrypted and needs your password to restore."
+                                               FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Export DB…" Click="ExportDb_Click"
+                                        VerticalAlignment="Center" Padding="12,6" FontSize="12"/>
+                            </Grid>
+                            <TextBlock x:Name="GeneralStatusText" FontSize="11" FontStyle="Italic" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource AppTextSecondary}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
                 <!-- Capture Settings -->
                 <StackPanel Spacing="8">
                     <TextBlock Text="Capture" FontSize="15" Classes="section-header"/>

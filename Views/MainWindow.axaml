@@ -86,14 +86,8 @@
                             <TextBlock Text="Expired" FontSize="12"/>
                         </StackPanel>
                     </Button>
-                    <Button Command="{Binding ToggleStartupCommand}" Content="{Binding StartupButtonText}" Padding="10,5" FontSize="12"/>
-                    <Button Command="{Binding ExportVaultDatabaseCommand}" Padding="10,5" FontSize="12"
-                            ToolTip.Tip="Export a backup copy of the whole vault database to a file you choose. If encryption is on, the backup is encrypted and needs your password to restore.">
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                            <TextBlock Text="&#xE74E;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
-                            <TextBlock Text="Export DB" FontSize="12"/>
-                        </StackPanel>
-                    </Button>
+                    <!-- Run-on-startup and Export DB moved to Settings → General (frees room for the
+                         paid Upload-files button). -->
                     <Button Padding="10,5" FontSize="12" Click="Settings_Click">
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <TextBlock Text="&#xE713;" FontFamily="{StaticResource SymbolFont}" FontSize="12" VerticalAlignment="Center"/>

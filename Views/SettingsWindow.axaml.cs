@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Kapture.Services;
 using Kapture.Services.CloudSync;
 using Kapture.ViewModels;
@@ -45,6 +46,10 @@ public partial class SettingsWindow : Window
         // F-02: the Online Vault account panel binds to its own view model (resolved from DI),
         // separate from this window's SettingsViewModel DataContext.
         OnlineVaultPanel.DataContext = App.Services.GetService<OnlineAccountViewModel>();
+
+        // The General card's "Run on startup" button binds to the main view model (the startup
+        // command lives there); Export DB is handled below so its picker parents to this window.
+        GeneralPanel.DataContext = App.Services.GetService<MainWindowViewModel>();
 
         // Snapshot the current value so Save_Click can detect a change.
         if (DataContext is SettingsViewModel vm)
@@ -197,6 +202,35 @@ public partial class SettingsWindow : Window
         await _syncManager.SyncAsync();
         SyncStatusText.Text = _syncManager.LastSyncStatus;
         SyncNowBtn.IsEnabled = true;
+    }
+
+    // ── General (Export DB; Run-on-startup binds to MainWindowViewModel.ToggleStartupCommand) ──
+
+    private async void ExportDb_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Export Vault Database",
+                DefaultExtension = "db",
+                SuggestedFileName = $"KaptureVault-backup-{DateTime.Now:yyyyMMdd_HHmmss}.db",
+                FileTypeChoices = [new FilePickerFileType("SQLite Database") { Patterns = ["*.db"] }]
+            });
+            if (file is null) return;
+
+            var path = file.Path.LocalPath;
+            // VACUUM INTO requires the destination not to pre-exist; the save dialog already
+            // confirmed any overwrite with the user, so deleting first is intended.
+            if (File.Exists(path)) File.Delete(path);
+            var db = App.Services.GetRequiredService<IDatabaseService>();
+            await Task.Run(() => db.CreateBackupCopy(path));
+            GeneralStatusText.Text = "Vault database exported.";
+        }
+        catch (Exception ex)
+        {
+            GeneralStatusText.Text = $"Export failed: {ex.Message}";
+        }
     }
 
     // ── Theme ──
