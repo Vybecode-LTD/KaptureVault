@@ -23,7 +23,7 @@ public partial class AboutDialog : Window
 
     private void WebsiteLink_Tapped(object? sender, TappedEventArgs e)
     {
-        OpenUrl("https://www.kapture.tools");
+        OpenUrl("https://kapture.tools");
     }
 
     private void PublisherLink_Tapped(object? sender, TappedEventArgs e)

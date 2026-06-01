@@ -13,7 +13,7 @@ public sealed class OnlineVaultConfig
 
     public const string DefaultApiBaseUrl = "https://kapturevault-backend.kapture.workers.dev";
     public const string DefaultGoogleClientId = "232322018793-p6c6gmi0qug5ij427528gniclcol84rr.apps.googleusercontent.com";
-    public const string DefaultWebVaultUrl = "https://www.kapture.tools/vault";
+    public const string DefaultWebVaultUrl = "https://kapture.tools/vault";
 
     /// <summary>Base URL of the deployed Cloudflare Worker (no trailing slash needed).</summary>
     public string ApiBaseUrl { get; init; } = DefaultApiBaseUrl;

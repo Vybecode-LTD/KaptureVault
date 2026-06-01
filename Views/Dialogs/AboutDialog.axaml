@@ -37,7 +37,7 @@
                 </StackPanel>
 
                 <!-- Row 2 · Product website (clickable) -->
-                <TextBlock Text="https://www.kapture.tools"
+                <TextBlock Text="https://kapture.tools"
                            FontSize="13"
                            Foreground="{DynamicResource AccentBrush}"
                            TextDecorations="Underline"
