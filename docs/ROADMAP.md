@@ -153,7 +153,7 @@ Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0
 - **Google Cloud Console:** confirm the OLD web secret is deleted (desktop client already recreated); reconfigure the desktop client as **secret-less native + loopback PKCE** (now part of F-02 Phase 2 client work — the `kapturevault-backend` broker handles the token exchange); finish the OAuth consent screen for `kapture.tools` (authorized domain + Privacy/TOS URLs, exit Testing mode).
 - **GitHub Pages + DNS:** point `kapture.tools` at Pages — A `@` → `185.199.108–111.153`, CNAME `www` → `vybecode-ltd.github.io`; enable Enforce HTTPS. Verify `kapture.tools` in Google Search Console.
 - **Mobile viewer:** paste the web client ID `232322018793-70gd1j2j…` into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
-- **Repo hygiene:** consider moving the KaptureVault repo off the OneDrive path (OneDrive + `.git` is risky). *(The new `kapturevault-backend` repo is already off OneDrive at `C:\dev\kapturevault-backend`.)*
+- **Repo hygiene:** ✅ DONE 2026-06-01 — KaptureVault repo moved off OneDrive to `C:\DEV\Utilities\KaptureVault` (alongside `kapturevault-backend` at `C:\dev`).
 
 ---
 

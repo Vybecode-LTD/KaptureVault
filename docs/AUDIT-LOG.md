@@ -10,6 +10,20 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 
 # AUDIT-LOG.md — KaptureVault
 
+## 2026-06-01 — Repo relocated off OneDrive to C:\DEV\Utilities\KaptureVault
+
+**Trigger:** User — "move the repo folder to `C:\DEV\Utilities` and make it the permanent location, change all known links, then work from there." Then: cut **v1.0.6** (F-01) and run the P1 backlog **T-16 → T-09 → T-08**.
+
+**Move (verified — proof, not assertion):** robocopy of the OneDrive working tree → `C:\DEV\Utilities\KaptureVault`, preserving `.git` and the two gitignored-but-required secrets (`client_secret.json`, `kaptureweb_clientsecret.json`), excluding regenerable `bin/obj/publish`. Verified at the destination *before* deleting the source: `git fsck --connectivity-only` clean (only harmless dangling objects), `git rev-parse HEAD` = **`dc615ce`** = `origin/main`, `git status` clean, and restore + build + **`dotnet test` 49/49 passing**. The OneDrive source was then removed (`Test-Path` → False) and the `C:\DEV` copy reconfirmed intact. The destination `Utilities` is the off-OneDrive twin of the parent repo (already held `Basefra.me` + `Kapture`), and `C:\DEV\` already carries the constitution + six directive files, so KaptureVault's `../../` directive references resolve correctly at the new path.
+
+**Why:** retires the OneDrive tooling hazard (stale / fabricated / empty tool output) documented since 2026-05-31; the client now sits alongside `kapturevault-backend` under `C:\DEV`.
+
+**Reference fixes (the "known links"):** repo-root path updated in `CLAUDE.md`; `HANDOFF.md` "Start here" + the CRITICAL hazard section reframed as RESOLVED with the new `cd` path and corrected expected SHA (`dc615ce`); the "repo hygiene: move off OneDrive" item marked ✅ DONE in HANDOFF + ROADMAP; the CLAUDE Lessons OneDrive-hazard bullet marked RESOLVED; a Session Log entry added; the 4 project memory files updated and copied to the new project key so future `C:\DEV\Utilities` sessions inherit them. The `%LOCALAPPDATA%\KaptureVault` runtime data path is unchanged (independent of repo location). `.claude/plan.md` "OneDrive provider" mentions were left intact — they refer to the cloud-sync *feature*, not the repo.
+
+**Auditor:** Claude (Opus 4.8). **Next:** v1.0.6 release, then T-16 → T-09 → T-08.
+
+---
+
 ## 2026-05-31 (PM-2) — F-01 shipped to main + F-02 Phase 1 backend built
 
 **Trigger:** Continuation of the same-day session, *after* the v1.0.5 reconciliation (the PM entry below). Two deliverables landed and a final reconciliation pass took the managed doc set to **`version` 1.7.0** (app-version stays **1.0.5** — F-01 is unreleased).

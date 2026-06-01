@@ -14,16 +14,16 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 
 ## ▶ Start here (fresh session) — DO THIS FIRST
 
-This repo lives on a OneDrive path; tooling can return stale/fabricated output (see ⚠️ below). Establish ground truth with these exact commands and compare to expected values **before trusting anything**:
+**The client repo was moved off OneDrive to `C:\DEV\Utilities\KaptureVault` on 2026-06-01** (joining `kapturevault-backend` under `C:\dev`), which retires the OneDrive tooling hazard noted below. Establish ground truth with these exact commands:
 
 ```powershell
-cd C:\Users\vybec\OneDrive\Documents\Development\Utilities\KaptureVault
-git ls-remote origin refs/heads/main                     # main expected = ddc3ce4
+cd C:\DEV\Utilities\KaptureVault
+git ls-remote origin refs/heads/main                     # main expected = dc615ce (pre-v1.0.6)
 git status --porcelain                                   # expect CLEAN
 dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 49 passing
 ```
 
-**If those match, the client repo is healthy** (v1.0.5 shipped, F-01 merged-but-unreleased, tree clean) — proceed to "Next moves". If they don't, the tooling may be lying; reconcile against the "Recent commit stack" below before editing anything.
+**If those match, the client repo is healthy** (v1.0.5 shipped, F-01 merged-but-unreleased, tree clean) — proceed to "Next moves".
 
 **Backend lives in a SEPARATE repo** (off OneDrive): `C:\dev\kapturevault-backend` (own git + GitHub remote `github.com/Vybecode-LTD/kapturevault-backend`, private). Verify with `npm test` there → **19 vitest passing**. See "Related repos / human prereqs".
 
@@ -31,11 +31,11 @@ dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 49 passing
 
 KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **v1.0.5 SHIPPED** this session (tag `v1.0.5` = `ffc3c9d`, GitHub Release created by the workflow). **F-01 (Export Vault Database) DONE but UNRELEASED** (on main, CHANGELOG `[Unreleased]`; ships in **v1.0.6**). **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **49 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD `ddc3ce4` = `origin/main` (verified), tree clean. The latest *released* version is **v1.0.5**; the next *new* release will be **v1.0.6** (it promotes the staged F-01).
 
-## ⚠️ CRITICAL — environment hazard (OneDrive path)
+## ✅ RESOLVED — former OneDrive hazard (repo moved 2026-06-01)
 
-The client repo lives on a **OneDrive path** and the tool harness has repeatedly returned **stale, delayed, fabricated, or empty** tool output — including reporting commits, files, a CI workflow, and a `git push` as DONE when none had happened, and going **dark (empty results)** on the read/verify channel mid-task while `Write`/`git commit` kept working.
+**The client repo was moved off OneDrive to `C:\DEV\Utilities\KaptureVault` on 2026-06-01, so this hazard no longer applies.** Kept here as history. While the repo lived on a OneDrive path, the tool harness repeatedly returned **stale, delayed, fabricated, or empty** tool output — including reporting commits, files, a CI workflow, and a `git push` as DONE when none had happened, and going **dark (empty results)** on the read/verify channel mid-task while `Write`/`git commit` kept working.
 
-**Mitigations that worked:** (1) verify every consequential action with a SECOND authoritative command before relying on it — *especially git* (`git log` / `git status` / `git ls-remote` / `Test-Path`); (2) `Write` (full-file overwrite) is safe blind and safe to repeat; (3) targeted `Edit` is safe-on-failure (errors, never corrupts) but needs an in-session `Read` first; (4) run ONE PowerShell per turn (a non-zero exit cancels parallel siblings); (5) build+test after every change. **The actual filesystem/git/build/test operations were sound — only result *reporting* was unreliable.** The **backend repo is already off OneDrive** (`C:\dev\kapturevault-backend`) and did not exhibit this. **STRONGLY consider cloning the client repo to a non-OneDrive path too** (e.g. `C:\dev\KaptureVault`).
+**Mitigations that worked (still good practice):** (1) verify every consequential action with a SECOND authoritative command — *especially git* (`git log` / `git status` / `git ls-remote` / `Test-Path`); (2) `Write` (full-file overwrite) is safe blind and repeatable; (3) targeted `Edit` is safe-on-failure but needs an in-session `Read` first; (4) build+test after every change. **The actual filesystem/git/build/test operations were sound — only result *reporting* was unreliable, and only on OneDrive.** The repo now lives alongside `kapturevault-backend` under `C:\DEV`.
 
 ## ✅ What shipped this session (2026-05-31)
 
@@ -86,7 +86,7 @@ Then, in the backend repo: fill `wrangler.toml` `REPLACE_WITH_*` (account id, R2
 - **GitHub Pages + DNS:** point `kapture.tools` at Pages (A `@` → 185.199.108–111.153; CNAME `www` → `vybecode-ltd.github.io`), enforce HTTPS; verify in Google Search Console.
 - **Mobile viewer:** paste the web client ID `…70gd1j2j…` into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
 - **F-02 cloud accounts / placeholders:** see "Related repos / human prereqs" above.
-- **Repo hygiene:** move the client repo off the OneDrive path (see ⚠️ above); the backend repo is already off it.
+- **Repo hygiene:** ✅ DONE 2026-06-01 — client repo moved off OneDrive to `C:\DEV\Utilities\KaptureVault` (now alongside the backend under `C:\dev`).
 
 ## Build / run quick reference
 
