@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.6] — 2026-06-01
+
+A new free-tier feature — save a complete backup of your vault to a file you choose.
 
 ### Added
 - **Export your entire vault to a file you choose.** A new **Export DB** button in the
@@ -168,6 +170,7 @@ clipboard, and screenshot capture plus settings).
   features were the only thing that needed elevation) and switched startup from a
   scheduled task to the per-user `Run` registry key.
 
+[1.0.6]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.6
 [1.0.5]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.5
 [1.0.4]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.4
 [1.0.3]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.3
