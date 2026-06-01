@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.7] — 2026-06-01
+
+Reliability and performance hardening — the final batch from the post-audit P1 pass.
+Internal robustness; no new day-to-day features.
 
 ### Changed
 - **The vault list no longer flickers or loses your place while you work.** The entry list
@@ -187,6 +190,7 @@ clipboard, and screenshot capture plus settings).
   features were the only thing that needed elevation) and switched startup from a
   scheduled task to the per-user `Run` registry key.
 
+[1.0.7]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.7
 [1.0.6]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.6
 [1.0.5]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.5
 [1.0.4]: https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.0.4

@@ -10,7 +10,7 @@
     <SelfContained>true</SelfContained>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>KaptureVault</AssemblyName>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <Product>KaptureVault</Product>
     <Description>Keystroke, clipboard, and screenshot capture vault</Description>
   </PropertyGroup>
@@ -55,6 +55,7 @@
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.93.0" />
   </ItemGroup>
 </Project>
+
 
 
 
