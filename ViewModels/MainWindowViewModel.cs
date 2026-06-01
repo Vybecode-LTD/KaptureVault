@@ -33,6 +33,13 @@ public partial class MainWindowViewModel : ViewModelBase
     // for every row on each refresh. Search is unaffected (it scans the full vault).
     private const int MaxDisplayedEntries = 1000;
 
+    // KV-032 / KV-033: the capture-driven refresh is debounced and runs its query/decrypt off
+    // the UI thread (see RequestRefresh / RefreshAsync). _refreshing/_refreshPending coalesce
+    // overlapping async refreshes so the query never runs concurrently with itself.
+    private DispatcherTimer? _refreshDebounce;
+    private bool _refreshing;
+    private bool _refreshPending;
+
     // (single-section app — vault is always the active view)
 
     // Stats
@@ -91,10 +98,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _startup = startup;
         _settings = settings;
 
-        _capture.OnEntryFlushed += () => Dispatcher.UIThread.Post(Refresh);
-        _clipboardMonitor.OnEntryFlushed += () => Dispatcher.UIThread.Post(Refresh);
+        _capture.OnEntryFlushed += () => Dispatcher.UIThread.Post(RequestRefresh);
+        _clipboardMonitor.OnEntryFlushed += () => Dispatcher.UIThread.Post(RequestRefresh);
         if (_screenshotService != null)
-            _screenshotService.OnEntryFlushed += () => Dispatcher.UIThread.Post(Refresh);
+            _screenshotService.OnEntryFlushed += () => Dispatcher.UIThread.Post(RequestRefresh);
 
         IsStartupEnabled = _startup.IsRegistered;
         UpdateStartupButtonText();
@@ -154,7 +161,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void RefreshEntries()
+    // Pure query + filtering (the decrypt cost). No UI-thread state is touched, so this can run
+    // on a background thread (KV-033, via RefreshAsync). Reads VM filter fields by value.
+    private List<CaptureEntry> QueryEntries()
     {
         var appFilter = SelectedAppFilter == "All Apps" ? null : SelectedAppFilter;
 
@@ -178,16 +187,91 @@ public partial class MainWindowViewModel : ViewModelBase
         if (SelectedTagFilter != null && SelectedTagFilter != "All Tags")
             results = results.Where(e => e.TagList.Contains(SelectedTagFilter, StringComparer.OrdinalIgnoreCase)).ToList();
 
-        Entries.Clear();
-        foreach (var entry in results)
-            Entries.Add(entry);
+        return results;
+    }
 
-        // Re-select if still available
-        if (SelectedEntry != null)
+    // Synchronous refresh of the entry list — used by filter changes, commands, and the ctor.
+    private void RefreshEntries() => SyncEntries(QueryEntries());
+
+    // KV-013: diff-update the entry list IN PLACE. Never Clear() a list whose SelectedItem is
+    // two-way bound — Avalonia's ListBox posts a *deferred* SelectedItem=null on Clear() that
+    // lands after any suppression window and silently drops the selection. Reusing the existing
+    // instance for a matching Id keeps the bound SelectedEntry valid; with CaptureEntry now
+    // observable, in-place edits (pin/tag) still repaint without a full rebuild.
+    private void SyncEntries(List<CaptureEntry> desired)
+    {
+        var desiredIds = new HashSet<long>(desired.Count);
+        foreach (var entry in desired)
+            desiredIds.Add(entry.Id);
+
+        // 1. Remove rows that are no longer present.
+        for (int i = Entries.Count - 1; i >= 0; i--)
+            if (!desiredIds.Contains(Entries[i].Id))
+                Entries.RemoveAt(i);
+
+        // 2. Reorder/insert to match `desired`, reusing existing instances by Id (most-recent first).
+        for (int i = 0; i < desired.Count; i++)
         {
-            var match = Entries.FirstOrDefault(e => e.Id == SelectedEntry.Id);
-            SelectedEntry = match;
+            var want = desired[i];
+            if (i < Entries.Count && Entries[i].Id == want.Id)
+                continue; // already in place
+
+            int existing = -1;
+            for (int j = i + 1; j < Entries.Count; j++)
+                if (Entries[j].Id == want.Id) { existing = j; break; }
+
+            if (existing >= 0)
+                Entries.Move(existing, i);
+            else
+                Entries.Insert(i, want);
         }
+
+        // 3. Trim any trailing extras.
+        while (Entries.Count > desired.Count)
+            Entries.RemoveAt(Entries.Count - 1);
+
+        // 4. Clear a selection only if it has genuinely left the vault (never otherwise — that is
+        //    the deferred-null bug we are avoiding).
+        if (SelectedEntry is not null && !desiredIds.Contains(SelectedEntry.Id))
+            SelectedEntry = null;
+    }
+
+    // KV-032: coalesce the high-frequency capture-driven refreshes into at most one per ~200 ms
+    // window. KV-033: the actual query/decrypt then runs off the UI thread (RefreshAsync).
+    public void RequestRefresh()
+    {
+        _refreshDebounce ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        if (_refreshDebounce.IsEnabled) return; // a refresh is already scheduled in this window
+        _refreshDebounce.Tick -= OnRefreshDebounceTick;
+        _refreshDebounce.Tick += OnRefreshDebounceTick;
+        _refreshDebounce.Start();
+    }
+
+    private async void OnRefreshDebounceTick(object? sender, EventArgs e)
+    {
+        _refreshDebounce!.Stop();
+        try { await RefreshAsync(); }
+        catch { /* a background refresh must never crash the UI */ }
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (_refreshing) { _refreshPending = true; return; } // coalesce; never run the query twice at once
+        _refreshing = true;
+        try
+        {
+            do
+            {
+                _refreshPending = false;
+                RefreshStats();
+                RefreshAppList();
+                RefreshTagList();
+                var results = await Task.Run(QueryEntries); // KV-033: decrypt off the UI thread
+                SyncEntries(results);                        // back on the UI thread (captured context)
+            }
+            while (_refreshPending);
+        }
+        finally { _refreshing = false; }
     }
 
     partial void OnSearchTextChanged(string value) => RefreshEntries();
