@@ -24,13 +24,26 @@ public sealed record SubscriptionInfo(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("currentPeriodEnd")] string? CurrentPeriodEnd);
 
-/// <summary>Response of <c>GET /me</c> — profile + subscription + entitlement + storage used.</summary>
+/// <summary>Feature flags inside <c>GET /me</c> (Revision 2 tier model: vault sync free, file hosting paid).</summary>
+public sealed record OnlineFeatures(
+    [property: JsonPropertyName("vaultSync")] bool VaultSync,
+    [property: JsonPropertyName("fileHosting")] bool FileHosting);
+
+/// <summary>
+/// Response of <c>GET /me</c> — profile + subscription + entitlement + the Revision 2 tier model
+/// (tier label, feature flags, storage quota + used). The newer fields are optional so a response
+/// from an older backend (or a positional test construction) still binds.
+/// </summary>
 public sealed record MeResponse(
     [property: JsonPropertyName("uid")] string Uid,
     [property: JsonPropertyName("email")] string? Email,
     [property: JsonPropertyName("subscription")] SubscriptionInfo Subscription,
     [property: JsonPropertyName("entitled")] bool Entitled,
-    [property: JsonPropertyName("storageUsed")] long StorageUsed);
+    [property: JsonPropertyName("storageUsed")] long StorageUsed,
+    [property: JsonPropertyName("tier")] string? Tier = null,
+    [property: JsonPropertyName("features")] OnlineFeatures? Features = null,
+    [property: JsonPropertyName("quota")] long Quota = 0,
+    [property: JsonPropertyName("used")] long Used = 0);
 
 /// <summary>Response of <c>POST /vault/{put,get}-url</c> — a short-lived presigned R2 URL.</summary>
 public sealed record PresignedUrl(

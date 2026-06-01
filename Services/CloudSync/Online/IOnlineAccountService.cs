@@ -18,6 +18,13 @@ public interface IOnlineAccountService
     bool IsPaid { get; }
     string SubscriptionStatus { get; }
     DateTime? CurrentPeriodEndUtc { get; }
+
+    /// <summary>Storage quota (bytes) for the account's tier, cached from the last <c>/me</c>; 0 if unknown.</summary>
+    long QuotaBytes { get; }
+
+    /// <summary>Storage used (bytes), cached from the last <c>/me</c>.</summary>
+    long UsedBytes { get; }
+
     string? LastError { get; }
 
     /// <summary>Raised when sign-in state or entitlement changes (for UI binding).</summary>

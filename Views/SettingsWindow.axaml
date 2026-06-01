@@ -235,6 +235,9 @@
                                         <TextBlock Text="{Binding SubscriptionStatus, StringFormat='Subscription: {0}'}"
                                                    FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"
                                                    IsVisible="{Binding IsSignedIn}"/>
+                                        <TextBlock Text="{Binding StorageSummary}"
+                                                   FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"
+                                                   IsVisible="{Binding HasStorageInfo}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                                         <Button Content="Sign in with Google" Command="{Binding SignInCommand}"

@@ -42,6 +42,8 @@ public sealed class OnlineAccountService : IOnlineAccountService
     public bool IsPaid { get; private set; }
     public string SubscriptionStatus { get; private set; } = "none";
     public DateTime? CurrentPeriodEndUtc { get; private set; }
+    public long QuotaBytes { get; private set; }
+    public long UsedBytes { get; private set; }
     public string? LastError { get; private set; }
 
     public event Action? StateChanged;
@@ -89,6 +91,8 @@ public sealed class OnlineAccountService : IOnlineAccountService
         Email = null;
         SubscriptionStatus = "none";
         CurrentPeriodEndUtc = null;
+        QuotaBytes = 0;
+        UsedBytes = 0;
         RaiseStateChanged();
     }
 
@@ -102,6 +106,8 @@ public sealed class OnlineAccountService : IOnlineAccountService
             Email = me.Email;
             SubscriptionStatus = me.Subscription.Status;
             CurrentPeriodEndUtc = ParseIso(me.Subscription.CurrentPeriodEnd);
+            QuotaBytes = me.Quota;
+            UsedBytes = me.Used;
             RaiseStateChanged();
             return me;
         }

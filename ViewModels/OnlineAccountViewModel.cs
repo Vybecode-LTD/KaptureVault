@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kapture.Services;
@@ -46,6 +47,14 @@ public partial class OnlineAccountViewModel : ObservableObject
     // Panel visibility helpers.
     public bool CanSubscribe => _account.IsSignedIn && !_account.IsPaid;
     public bool CanManageBilling => _account.IsSignedIn && _account.IsPaid;
+
+    /// <summary>True once a signed-in account has a known storage quota (from <c>/me</c>).</summary>
+    public bool HasStorageInfo => _account.IsSignedIn && _account.QuotaBytes > 0;
+
+    /// <summary>e.g. "5 MB of 250 MB used" — the account's vault storage against its tier quota.</summary>
+    public string StorageSummary => HasStorageInfo
+        ? $"{FormatBytes(_account.UsedBytes)} of {FormatBytes(_account.QuotaBytes)} used"
+        : "";
 
     [RelayCommand]
     private async Task SignInAsync()
@@ -171,5 +180,17 @@ public partial class OnlineAccountViewModel : ObservableObject
         OnPropertyChanged(nameof(AccountSummary));
         OnPropertyChanged(nameof(CanSubscribe));
         OnPropertyChanged(nameof(CanManageBilling));
+        OnPropertyChanged(nameof(HasStorageInfo));
+        OnPropertyChanged(nameof(StorageSummary));
+    }
+
+    /// <summary>Friendly byte size (invariant, so display + tests are culture-stable).</summary>
+    private static string FormatBytes(long bytes)
+    {
+        const double KB = 1024, MB = KB * 1024, GB = MB * 1024;
+        if (bytes >= GB) return (bytes / GB).ToString("0.#", CultureInfo.InvariantCulture) + " GB";
+        if (bytes >= MB) return (bytes / MB).ToString("0.#", CultureInfo.InvariantCulture) + " MB";
+        if (bytes >= KB) return (bytes / KB).ToString("0.#", CultureInfo.InvariantCulture) + " KB";
+        return bytes + " B";
     }
 }

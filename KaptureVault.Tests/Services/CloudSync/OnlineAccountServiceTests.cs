@@ -149,6 +149,21 @@ public class OnlineAccountServiceTests
     }
 
     [Fact]
+    public async Task RefreshAccount_CachesQuotaAndUsedFromMe()
+    {
+        _store.Tokens = new OnlineTokens("s", "r", _now.AddMinutes(30), "u-1");
+        _api.GetMeAsync("s", Arg.Any<CancellationToken>()).Returns(
+            new MeResponse("u-1", "a@b.com", new SubscriptionInfo("active", null), true, 1024,
+                "paid", new OnlineFeatures(true, true), 10_737_418_240, 1024));
+        var svc = NewService();
+
+        await svc.RefreshAccountAsync();
+
+        svc.QuotaBytes.Should().Be(10_737_418_240);
+        svc.UsedBytes.Should().Be(1024);
+    }
+
+    [Fact]
     public async Task RefreshAccount_WhenNotSignedIn_ReturnsNullAndNotPaid()
     {
         var svc = NewService();

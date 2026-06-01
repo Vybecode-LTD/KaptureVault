@@ -143,6 +143,31 @@ public class OnlineAccountViewModelTests
     }
 
     [Fact]
+    public void StorageSummary_FormatsUsedOfQuota_WhenSignedInWithQuota()
+    {
+        _account.IsSignedIn.Returns(true);
+        _account.QuotaBytes.Returns(250L * 1024 * 1024);
+        _account.UsedBytes.Returns(5L * 1024 * 1024);
+
+        var vm = NewVm();
+
+        vm.HasStorageInfo.Should().BeTrue();
+        vm.StorageSummary.Should().Be("5 MB of 250 MB used");
+    }
+
+    [Fact]
+    public void StorageSummary_IsEmpty_WhenNoQuotaKnown()
+    {
+        _account.IsSignedIn.Returns(true);
+        _account.QuotaBytes.Returns(0L);
+
+        var vm = NewVm();
+
+        vm.HasStorageInfo.Should().BeFalse();
+        vm.StorageSummary.Should().BeEmpty();
+    }
+
+    [Fact]
     public void OpenVault_OpensTheWebVaultUrl()
     {
         NewVm().OpenVaultCommand.Execute(null);
