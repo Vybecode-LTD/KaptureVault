@@ -26,7 +26,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 
 ### Deferred / not done (tracked)
 - **`/account` page → Phase 4/5** (needs web auth to be a real dashboard; the Stripe-redirect 404 does not affect the desktop flow).
-- **Live steps not run this session (human):** `wrangler deploy`, R2-bucket CORS, and **rotating the Google + Stripe-live secrets** that were pasted into chat during the PM-4 provisioning. Runbook updated for all three.
+- **Live steps — ✅ DONE later this same session:** `wrangler deploy` (Worker version `17ba084b`; `/health` ok + a live CORS-header check confirmed Phase 2 is serving), **R2-bucket CORS applied** (`r2-cors.json`, committed `0103f5b` + pushed; first attempt used the S3 schema and was safely rejected — wrangler wants the R2-native `rules` shape), and the **Google + Stripe-live secrets rotated** (maintainer-confirmed). Recommended follow-up: runbook **Part F** end-to-end smoke (sign-in → checkout → sync) to confirm the rotated secret values are the ones now stored in the Worker.
 
 ### Verification (proof, not assertion)
 Backend `npm test` **51 passed** + `tsc --noEmit` clean. Client `dotnet test` **123 passed**, `dotnet build -c Release` **0 warn / 0 err**, `dotnet format --verify` clean (slnx).
@@ -34,7 +34,7 @@ Backend `npm test` **51 passed** + `tsc --noEmit` clean. Client `dotnet test` **
 ### Docs reconciled → shared `version` 1.12.0
 CLAUDE (Session Log + Health), HANDOFF, ROADMAP (Phase 2 status), TESTING (backend 51 + new suites; client 123), BUGS (header), this entry; `F-02-PROVISIONING.md` (quota note, R2-bucket CORS step, free-sync smoke test, `/account` deferral). CHANGELOG left as-is (Phase 2 still inactive until deployed — no shipped user-facing change).
 
-**Auditor:** Claude (Opus 4.8). **Next:** human — `wrangler deploy` + rotate the pasted secrets; then F-02 **Phase 3** (client vault-sync v2: multi-object incl. screenshots, quota-aware) or the **P2 backlog** (incl. T-35).
+**Auditor:** Claude (Opus 4.8). **Next:** F-02 **Phase 3** (client vault-sync v2: multi-object incl. screenshots, quota-aware) or the **P2 backlog** (incl. T-35); recommended first: runbook **Part F** smoke test of the now-live deploy.
 
 ---
 
