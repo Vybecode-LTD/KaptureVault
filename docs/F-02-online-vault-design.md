@@ -6,6 +6,58 @@
 
 ---
 
+## ⭐ Revision 2 (2026-06-01) — agreed tiering, auth & web model (supersedes v1 where noted)
+
+> Decided with the product owner this session. This revision **intentionally reverses three v1 choices**; where §1–§16 below conflict, **this revision wins**. Phases 1–2 (Google-only, paid-vault) were built first; this is the agreed evolution.
+
+### Tiers (the agreed model)
+
+| Capability | Free (offline) | Free (registered) | Paid — $49/yr |
+|---|:---:|:---:|:---:|
+| Desktop app · local vault · DB export · Google Drive sync | ✓ | ✓ | ✓ |
+| Account — **Google OR email/password** | — | ✓ | ✓ |
+| **Online vault sync** (encrypted capture DB **+ re-encoded screenshot images**) + **web vault** access | — | ✓ (≤ **250 MB**) | ✓ (~**10 GB**) |
+| **File hosting** (upload arbitrary files) · private/public · **shareable links** | — | — | ✓ |
+
+- **Screenshots** are stored as separate image files today and were never synced; the online vault now also syncs them **re-encoded BMP→PNG/JPEG** (SkiaSharp), **counted against the quota**.
+- **Quota:** free **250 MB**, paid **~10 GB** (both config values, tunable pre-launch). The free cap is what nudges heavy users to upgrade.
+
+### Three reversals from v1 (with rationale)
+
+1. **Vault sync is FREE** (v1 gated all `/vault/*` behind an active subscription — §1–2, §9). The paid differentiator is now **file hosting + share links**, not vault sync. Rationale: a free online vault drives adoption; file hosting is the genuinely cost-/abuse-heavy surface and stays paid.
+2. **Email/password auth ADDED** alongside Google (v1 said "reuse Google sign-in … no new password store" — §3 decision 3 / §7). Rationale: free users must be able to register without a Google account. Additive at the existing uid-minting seam (`issueSession`/`mintSessionToken`).
+3. **A web client for the vault is IN SCOPE** (v1 listed it a non-goal — §2). Rationale: the web vault is *how* free + paid users access their vault online; it reuses the existing WASM + WebCrypto viewer.
+
+### Entitlement boundary (the load-bearing change)
+
+- `/vault/*` → **session-only** (any registered user; FREE). Remove the `requireEntitled` gate.
+- `/files/*` (new) → **session + active subscription** (PAID).
+- **Quota + a server-pinned object-size cap are now MANDATORY** (free users write to R2): `/vault/put-url` currently signs an *unbounded* PUT and `storage_used` is never maintained — fix that *with* the free tier, not later.
+- `/me` returns a `{ tier, features, quota, used }` object so both clients render the right gates from one authoritative field.
+
+### Constraints to honor (surfaced by the design critique)
+
+- **Refresh token ≠ session token** — today both are minted with identical claims/audience, so a 30-day refresh is accepted as a session bearer everywhere. Give refresh a distinct audience/`typ` that `requireSession` rejects, **before** password auth multiplies long-lived credentials.
+- **Web-viewer KDF** hardcodes PBKDF2 100k; vaults since T-11 use 600k → they silently fail to decrypt in-browser. Read iterations from `encryption.json`/meta.
+- **Account password ≠ vault-encryption password** — the vault key derives locally and is never escrowed, so an account-password reset never recovers the vault. Enforce a hard interlock (distinct entry contexts + an explicit "this does NOT recover your vault" confirmation; consider refusing identical strings). Labels alone are insufficient (silent permanent data-loss risk).
+- **PBKDF2 on the Worker** is attacker-triggerable shared CPU → choose the *server* iteration count for the Worker budget (not the desktop's 600k) and **rate-limit `/auth/*`** (needs a new Cloudflare KV/DO/Rate-Limiting binding — not yet provisioned).
+- **Quota integrity** — never trust client-reported size in `vault.db.meta`; pin max object size in the presigned signature and/or derive it from R2's actual object size (HEAD/event).
+- **CORS** on the Worker **and** on the R2 bucket (presigned URLs are a different origin).
+
+### Build order
+
+0. **Polish** (client): charset fix on the loopback "Connected" page; show email not uid; 402 → clear upsell message.
+1. **Desktop panel UX** (client): free/paid layout (Sign in → Open Vault → Upgrade); relocate Export-DB + Run-on-startup into Settings; Upload hidden until paid file hosting exists.
+2. **Backend free-vault + foundations:** drop `/vault/*` entitlement; quota + size cap; refresh-token fix; CORS; `/me` tier object; build the `/account` page.
+3. **Vault sync v2** (client): multi-object sync (vault.db + re-encoded screenshots), quota-aware; carry salt/KDF in meta for web unlock.
+4. **Web vault** (needs the kapture.tools repo-consolidation decision): Google + email/password login → read + decrypt + show screenshots/files → subscribe; KDF 100k→600k fix.
+5. **Email/password auth:** register/verify/login/reset + transactional email + rate-limiting + the account-vs-vault-password interlock.
+6. **File hosting (paid):** `/files/*` + shares + 250 MB-per-file cap + desktop upload UI + public/private + share links.
+
+**Still open:** confirm the paid cap (~10 GB); the kapture.tools repo-consolidation decision (only blocks Phase 4).
+
+---
+
 ## 1. Summary
 
 Add a **paid tier ($49/yr)** to KaptureVault. Registered subscribers get:
