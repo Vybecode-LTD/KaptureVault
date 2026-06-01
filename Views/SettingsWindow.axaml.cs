@@ -21,6 +21,17 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
+
+        // The ScrollViewer measures its content at unbounded width here, so long wrapping
+        // paragraphs never wrap and spill past the cards. Bound the content to the viewer's
+        // actual visible width (Bounds minus its horizontal padding) on every size change —
+        // a stable, window-driven value that forces wrapping. This is the reliable fix.
+        SettingsScroll.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Visual.BoundsProperty)
+                SettingsContent.MaxWidth = System.Math.Max(0,
+                    SettingsScroll.Bounds.Width - SettingsScroll.Padding.Left - SettingsScroll.Padding.Right);
+        };
     }
 
     protected override void OnOpened(EventArgs e)

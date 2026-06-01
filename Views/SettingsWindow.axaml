@@ -12,8 +12,11 @@
 
     <Grid RowDefinitions="*,Auto" Margin="0">
         <!-- Scrollable settings content -->
-        <ScrollViewer Grid.Row="0" Padding="20,16,20,0" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="20" Margin="0,0,0,40">
+        <ScrollViewer x:Name="SettingsScroll" Grid.Row="0" Padding="20,16,20,0" HorizontalScrollBarVisibility="Disabled">
+            <!-- SettingsContent.MaxWidth is set in code-behind to the viewer's visible width
+                 (Bounds - Padding) so long wrapping paragraphs wrap instead of overflowing the
+                 cards (the ScrollViewer measures its content at unbounded width here). -->
+            <StackPanel x:Name="SettingsContent" Spacing="20" Margin="0,0,0,40">
 
                 <!-- Appearance -->
                 <StackPanel Spacing="8">
@@ -123,7 +126,7 @@
                                 <Button x:Name="EnableEncryptionBtn" Content="Enable Encryption" Click="EnableEncryption_Click" Padding="12,6" FontSize="12"/>
                                 <Button x:Name="DisableEncryptionBtn" Content="Disable Encryption" Click="DisableEncryption_Click" Padding="12,6" FontSize="12"/>
                             </StackPanel>
-                            <TextBlock x:Name="EncryptionStatusText" FontSize="11" FontStyle="Italic"
+                            <TextBlock x:Name="EncryptionStatusText" FontSize="11" FontStyle="Italic" TextWrapping="Wrap"
                                        Foreground="{DynamicResource AppTextSecondary}"/>
                         </StackPanel>
                     </Border>
