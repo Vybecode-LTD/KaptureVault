@@ -1,6 +1,6 @@
 ---
 document: ROADMAP
-version: 1.9.0
+version: 1.10.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -21,7 +21,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 > **P1 — in progress (batch 1 shipped in v1.0.4; batch 2 shipped in v1.0.5):**
 > ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite now **49** — was 47 at the v1.0.5 cut, +2 from F-01's `DatabaseServiceBackupTests`; CI `dotnet test` + `dotnet format --verify` + `--vulnerable` scan added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
 > **Shipped in v1.0.5 (2026-05-31):** the **T-07 + T-11 + T-10** batch (DB-writes-off-hook-thread, PBKDF2 600k + KDF params, DI via `ServiceRegistration`), plus the `dotnet format`/`--vulnerable` CI gates from T-16.
-> **P1 — ✅ COMPLETE (final batch on `main` 2026-06-01, unreleased).** **T-16** (Avalonia.Headless.XUnit harness + VM filter-selection/diff regressions; test suite **71**), **T-09** (Entries diff-update via `SyncEntries` + debounced `RequestRefresh` + off-UI-thread query/decrypt; `CaptureEntry` observable), and **T-08** (centralized idempotent teardown via `ShutdownRequested` + `ShutdownCoordinator`; ServiceProvider disposed on every exit path) all landed test-first. **T-12 (secret-less OAuth, residual KV-007) is RETIRED** — F-02 Phase 1's backend brokers the OAuth exchange, so the client-side cutover lands in **F-02 Phase 2**. **Next focus: F-02 Phase 2** (client Online Vault) and/or the **P2 backlog**; the P1 batch can ship as **v1.0.7** whenever a release is cut. _Resequenced 2026-05-31: T-08/T-09 followed T-16 so the lifecycle/UI refactors were verifiable via the headless harness — which is how they shipped._
+> **P1 — ✅ COMPLETE (final batch on `main` 2026-06-01, unreleased).** **T-16** (Avalonia.Headless.XUnit harness + VM filter-selection/diff regressions; test suite **71**), **T-09** (Entries diff-update via `SyncEntries` + debounced `RequestRefresh` + off-UI-thread query/decrypt; `CaptureEntry` observable), and **T-08** (centralized idempotent teardown via `ShutdownRequested` + `ShutdownCoordinator`; ServiceProvider disposed on every exit path) all landed test-first. **T-12 (secret-less OAuth, residual KV-007) is RETIRED** — F-02 Phase 1's backend brokers the OAuth exchange, so the client-side cutover lands in **F-02 Phase 2**. **F-02 Phase 2 (client Online Vault) is now BUILT** (2026-06-01, local/unpushed; v1.0.7 already shipped the P1 batch). **Next focus: make Phase 2 live (cloud provisioning), then F-02 Phase 3 and/or the P2 backlog (incl. T-35).** _Resequenced 2026-05-31: T-08/T-09 followed T-16 so the lifecycle/UI refactors were verifiable via the headless harness — which is how they shipped._
 
 ---
 
@@ -55,8 +55,8 @@ Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0
 | # | Phase | Where | Status |
 |---|-------|-------|--------|
 | 1 | Backend foundation — Worker API + R2 + D1 + Stripe + auth (verify subscription → issue presigned URLs scoped to `users/{uid}/`) | **`kapturevault-backend`** | **✅ DONE (2026-05-31, repo `kapturevault-backend`)** — Cloudflare Worker: Google-auth sessions, Stripe billing + webhook→D1 state machine, presigned R2 URLs scoped to `users/{uid}/`, entitlement gate, D1 schema; **19 vitest tests + tsc + GitHub CI green**. Retires T-12/KV-007 (backend brokers the OAuth exchange). |
-| 2 | Client online vault — `R2StorageProvider` (DB-sync alt to Drive) + login UI + subscription gate **+ secret-less client OAuth (ex-T-12/KV-007, now via the backend broker)** | KaptureVault | ⏳ **NEXT** |
-| 3 | Client file hosting — upload (presigned PUT, 250 MB cap enforced client + server) + file list + share links + files-in-vault | KaptureVault | ⬜ |
+| 2 | Client online vault — `R2StorageProvider` (DB-sync alt to Drive) + login UI + subscription gate **+ secret-less client OAuth via the backend broker** | KaptureVault | **✅ BUILT (2026-06-01, local/unpushed)** — `KaptureOnlineApiClient`, `OnlineAccountService` (DPAPI session + refresh + entitlement), `R2StorageProvider`, DI into `CloudSyncManager`, `OnlineAccountViewModel` + Settings panel; backend gained `POST /auth/google` (secret-less broker) + `PUT /vault/meta`. Client **118** / backend **26** tests. **Inactive until cloud accounts provisioned + config filled.** Secret-less model is in use for the Online Vault; **Drive's bundled secret (KV-007) still remains → T-35.** |
+| 3 | Client file hosting — upload (presigned PUT, 250 MB cap enforced client + server) + file list + share links + files-in-vault | KaptureVault | ⏳ **NEXT (after Phase 2 goes live)** |
 | 4 | Ops — quotas, billing portal, deletion, abuse/DMCA handling | both | ⬜ |
 
 **Reality check:** this turns KaptureVault into a hosted product — a separate backend repo (`kapturevault-backend`), recurring infra cost (R2 cheap + no egress; Workers/D1 ~free at small scale; Stripe ~2.9% + 30¢), and a real operational/legal surface (ToS/privacy updates, share-link abuse/DMCA, data deletion, account management). The economics work; the commitment is the ops surface. **Phase 1 is started AND done** (backend foundation built + 19 tests + CI green, 2026-05-31); **Phase 2 (client `R2StorageProvider` + login + subscription gate, including the secret-less client OAuth folded in from T-12/KV-007) is next**, then Phase 3 (client file hosting), then Phase 4 (ops).
@@ -120,6 +120,7 @@ Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0
 | T-24 | Harden `CloudSyncManager` timer (try/catch, log) + `WithRetryAsync` (transport retry, terminate) | KV-028, KV-030, KV-031 | M |
 | T-25 | Debounce/coalesce `Refresh()` | KV-032 | S |
 | T-26 | Add a test CI workflow (`dotnet test` on `windows-latest`, coverage) | KV-045 | S |
+| T-35 | Route `GoogleDriveProvider` through the F-02 backend broker (stop bundling `client_secret.json`, drop `FallbackClientId`); reuse the Phase 2 secret-less model — closes the residual KV-007 for Drive sync | KV-007 | M |
 
 ## P3 — Low / polish
 

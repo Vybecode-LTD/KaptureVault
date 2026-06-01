@@ -1,6 +1,6 @@
 ---
 document: BUGS
-version: 1.9.0
+version: 1.10.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -17,8 +17,8 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018.
 > - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, KV-010 (DI).
 > - **P1 — COMPLETED 2026-06-01 (on main, unreleased):** ✅ **KV-013** (Entries diff-update, T-09), ✅ **KV-032** (debounced refresh), ✅ **KV-033** (decrypt off the UI thread), ✅ **KV-011** + ✅ **KV-024** (centralized shutdown teardown, T-08), ✅ KV-010 residual (HotkeyService + provider disposal). **All P1 issues are now fixed.**
-> - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → **71 now** (T-16 headless harness + VM filter/diff regressions + ShutdownCoordinator). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression now exist. CI (`tests.yml`) green.
-> - **Next:** P2 backlog (T-18..T-26) and **F-02 Phase 2** (client Online Vault); KV-007 secret-less OAuth **retired → F-02 Phase 2** (backend broker built); KV-015 View-locator cleanup folded into T-22.
+> - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → 71 (P1 batch) → **118 now** (F-02 Phase 2: Online API client + account/session + R2 provider + account VM; backend **26** vitest). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression now exist. CI (`tests.yml`) green.
+> - **Next:** make F-02 Phase 2 live (cloud provisioning); then F-02 Phase 3 + the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault** (F-02 Phase 2); Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 
@@ -65,10 +65,11 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix (shipped in v1.0.5):** New vaults derive at **600k**; `encryption.json` persists the KDF params (`Iterations`, `Kdf`). `Unlock` derives with the stored count, defaulting pre-T-11 files (no count) to 100k, so existing vaults still open. Argon2id + re-keying legacy vaults deferred (needs the transactional bulk path, KV-021/T-20).
 
 ### KV-007 · OAuth client secret bundled in installer + hardcoded fallback
-- **Area:** Security · **Status:** OPEN — **deferred to F-02 (decision 2026-05-31)** · `Services/CloudSync/GoogleDriveProvider.cs:15,82-87,113`, `installer/KaptureVaultSetup.iss:101-105`
+- **Area:** Security · **Status:** 🟡 IN PROGRESS — secret-less model **delivered for the Online Vault** (F-02 Phase 2, 2026-06-01); Drive's bundled secret remains (→ T-35) · `Services/CloudSync/GoogleDriveProvider.cs:15,82-87,113`, `installer/KaptureVaultSetup.iss:101-105`
 - App uses PKCE but still *hard-requires* `_clientSecret` (`AuthenticateAsync` refuses without it; it's sent in the token exchange at :113), ships `client_secret.json` into Program Files, and has a hardcoded `FallbackClientId` (that constant is a client **ID** — public, not a secret). A secret shipped to every user is not secret.
 - **2026-05-31 DECISION (user):** fix **deferred to F-02 Phase 1 (backend broker)**, not a quick client-side change. Rationale: Google's desktop token endpoint still expects `client_secret` (PKCE alone secret-less was not confirmable without risking sync for all users), so the correct fix is the F-02 backend that brokers the OAuth code/refresh exchange — the client then holds only the public client ID + PKCE and never a secret. Re-confirmed the bundling persists (the v1.0.5 installer compresses `client_secret.json`). Until F-02 ships, the bundled value is a Google-"non-confidential" desktop credential (PKCE-protected); **do not widen distribution on that assumption.**
 - **F-02 Phase 1 backend now built** (repo kapturevault-backend, 2026-05-31) — the secret-less client cutover lands in F-02 Phase 2.
+- **2026-06-01 (F-02 Phase 2):** secret-less sign-in is now **implemented + in use for the Online Vault** — `LoopbackGoogleSignIn` → `POST /auth/google` broker (the Worker holds `GOOGLE_CLIENT_SECRET`; the client holds only the public client id + PKCE). **Residual:** `GoogleDriveProvider` still bundles `client_secret.json` for Drive → ROADMAP **T-35** routes Drive through the broker to close KV-007 fully.
 - **Fix (via F-02 Phase 1):** backend brokers token exchange; client keeps only the public client ID + PKCE; stop bundling `client_secret.json`; remove the `FallbackClientId` constant.
 
 ### KV-008 · `ThrowIfReplacing()` gate applied inconsistently → sync-swap races

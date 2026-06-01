@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added (groundwork — inactive until configured)
+- **Paid "Online Vault" tier (Phase 2 — not yet live).** Optional cloud sync of your
+  encrypted vault to a KaptureVault account, with Google sign-in and subscription
+  management in Settings. Your data stays end-to-end encrypted — the server only ever
+  stores ciphertext. The feature stays hidden ("not available in this build yet") until
+  the backend is configured; the free, offline experience is unchanged.
+
+---
+
 ## [1.0.7] — 2026-06-01
 
 Reliability and performance hardening — the final batch from the post-audit P1 pass.

@@ -1,6 +1,6 @@
 ---
 document: HANDOFF
-version: 1.9.0
+version: 1.10.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -20,16 +20,16 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 cd C:\DEV\Utilities\KaptureVault
 git status --porcelain                                   # expect CLEAN
 git ls-remote origin refs/heads/main                     # should equal your local HEAD (git log -1)
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 71 passing
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 118 passing
 ```
 
 **If those match, the client repo is healthy** (v1.0.7 shipped — it shipped the P1 backlog; tree clean) — proceed to "Next moves".
 
-**Backend lives in a SEPARATE repo** (off OneDrive): `C:\dev\kapturevault-backend` (own git + GitHub remote `github.com/Vybecode-LTD/kapturevault-backend`, private). Verify with `npm test` there → **19 vitest passing**. See "Related repos / human prereqs".
+**Backend lives in a SEPARATE repo** (off OneDrive): `C:\dev\kapturevault-backend` (own git + GitHub remote `github.com/Vybecode-LTD/kapturevault-backend`, private). Verify with `npm test` there → **26 vitest passing**. See "Related repos / human prereqs".
 
 ## TL;DR
 
-KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Repo lives at `C:\DEV\Utilities\KaptureVault` (off OneDrive); public repo.** **Latest release: v1.0.7** (tag `v1.0.7` = `2d09aa3`) — it shipped the **P1 audit backlog**: T-16 (Avalonia.Headless.XUnit harness + VM regressions), T-09 (Entries diff-update + debounce + off-UI decrypt), T-08 (centralized shutdown teardown); **v1.0.6** before it shipped **F-01 (Export Vault Database)**. **All P0 + P1 audit issues resolved.** **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **71 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD = `origin/main`, tree clean. **Next: F-02 Phase 2** (client Online Vault) and/or the P2 backlog.
+KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Repo lives at `C:\DEV\Utilities\KaptureVault` (off OneDrive); public repo.** **Latest release: v1.0.7** (tag `v1.0.7` = `2d09aa3`) — it shipped the **P1 audit backlog**: T-16 (Avalonia.Headless.XUnit harness + VM regressions), T-09 (Entries diff-update + debounce + off-UI decrypt), T-08 (centralized shutdown teardown); **v1.0.6** before it shipped **F-01 (Export Vault Database)**. **All P0 + P1 audit issues resolved.** **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **71 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD = `origin/main`, tree clean. **F-02 Phase 2 (client Online Vault) is now BUILT** (test-first): secret-less Google sign-in via the backend `/auth/google` broker, `R2StorageProvider` (encrypted vault ↔ R2 over presigned URLs + `vault.db.meta`), DPAPI session + entitlement gate, and the Settings "Online Vault" panel. Client suite **118** / backend **26**, Debug+Release 0/0, `dotnet format` clean. The F-02 commits are **LOCAL/unpushed** (`6ad70e5`..`9bd7369`; `origin/main` = `505adf1`), and the feature is **inactive until the cloud accounts are provisioned + config filled** (panel shows "not available in this build yet"). **Next: make Phase 2 live, then F-02 Phase 3 (file hosting) and/or the P2 backlog.**
 
 ## ✅ RESOLVED — former OneDrive hazard (repo moved 2026-06-01)
 
@@ -37,7 +37,15 @@ KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screensho
 
 **Mitigations that worked (still good practice):** (1) verify every consequential action with a SECOND authoritative command — *especially git* (`git log` / `git status` / `git ls-remote` / `Test-Path`); (2) `Write` (full-file overwrite) is safe blind and repeatable; (3) targeted `Edit` is safe-on-failure but needs an in-session `Read` first; (4) build+test after every change. **The actual filesystem/git/build/test operations were sound — only result *reporting* was unreliable, and only on OneDrive.** The repo now lives alongside `kapturevault-backend` under `C:\DEV`.
 
-## ✅ What happened this session (2026-06-01)
+## ✅ What happened this session (2026-06-01, PM-3 — F-02 Phase 2 client built)
+
+- **F-02 Phase 2 implemented end-to-end, test-first** — **local commits, NOT pushed** (client `6ad70e5`..`9bd7369`; backend `9a969d9`):
+  - **Backend** (`kapturevault-backend`): `POST /auth/google` (secret-less PKCE broker — exchanges the desktop auth code with Google server-side, holding the new `GOOGLE_CLIENT_SECRET`) + `PUT /vault/meta`. vitest **19 → 26**, tsc clean.
+  - **Client**: `KaptureOnlineApiClient` (typed Worker contract), `OnlineAccountService` (DPAPI session + auto-refresh-on-401 + cached entitlement from `/me`), `R2StorageProvider : ICloudStorageProvider` (encrypted vault ↔ R2 via presigned URLs + `vault.db.meta`), DI wiring so it's selectable in `CloudSyncManager`, `OnlineAccountViewModel` + the Settings "Online Vault" panel (sign in/out, Subscribe/Manage-billing, entitlement-gated). Client suite **71 → 118**; Debug+Release 0/0; `dotnet format` clean.
+- **KV-007 (honest status):** the secret-less model is delivered and in use **for the Online Vault** (the client holds no Google secret on that path). **`GoogleDriveProvider` still bundles `client_secret.json`** for Drive sync — routing Drive through the broker too is the remaining piece (added as a Next move).
+- **Live gating:** inactive until a human provisions Cloudflare/Stripe/Google + fills `OnlineVaultConfig` (`ApiBaseUrl` + `GoogleClientId`) and `wrangler secret put`s the Worker secrets (incl. `GOOGLE_CLIENT_SECRET`). The UI shows "not available in this build yet" until configured.
+
+## ✅ What happened earlier (2026-06-01)
 
 - **Repo relocated off OneDrive** → `C:\DEV\Utilities\KaptureVault` (robocopy + verify + delete source; retires the OneDrive tooling hazard). Path refs + memory updated. **Future sessions: launch Claude Code from `C:\DEV\Utilities`.**
 - **v1.0.6 RELEASED** — shipped **F-01 (Export Vault Database)**: Export DB toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off-thread (`DatabaseServiceBackupTests`). `Invoke-Release.ps1` → `auto-release.yml` created the GitHub Release v1.0.6 (`aee32b5`).
@@ -100,8 +108,8 @@ Then, in the backend repo: fill `wrangler.toml` `REPLACE_WITH_*` (account id, R2
 # Client
 dotnet build -c Debug
 .\bin\Debug\net9.0-windows\win-x64\KaptureVault.exe        # kill any running (maybe elevated) instance first
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 49 passing
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 118 passing
 # Backend (C:\dev\kapturevault-backend)
-npm test                                                   # 19 vitest passing
+npm test                                                   # 26 vitest passing
 ```
 Inno Setup ISCC: `C:\Users\vybec\AppData\Local\Programs\Inno Setup 6\ISCC.exe`.

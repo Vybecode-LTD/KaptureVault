@@ -1,6 +1,6 @@
 # F-02 · Paid "Online Vault" — Full Design
 
-> **Status:** DESIGN (no code yet) · **Authored:** 2026-05-31 · **Originating discussion:** `AUDIT-LOG.md` (2026-05-30 PM-4) and `ROADMAP.md → 🚀 FEATURE ROADMAP`.
+> **Status:** Phases 1–2 BUILT (2026-06-01; Phase 2 inactive until provisioned) · **Authored:** 2026-05-31 · **Originating discussion:** `AUDIT-LOG.md` (2026-05-30 PM-4) and `ROADMAP.md → 🚀 FEATURE ROADMAP`.
 >
 > This is a design reference, **not** one of the shared-version managed docs (it carries no managed `version` frontmatter and is exempt from the version-bump rule). It is the "design F-02 in full" deliverable. Implementation is gated on **T-12** (secret-less desktop OAuth) — see §16.
 
@@ -262,4 +262,4 @@ Turning KaptureVault into a hosted product adds standing obligations:
 - **Helpful precursor:** F-01 (local DB export) — a manual backup escape hatch independent of any cloud.
 - **First build step:** stand up the **new backend repo** and complete **Phase 1** (verifiable in isolation, no client changes). Only then start the client `R2StorageProvider` (Phase 2).
 
-*This document is the "design F-02 in full" deliverable. No client/back-end code has been written.*
+*This document is the "design F-02 in full" deliverable. Phases 1–2 are now built (2026-06-01) — see `ROADMAP.md` + `AUDIT-LOG.md`; Phase 2 is inactive until the cloud accounts are provisioned. The one deviation from §7/§9 as designed: the client uses `POST /auth/google` (the Worker brokers the code→token exchange so the client stays secret-less) rather than completing the Google exchange itself and calling `/auth/session` with an id_token.*

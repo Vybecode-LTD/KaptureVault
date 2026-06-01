@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.9.0
+version: 1.10.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -9,6 +9,24 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-01 (PM-3) — F-02 Phase 2 client Online Vault built (test-first, local/unpushed)
+
+**Trigger:** User — "work on the F-02 phase, then the P2 backlog." Decisions: secret-less sign-in via the backend broker (Route B); cloud accounts not yet provisioned → build + unit-test against a mocked Worker.
+
+**Delivered (7 commits; client `6ad70e5`..`9bd7369` + backend `9a969d9`; all LOCAL/unpushed):**
+- **Backend** (`kapturevault-backend`): `POST /auth/google` (secret-less PKCE broker — exchanges the desktop code with Google holding the new `GOOGLE_CLIENT_SECRET`) + `PUT /vault/meta`; `exchangeGoogleCode` injected so tests need no network. vitest **19 → 26**, `tsc --noEmit` clean.
+- **Client**: `KaptureOnlineApiClient` (typed Worker contract), `OnlineAccountService`/`IOnlineAccountService` (DPAPI session via `CloudTokenStore` "online" key, auto-refresh on near-expiry + 401, cached entitlement from `/me`, checkout/portal URLs), `LoopbackGoogleSignIn`, `R2StorageProvider : ICloudStorageProvider` (encrypted vault ↔ R2 via presigned URLs + `vault.db.meta`), DI wiring (`CloudSyncManager` now takes `IEnumerable<ICloudStorageProvider>`), `OnlineAccountViewModel` + the Settings "Online Vault" panel (compiled-binding, entitlement-gated).
+
+**Verification (proof, not assertion):** per slice `dotnet test` (**71 → 118**), Debug **and** Release builds 0/0, `dotnet format --verify` clean; backend `npm test` **26** + `tsc` clean.
+
+**KV-007 (honest status):** secret-less delivered + in use **for the Online Vault**; `GoogleDriveProvider` still bundles `client_secret.json` for Drive → residual closed by new **T-35** (route Drive through the broker).
+
+**Live gating:** inactive until Cloudflare/Stripe/Google are provisioned and `OnlineVaultConfig` (`ApiBaseUrl`+`GoogleClientId`) + Worker secrets (incl. `GOOGLE_CLIENT_SECRET`) are filled. **Docs reconciled → shared `version` 1.10.0:** HANDOFF/ROADMAP/BUGS/TESTING/AUDIT-LOG + CLAUDE; CHANGELOG `[Unreleased]` groundwork note; design doc status → Phases 1–2 built.
+
+**Auditor:** Claude (Opus 4.8). **Next:** provision + go live, or start the P2 backlog (user's stated next step).
+
+---
 
 ## 2026-06-01 (PM-2) — v1.0.7 released + kapture.tools "Freeware" rebrand + visibility/doc fixes
 

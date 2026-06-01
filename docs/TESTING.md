@@ -1,6 +1,6 @@
 ---
 document: TESTING
-version: 1.9.0
+version: 1.10.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -12,7 +12,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **71 tests passing** as of 2026-06-01. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **118 tests passing** as of 2026-06-01 (71 + 47 from F-02 Phase 2). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
 
 Suite inventory:
 | Suite | Covers | Tests |
@@ -23,16 +23,20 @@ Suite inventory:
 | `Services/DatabaseServiceReplaceTests` | KV-003 pre-sync backup retention | 1 |
 | `Services/DatabaseServiceCrudTests` | KV-009 full-field round-trip, null-expiry, pin/tags, GetAll limit | 4 |
 | `Services/DatabaseServiceBackupTests` | F-01 local DB export: `CreateBackupCopy` writes a standalone copy containing every row; empty-vault backup is still a valid vault | 2 |
-| `Services/ServiceRegistrationTests` | KV-010/T-10 DI composition (`HotkeyService` + `MainWindowViewModel` resolve from `ServiceRegistration.cs`) | 13 |
+| `Services/ServiceRegistrationTests` | KV-010/T-10 DI composition + F-02 online services registered + both cloud providers present | 21 |
 | `ViewModels/ConverterTests` | KV-033 brush caching + pure text/number converters | 16 |
 | `ViewModels/MainWindowViewModelFilterTests` | T-16/KV-013 filter-selection regression: app/tag filter + selected entry survive a background Refresh; filter narrows Entries; selection clears when it leaves the vault | 7 |
 | `ViewModels/MainWindowViewModelEntriesDiffTests` | T-09/KV-013 Entries diff-update: instance reuse, prepend ordering, removal; CaptureEntry IsPinned/Tags change notifications | 5 |
 | `Views/MainWindowSmokeTests` | T-16 headless `[AvaloniaFact]`: MainWindow constructs + shows; the real sidebar ListBox SelectedItem binding keeps the filter across a refresh | 2 |
 | `ShutdownCoordinatorTests` | T-08/KV-011 teardown: stops capture, sync-on-close gating, idempotency, swallows sync failures | 8 |
+| `Services/CloudSync/KaptureOnlineApiClientTests` | F-02 P2: Online Vault HTTP contract (auth/session, auth/google, /me, billing, vault put/get-url, meta read+write, 401/402 mapping) via a stub handler | 11 |
+| `Services/CloudSync/OnlineAccountServiceTests` | F-02 P2: secret-less sign-in, DPAPI session + auto-refresh (near-expiry + 401), sign-out, entitlement from /me, checkout/portal URLs | 13 |
+| `Services/CloudSync/R2StorageProviderTests` | F-02 P2: Online Vault as `ICloudStorageProvider` — upload/download over presigned URLs + meta, find/mtime, R2 failure surfaced | 6 |
+| `ViewModels/OnlineAccountViewModelTests` | F-02 P2: Settings account-panel logic — sign-in gating + persist provider, subscribe/billing open URLs, sign-out clears provider | 9 |
 
-**Total: 71 tests.**
+**Total: 118 tests.**
 
-> **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **19 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Those are **not** part of the .NET `KaptureVault.Tests` count above.
+> **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **26 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Those are **not** part of the .NET `KaptureVault.Tests` count above.
 
 **CI: LIVE.** `.github/workflows/tests.yml` runs on every push/PR to `main` (windows-latest, .NET 9) and enforces, in order: `dotnet build` → `dotnet format --verify-no-changes` → `dotnet list package --vulnerable --include-transitive` (fails the run on any vulnerable package) → `dotnet test` (TRX + Cobertura coverage). Verified green on GitHub (Actions run 26725669973, all steps passing).
 
