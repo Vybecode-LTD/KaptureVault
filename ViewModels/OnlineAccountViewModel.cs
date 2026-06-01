@@ -39,7 +39,9 @@ public partial class OnlineAccountViewModel : ObservableObject
     public bool IsSignedIn => _account.IsSignedIn;
     public bool IsPaid => _account.IsPaid;
     public string SubscriptionStatus => _account.SubscriptionStatus;
-    public string AccountSummary => _account.IsSignedIn ? $"Signed in (account {_account.Uid})" : "Not signed in";
+    public string AccountSummary => _account.IsSignedIn
+        ? (string.IsNullOrWhiteSpace(_account.Email) ? "Signed in" : $"Signed in as {_account.Email}")
+        : "Not signed in";
 
     // Panel visibility helpers.
     public bool CanSubscribe => _account.IsSignedIn && !_account.IsPaid;

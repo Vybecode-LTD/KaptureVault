@@ -132,4 +132,13 @@ public class OnlineAccountViewModelTests
         _account.Received(1).SignOut();
         _appSettings.CloudSyncProvider.Should().BeNull();
     }
+
+    [Fact]
+    public void AccountSummary_ShowsEmail_WhenSignedIn()
+    {
+        _account.IsSignedIn.Returns(true);
+        _account.Email.Returns("a@b.com");
+
+        NewVm().AccountSummary.Should().Be("Signed in as a@b.com");
+    }
 }

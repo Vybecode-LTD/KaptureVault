@@ -38,6 +38,7 @@ public sealed class OnlineAccountService : IOnlineAccountService
 
     public bool IsSignedIn => _tokens is not null;
     public string? Uid => _tokens?.Uid;
+    public string? Email { get; private set; }
     public bool IsPaid { get; private set; }
     public string SubscriptionStatus { get; private set; } = "none";
     public DateTime? CurrentPeriodEndUtc { get; private set; }
@@ -85,6 +86,7 @@ public sealed class OnlineAccountService : IOnlineAccountService
         _store.Clear();
         _tokens = null;
         IsPaid = false;
+        Email = null;
         SubscriptionStatus = "none";
         CurrentPeriodEndUtc = null;
         RaiseStateChanged();
@@ -97,6 +99,7 @@ public sealed class OnlineAccountService : IOnlineAccountService
         {
             var me = await ExecuteAuthedAsync((s, c) => _api.GetMeAsync(s, c), ct);
             IsPaid = me.Entitled;
+            Email = me.Email;
             SubscriptionStatus = me.Subscription.Status;
             CurrentPeriodEndUtc = ParseIso(me.Subscription.CurrentPeriodEnd);
             RaiseStateChanged();

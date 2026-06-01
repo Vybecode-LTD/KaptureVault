@@ -143,6 +143,7 @@ public class OnlineAccountServiceTests
 
         me.Should().NotBeNull();
         svc.IsPaid.Should().BeTrue();
+        svc.Email.Should().Be("a@b.com");
         svc.SubscriptionStatus.Should().Be("active");
         svc.CurrentPeriodEndUtc.Should().NotBeNull();
     }

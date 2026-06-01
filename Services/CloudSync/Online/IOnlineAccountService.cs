@@ -11,6 +11,9 @@ public interface IOnlineAccountService
     bool IsSignedIn { get; }
     string? Uid { get; }
 
+    /// <summary>The signed-in user's email (from <c>/me</c>); null until refreshed or when signed out.</summary>
+    string? Email { get; }
+
     /// <summary>Cached from the last <see cref="RefreshAccountAsync"/>; UI-only — the server re-checks.</summary>
     bool IsPaid { get; }
     string SubscriptionStatus { get; }
