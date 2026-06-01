@@ -12,7 +12,7 @@
 
     <Grid RowDefinitions="*,Auto" Margin="0">
         <!-- Scrollable settings content -->
-        <ScrollViewer Grid.Row="0" Padding="20,16,20,0">
+        <ScrollViewer Grid.Row="0" Padding="20,16,20,0" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="20" Margin="0,0,0,40">
 
                 <!-- Appearance -->
@@ -159,7 +159,7 @@
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel>
                                         <TextBlock Text="Google Drive" FontSize="12"/>
-                                        <TextBlock x:Name="GoogleStatusText" Text="Not connected" FontSize="11"
+                                        <TextBlock x:Name="GoogleStatusText" Text="Not connected" FontSize="11" TextWrapping="Wrap"
                                                    Foreground="{DynamicResource AppTextSecondary}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
@@ -170,11 +170,11 @@
                                     </StackPanel>
                                 </Grid>
                                 <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                <StackPanel Spacing="6">
                                     <Button x:Name="SyncNowBtn" Content="Sync Now" Click="SyncNow_Click"
-                                            Classes="accent" Padding="12,5" FontSize="11"/>
-                                    <TextBlock x:Name="SyncStatusText" Text="" FontSize="11"
-                                               Foreground="{DynamicResource AppTextSecondary}" VerticalAlignment="Center"/>
+                                            Classes="accent" Padding="12,5" FontSize="11" HorizontalAlignment="Left"/>
+                                    <TextBlock x:Name="SyncStatusText" Text="" FontSize="11" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource AppTextSecondary}"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
@@ -197,9 +197,9 @@
                             <StackPanel Spacing="10" IsVisible="{Binding IsConfigured}">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding AccountSummary}" FontSize="12"/>
+                                        <TextBlock Text="{Binding AccountSummary}" FontSize="12" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding SubscriptionStatus, StringFormat='Subscription: {0}'}"
-                                                   FontSize="11" Foreground="{DynamicResource AppTextSecondary}"
+                                                   FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"
                                                    IsVisible="{Binding IsSignedIn}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
