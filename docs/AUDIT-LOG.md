@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.11.0
+version: 1.12.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -9,6 +9,34 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-01 (PM-5) — F-02 Phase 2 backend (free vault + quota + token/CORS/tier) + client storage wiring
+
+**Trigger:** User — absorb the docs, run an audit, then "let's get at it." Verified a green baseline first (client **120/120**, backend **26/26**, both trees clean, 19 client + 3 backend commits unpushed), then built **F-02 Phase 2** test-first, each slice its own commit. User decisions mid-session: **wire the desktop panel + reconcile docs now, defer the `/account` page to Phase 4/5, push both repos.**
+
+### Backend (`kapturevault-backend`) — 5 slices, vitest **26 → 51**, `tsc` clean
+- **`f657b87` refresh ≠ session token** — distinct JWT audiences (`kapturevault-client` vs `kapturevault-refresh`); a refresh can no longer act as a session bearer, nor a session be used at `/auth/refresh`. `test/auth-tokens.test.ts` (RED→GREEN).
+- **`ab32c78` free vault sync** — dropped the `/vault/*` `requireEntitled` gate, so any signed-in account syncs. Entitlement is still computed + surfaced on `/me` and will gate `/files/*` in Phase 6. New `free-vault.test.ts`; the old "402-until-subscribed" assertions in `api`/`broker-meta` were repointed to the free-sync contract (deliberate requirement change, not lost coverage).
+- **`5f98fe9` quota + server-side size cap** (the MANDATORY abuse-hole fix) — `PUT /vault/meta` is the upload commit: HEADs the **real** R2 object (never the client-reported size), rejects + deletes an over-quota vault (413), maintains `storage_used`; the meta body is capped at 64 KB. Quotas 250 MB free / 10 GB paid, tunable via `wrangler [vars]`. New `quota.ts` + `Store.setStorageUsed`; `quota`/`vault-quota` tests.
+- **`ebed5c5` CORS** — `hono/cors` for the site origin (+ www) and localhost; unknown origins refused; non-CORS requests untouched. R2-**bucket** CORS is a separate Phase-4 config step (added to the runbook).
+- **`e61a3ad` /me tier** — adds `{tier, features{vaultSync,fileHosting}, quota, used}` (kept `entitled`/`storageUsed` for the existing client). `me-tier.test.ts`.
+
+### Client (`KaptureVault`) — storage display, suite **120 → 123**
+- **`09f2fee`** — `MeResponse` + new `OnlineFeatures` parse the enriched `/me`; `IOnlineAccountService` caches `QuotaBytes`/`UsedBytes` each refresh; `OnlineAccountViewModel.StorageSummary` ("X of Y used") shows in the Settings → Online Vault panel once signed in. Tests: service caching (RED→GREEN) + VM formatting (incl. empty-when-unknown).
+
+### Deferred / not done (tracked)
+- **`/account` page → Phase 4/5** (needs web auth to be a real dashboard; the Stripe-redirect 404 does not affect the desktop flow).
+- **Live steps not run this session (human):** `wrangler deploy`, R2-bucket CORS, and **rotating the Google + Stripe-live secrets** that were pasted into chat during the PM-4 provisioning. Runbook updated for all three.
+
+### Verification (proof, not assertion)
+Backend `npm test` **51 passed** + `tsc --noEmit` clean. Client `dotnet test` **123 passed**, `dotnet build -c Release` **0 warn / 0 err**, `dotnet format --verify` clean (slnx).
+
+### Docs reconciled → shared `version` 1.12.0
+CLAUDE (Session Log + Health), HANDOFF, ROADMAP (Phase 2 status), TESTING (backend 51 + new suites; client 123), BUGS (header), this entry; `F-02-PROVISIONING.md` (quota note, R2-bucket CORS step, free-sync smoke test, `/account` deferral). CHANGELOG left as-is (Phase 2 still inactive until deployed — no shipped user-facing change).
+
+**Auditor:** Claude (Opus 4.8). **Next:** human — `wrangler deploy` + rotate the pasted secrets; then F-02 **Phase 3** (client vault-sync v2: multi-object incl. screenshots, quota-aware) or the **P2 backlog** (incl. T-35).
+
+---
 
 ## 2026-06-01 (PM-4) — F-02 provisioned LIVE + Phases 0–1 (polish, desktop UX, Settings layout fix)
 

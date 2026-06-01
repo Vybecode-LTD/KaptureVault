@@ -1,6 +1,6 @@
 ---
 document: HANDOFF
-version: 1.11.0
+version: 1.12.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -17,19 +17,19 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 ```powershell
 cd C:\DEV\Utilities\KaptureVault
 git status --porcelain                                   # expect CLEAN
-git log -1 --oneline                                     # expect 97f4ca8 (the F-02 stack is LOCAL/unpushed)
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 120 passing
+git log -1 --oneline                                     # latest = the v1.12.0 docs reconcile (pushed)
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 123 passing
 ```
-Backend (separate repo): `cd C:\dev\kapturevault-backend && npm test` → **26 vitest**; HEAD `8480022`.
+Backend (separate repo): `cd C:\dev\kapturevault-backend && npm test` → **51 vitest**; HEAD `e61a3ad` (pushed).
 
-> **⚠️ The F-02 work is committed LOCALLY but NOT pushed** — client `6ad70e5`..`97f4ca8` (16 commits) on top of `origin/main` = `505adf1`; backend `9a969d9`+`8480022`. Push when ready (CI runs format/vuln/test gates).
+> **✅ F-02 Phase 2 built + pushed (2026-06-01).** Both repos are pushed (CI runs the format/vuln/test gates). The Phase-2 **backend is not deployed yet** — it goes live on `wrangler deploy` (a human step); see Live status. (Earlier F-02 stack: client `6ad70e5`..`97f4ca8`; backend through `e61a3ad`.)
 > **⚠️ Capture Admin Apps self-elevates the app** — when it's running you can't `Stop-Process` it (it locks the build output); tray-Quit it before rebuilding, or toggle it off (Settings → Advanced) to iterate freely.
 
 ## TL;DR
 
 KaptureVault = vault-only fork (keystroke/clipboard/screenshot → SQLite, AES-256-GCM, Drive sync, Quick Paste, annotation editor). C# 13 / .NET 9 / Avalonia 11.3.12. Repo `C:\DEV\Utilities\KaptureVault` (off OneDrive), public. Latest release **v1.0.7**.
 
-**The current initiative is F-02 "Online Vault"** (paid tier + free cloud sync). This session: the F-02 **engine was provisioned and deployed LIVE** (Cloudflare Worker at `kapturevault-backend.kapture.workers.dev`, `/health` ok; D1 + R2 + Stripe-live + Google OIDC all wired), and **Phases 0–1** shipped (polish + the desktop Online-Vault panel + the Export-DB/Run-on-startup relocation + the Settings-layout overflow fix). Client suite **120**, backend **26**, Debug+Release **0/0**, format clean. **Next: F-02 Phase 2** (backend free-vault tier + quota).
+**The current initiative is F-02 "Online Vault"** (paid file hosting + free cloud sync). The engine is live-provisioned and Phases 0–1 (polish + desktop UX) shipped; **Phase 2 is now built** (2026-06-01): free vault sync (the `/vault/*` paywall dropped), per-user quota + server-side vault size cap, refresh≠session token, Worker CORS, `/me` tier model, and the desktop panel shows quota/used. Client suite **123**, backend **51**, Release **0/0**, format clean, **both repos pushed**. **Next: `wrangler deploy` + rotate secrets (human), then F-02 Phase 3** (client vault-sync v2).
 
 ## Agreed product model (Revision 2)
 
@@ -44,25 +44,23 @@ Paid differentiator = **file hosting + share links**; vault sync is **free** for
 
 ## Next moves (recommended order)
 
-1. **F-02 Phase 2 — backend free-vault + foundations** (in `kapturevault-backend`, + a little client). The functional unlock:
-   - Drop the `/vault/*` `requireEntitled` gate (move entitlement to the future `/files/*`) so **free** accounts sync.
-   - **Quota + a server-pinned object-size cap** — MANDATORY: `/vault/put-url` currently signs an *unbounded* PUT and `storage_used` is never enforced; free R2 writes without a cap are an abuse hole. Pin max size in the presigned signature and/or HEAD the object; maintain `storage_used`; reject over-quota.
-   - **Fix refresh ≠ session token** (today both are minted identically — a 30-day refresh is accepted as a session bearer). Give refresh a distinct audience/`typ`.
-   - Add **CORS** (Worker **and** the R2 bucket); `/me` → `{tier,features,quota,used}`; build the **`/account`** page (Stripe redirects there + it 404s).
-2. **Phase 3** — client vault-sync v2: multi-object sync (`vault.db` + re-encoded screenshot images), quota-aware; salt/KDF in `vault.db.meta` for web unlock.
-3. **Phase 4** — web vault (needs the **T-34** repo-consolidation decision); **Phase 5** — email/password auth; **Phase 6** — file hosting (paid).
+0. **Go live with Phase 2 (human, not done this session):** `cd C:\dev\kapturevault-backend && npm run deploy` (`wrangler deploy`) to take the Phase-2 Worker live; **rotate the Google + Stripe-live secrets** pasted in chat during provisioning; for the future web vault add **R2-bucket CORS** (runbook). On deploy the new token audience re-requires one sign-in.
+1. ✅ **F-02 Phase 2 — DONE (2026-06-01, pushed):** free vault sync (paywall dropped), quota + server-side size cap (HEAD-on-commit), refresh≠session token, Worker CORS, `/me` tier model, desktop storage display. **`/account` page deferred to Phase 4/5** (needs web auth). Backend vitest 26→51, client 123.
+2. **Phase 3 — client vault-sync v2 (NEXT):** multi-object sync (`vault.db` + re-encoded screenshot images), quota-aware; salt/KDF in `vault.db.meta` for web unlock. The backend now enforces quota on the `PUT /vault/meta` commit (413 over-quota) — the client should surface that as "over quota".
+3. **Phase 4** — web vault (needs the **T-34** repo-consolidation decision) + the deferred **`/account`** page; **Phase 5** — email/password auth; **Phase 6** — file hosting (paid).
 4. **Or** pause F-02 and clear the **P2 backlog** (T-18..T-26, **T-35** = route Drive through the broker to close residual KV-007).
 
-## Recent commit stack (client, local/unpushed — verify with `git log --oneline`)
+## Recent commit stack (pushed — verify with `git log --oneline`)
 
-`97f4ca8` www→kapture.tools · `8b8e964` Phase 1c relocate Export/startup · `1941c56` lessons · `55f2279` Settings overflow real fix · `d21efe2` overflow partial · `7c7a7f8` Phase 1b panel · `d4e1ff8` Phase 1a Open Vault · `e0c49f2` Phase 0 polish · `ead72ab` design Rev 2 · `624f351` config→Worker · `bbc5a80` provisioning runbook · `f703a77` reconcile v1.10.0 · `9bd7369`..`6ad70e5` Phase 2 engine (slices 5b→1). Backend: `8480022` client-id + `9a969d9` broker/meta on top of Phase 1 (`8795110`/`4758a50`).
+**Backend (`kapturevault-backend`):** `e61a3ad` /me tier · `ebed5c5` CORS · `5f98fe9` quota+size-cap · `ab32c78` free vault sync · `f657b87` refresh≠session — **Phase 2**; atop `8480022` (Phase 1 + engine). **Client:** v1.12.0 docs reconcile · `09f2fee` storage display (quota/used) — **Phase 2 client**; atop the F-02 stack `97f4ca8`..`6ad70e5` over `505adf1`.
 
 ## Live status / human prereqs
 
-**Online Vault is provisioned + LIVE** (Cloudflare R2+D1+Workers, Stripe **live** price `price_1TdVtY…` + keys + webhook, Google OIDC sign-in client; secrets set; D1 schema applied; Worker deployed). Runbook: `docs/F-02-PROVISIONING.md`.
-- **Rotate the exposed secrets:** the Google client secret + Stripe **live** secret key were pasted into chat during setup — roll both before wide use (Google Console → reset secret; Stripe → Developers → roll key; re-`wrangler secret put`).
-- **`www` DNS:** the site has no `www` host yet (app now links bare `kapture.tools`); the maintainer plans to add the `www` record.
-- **Vault sync currently still 402s for non-subscribers** until Phase 2 lifts the `/vault/*` paywall.
+**Online Vault engine is provisioned + LIVE** (Cloudflare R2+D1+Workers, Stripe **live** price `price_1TdVtY…` + keys + webhook, Google OIDC sign-in client; secrets set; D1 schema applied). Runbook: `docs/F-02-PROVISIONING.md`. **The Phase-2 changes are pushed but NOT deployed** — run `npm run deploy` (`wrangler deploy`) in `kapturevault-backend` to take them live.
+- **⚠️ Rotate the exposed secrets (STILL OUTSTANDING):** the Google client secret + Stripe **live** secret key were pasted into chat during setup — roll both before wide use (Google Console → reset secret; Stripe → Developers → roll key; re-`wrangler secret put`).
+- **R2-bucket CORS:** required before the Phase-4 web vault (the browser fetches R2 directly via presigned URLs); not needed for desktop sync (runbook).
+- **`www` DNS:** the site has no `www` host yet (app links bare `kapture.tools`); the maintainer plans to add the `www` record.
+- **After deploy, vault sync is FREE for any signed-in account** (the `/vault/*` paywall is gone, quota-enforced); cancelling a subscription locks only paid features (file hosting, Phase 6) — it no longer 402s vault sync.
 
 ## Gotchas (also in CLAUDE Lessons)
 - **Settings layout overflow** (recurs): the settings `ScrollViewer` measures content at **unbounded width**, so wrapping text won't wrap and spills out. `HorizontalScrollBarVisibility="Disabled"` did NOT fix it — `SettingsWindow` code-behind pins the content `StackPanel.MaxWidth` to the ScrollViewer `Bounds.Width − Padding`. Don't undo that.
@@ -73,8 +71,8 @@ Paid differentiator = **file hosting + share links**; vault sync is **free** for
 ```powershell
 dotnet build -c Debug                                      # kill/tray-quit any running instance first
 .\bin\Debug\net9.0-windows\win-x64\KaptureVault.exe
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 120 passing
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 123 passing
 # Backend (C:\dev\kapturevault-backend)
-npm test                                                   # 26 vitest passing
+npm test                                                   # 51 vitest passing
 ```
 Inno Setup ISCC: `C:\Users\vybec\AppData\Local\Programs\Inno Setup 6\ISCC.exe`. Release: `scripts\Invoke-Release.ps1` (see `CLAUDE.md` release directive — never re-add `gh release create`).

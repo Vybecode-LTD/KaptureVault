@@ -1,6 +1,6 @@
 ---
 document: BUGS
-version: 1.11.0
+version: 1.12.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -18,7 +18,7 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, KV-010 (DI).
 > - **P1 — COMPLETED 2026-06-01 (on main, unreleased):** ✅ **KV-013** (Entries diff-update, T-09), ✅ **KV-032** (debounced refresh), ✅ **KV-033** (decrypt off the UI thread), ✅ **KV-011** + ✅ **KV-024** (centralized shutdown teardown, T-08), ✅ KV-010 residual (HotkeyService + provider disposal). **All P1 issues are now fixed.**
 > - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → 71 (P1 batch) → 118 (Phase 2 engine) → **120 now** (+ Phase 0/1 email + Open Vault; backend **26** vitest). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression now exist. CI (`tests.yml`) green.
-> - **Next:** make F-02 Phase 2 live (cloud provisioning); then F-02 Phase 3 + the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault** (F-02 Phase 2); Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
+> - **F-02 Phase 2 built (2026-06-01):** backend free-vault sync + quota/size-cap + refresh≠session-token + CORS + `/me` tier (vitest 26→51); client shows quota/used (suite 120→123); both repos pushed. **Next:** `wrangler deploy` + rotate the provisioning secrets (human); then F-02 Phase 3 (client vault-sync v2) + the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault**; Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 

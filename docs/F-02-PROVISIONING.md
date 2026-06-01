@@ -116,8 +116,9 @@ repeat the keys for live mode when ready.
 
    > Checkout returns the browser to `https://kapture.tools/account?checkout=success|cancel`
    > (`APP_BASE_URL`). Entitlement is driven by the **webhook → D1**, and the desktop app reads it via
-   > **Refresh** (`/me`) — so that return page is cosmetic. A simple `kapture.tools/account` page is nice
-   > but not required for the flow to work.
+   > **Refresh** (`/me`) — so that return page is cosmetic. The `/account` page itself is **deferred to
+   > F-02 Phase 4/5** (it needs web auth to be a real dashboard); until then the redirect simply 404s,
+   > which does not affect the desktop flow.
 
 ---
 
@@ -183,7 +184,8 @@ dotnet build -c Debug      # IsConfigured becomes true -> the Online Vault panel
 5. [ ] On a **second machine** (or after deleting the local `vault.db`): sign in → Sync → the vault
        downloads and restores (last-writer-wins, with the retained `.pre_sync_backup`).
 6. [ ] **Manage billing** → opens the Stripe Customer Portal. Cancelling there → next **Refresh** →
-       vault endpoints return 402 and paid features lock.
+       `/me` flips to `entitled:false` (tier `free`). **Vault sync stays available** — it is free for any
+       account in Revision 2; only paid features (file hosting, Phase 6) lock.
 
 ---
 
@@ -195,8 +197,16 @@ dotnet build -c Debug      # IsConfigured becomes true -> the Online Vault panel
   "redirect_uri_mismatch".
 - **Consent screen publishing:** in *Testing* mode only listed test users can sign in; **Publish** before
   real users.
-- **Quotas/abuse (Phase 4):** per-user storage cap, the 250 MB file cap, and DMCA/takedown handling are
-  Phase 3/4 — not needed to validate Phase 2 vault sync.
+- **Quotas/abuse:** the per-user storage quota + server-side vault size cap are now **implemented (Phase 2
+  backend)** — free **250 MB** / paid **~10 GB**, tunable via `wrangler.toml` `[vars] FREE_QUOTA_BYTES` /
+  `PAID_QUOTA_BYTES`. Enforced server-side on the `PUT /vault/meta` commit (HEADs the real object, rejects +
+  deletes over-quota). The per-file cap for *hosted files* and DMCA/takedown handling remain **Phase 6** (file hosting).
+- **R2 bucket CORS (needed for the Phase 4 web vault, not for desktop sync):** the Worker now sends CORS
+  headers, but the browser also fetches the vault **straight from R2** via presigned URLs, so the **bucket**
+  needs its own CORS policy too. Configure it once before the web vault ships — R2 dashboard → bucket →
+  Settings → **CORS policy** (or `wrangler r2 bucket cors`): allow methods `GET`,`PUT` from origin
+  `https://kapture.tools` (+ `http://localhost:*` for dev), allow header `*`, expose `ETag`. The desktop
+  client is not a browser, so desktop sync works without this.
 - **KV-007 residual:** this provisions the **sign-in** client (secret-less on the desktop). Google **Drive**
   sync still uses its own bundled `client_secret.json` until ROADMAP **T-35** routes it through the broker too.
 - **Secrets discipline:** none of the 7 secrets ever go in git or a client file. `wrangler secret put` only.
