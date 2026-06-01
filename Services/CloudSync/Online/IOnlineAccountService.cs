@@ -29,6 +29,12 @@ public interface IOnlineAccountService
     /// <summary>Re-read <c>/me</c> to refresh cached entitlement; null if not signed in or it failed.</summary>
     Task<MeResponse?> RefreshAccountAsync(CancellationToken ct = default);
 
+    /// <summary>Create a Stripe Checkout session; returns the URL to open in the browser (null on failure).</summary>
+    Task<string?> GetCheckoutUrlAsync(CancellationToken ct = default);
+
+    /// <summary>Create a Stripe Customer Portal session; returns the URL (null if no billing account / failure).</summary>
+    Task<string?> GetBillingPortalUrlAsync(CancellationToken ct = default);
+
     /// <summary>
     /// Run an authenticated backend call with a valid session, refreshing the session once and
     /// retrying if it is rejected with 401. Throws <see cref="InvalidOperationException"/> if not signed in.

@@ -38,6 +38,8 @@ public class ServiceRegistrationTests
     [InlineData(typeof(IOnlineTokenStore))]
     [InlineData(typeof(IKaptureOnlineApiClient))]
     [InlineData(typeof(IOnlineAccountService))]
+    [InlineData(typeof(IUrlOpener))]
+    [InlineData(typeof(OnlineAccountViewModel))]
     public void AddKaptureServices_RegistersExpectedType(Type serviceType)
     {
         var services = new ServiceCollection().AddKaptureServices();

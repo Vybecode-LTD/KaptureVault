@@ -171,6 +171,32 @@ public class OnlineAccountServiceTests
         _store.Tokens.Should().BeNull();
     }
 
+    [Fact]
+    public async Task GetCheckoutUrlAsync_ReturnsUrl_WhenSignedIn()
+    {
+        _store.Tokens = new OnlineTokens("s", "r", _now.AddMinutes(30), "u-1");
+        _api.CreateCheckoutAsync("s", Arg.Any<CancellationToken>()).Returns(new BillingUrl("https://stripe/checkout"));
+        var svc = NewService();
+
+        (await svc.GetCheckoutUrlAsync()).Should().Be("https://stripe/checkout");
+    }
+
+    [Fact]
+    public async Task GetCheckoutUrlAsync_WhenNotSignedIn_ReturnsNull()
+    {
+        (await NewService().GetCheckoutUrlAsync()).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetBillingPortalUrlAsync_ReturnsUrl_WhenSignedIn()
+    {
+        _store.Tokens = new OnlineTokens("s", "r", _now.AddMinutes(30), "u-1");
+        _api.CreatePortalAsync("s", Arg.Any<CancellationToken>()).Returns(new BillingUrl("https://stripe/portal"));
+        var svc = NewService();
+
+        (await svc.GetBillingPortalUrlAsync()).Should().Be("https://stripe/portal");
+    }
+
     private sealed class InMemoryTokenStore : IOnlineTokenStore
     {
         public OnlineTokens? Tokens;

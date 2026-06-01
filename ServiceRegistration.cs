@@ -39,6 +39,7 @@ public static class ServiceRegistration
         services.AddSingleton<IKaptureOnlineApiClient>(sp =>
             new KaptureOnlineApiClient(new HttpClient(), sp.GetRequiredService<OnlineVaultConfig>().ApiBaseUrl));
         services.AddSingleton<IOnlineAccountService, OnlineAccountService>();
+        services.AddSingleton<IUrlOpener, BrowserUrlOpener>();
 
         // Cloud sync providers, selectable by ProviderName: Google Drive (free) + Online Vault (paid).
         services.AddSingleton<ICloudStorageProvider, GoogleDriveProvider>();
@@ -60,6 +61,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IStartupService>(),
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<IScreenshotService>()));
+        services.AddSingleton<OnlineAccountViewModel>();
 
         return services;
     }

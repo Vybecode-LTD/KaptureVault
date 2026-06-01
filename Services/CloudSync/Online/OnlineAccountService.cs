@@ -115,6 +115,36 @@ public sealed class OnlineAccountService : IOnlineAccountService
         }
     }
 
+    public async Task<string?> GetCheckoutUrlAsync(CancellationToken ct = default)
+    {
+        if (!IsSignedIn) return null;
+        try
+        {
+            var result = await ExecuteAuthedAsync((s, c) => _api.CreateCheckoutAsync(s, c), ct);
+            return result.Url;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex.Message;
+            return null;
+        }
+    }
+
+    public async Task<string?> GetBillingPortalUrlAsync(CancellationToken ct = default)
+    {
+        if (!IsSignedIn) return null;
+        try
+        {
+            var result = await ExecuteAuthedAsync((s, c) => _api.CreatePortalAsync(s, c), ct);
+            return result.Url;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex.Message;
+            return null;
+        }
+    }
+
     public async Task<T> ExecuteAuthedAsync<T>(Func<string, CancellationToken, Task<T>> call, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(call);
