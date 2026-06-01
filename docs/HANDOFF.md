@@ -41,8 +41,10 @@ KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screensho
 
 - **Repo relocated off OneDrive** → `C:\DEV\Utilities\KaptureVault` (robocopy + verify + delete source; retires the OneDrive tooling hazard). Path refs + memory updated. **Future sessions: launch Claude Code from `C:\DEV\Utilities`.**
 - **v1.0.6 RELEASED** — shipped **F-01 (Export Vault Database)**: Export DB toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off-thread (`DatabaseServiceBackupTests`). `Invoke-Release.ps1` → `auto-release.yml` created the GitHub Release v1.0.6 (`aee32b5`).
-- **P1 backlog COMPLETE (on `main`, unreleased → v1.0.7), test-first:** **T-16** (`ff78e6d` — `Avalonia.Headless.XUnit` harness `TestAppBuilder` + `MainWindowSmokeTests` + `MainWindowViewModelFilterTests`/`…EntriesDiffTests`); **T-09** (`53f0ad4` — `SyncEntries` diff-update + debounced `RequestRefresh` + off-UI `RefreshAsync`; `CaptureEntry` observable — KV-013/032/033); **T-08** (`bf3658c` — `ShutdownCoordinator` + `OnShutdownRequested` centralize teardown; ServiceProvider disposed on every exit — KV-011/024). Tests **49 → 71**.
+- **P1 backlog COMPLETE (shipped in v1.0.7), test-first:** **T-16** (`ff78e6d` — `Avalonia.Headless.XUnit` harness `TestAppBuilder` + `MainWindowSmokeTests` + `MainWindowViewModelFilterTests`/`…EntriesDiffTests`); **T-09** (`53f0ad4` — `SyncEntries` diff-update + debounced `RequestRefresh` + off-UI `RefreshAsync`; `CaptureEntry` observable — KV-013/032/033); **T-08** (`bf3658c` — `ShutdownCoordinator` + `OnShutdownRequested` centralize teardown; ServiceProvider disposed on every exit — KV-011/024). Tests **49 → 71**.
+- **v1.0.7 RELEASED** (`2d09aa3`) — shipped the P1 batch above.
 - **F-02 Phase 1 backend** (prior session) remains DONE in `kapturevault-backend` (19 vitest + CI green); retires KV-007/T-12 via the broker. **All P0 + P1 audit issues are now resolved.**
+- **kapture.tools is a SEPARATE repo** — `Kapture.Tools-Website` (cloned to `C:\DEV\Kapture.Tools-Website`), **not** this repo's `docs/`. It was rebranded: hero badge "Free & Open Source" → **"v{version} - Freeware"** (auto-updates from the KaptureVault Releases API via `download.js`) + stale download card fixed. It has **no GitHub Pages** — deploys via an external host. This repo's `docs/` is a redundant legacy landing page.
 
 ## Recent commit stack (client `origin/main`, 2026-06-01 — verify with `git log --oneline`)
 
@@ -50,14 +52,15 @@ Newest first; HEAD = `origin/main` (verified via `git ls-remote`).
 
 | Commit | What |
 |---|---|
-| `bf3658c` | feat(t-08): centralize shutdown teardown via ShutdownRequested (KV-011/024) *(HEAD = origin/main)* |
+| `85d3ddc` | docs: reconcile to v1.9.0 / app 1.0.7; repo visibility private→public *(HEAD = origin/main)* |
+| `8c33a0b` | revert: restore docs/index.html footer (wrong site) |
+| `9879d83` | feat(site): footer version+Freeware *(superseded — real site is the separate repo)* |
+| `2d09aa3` | release: v1.0.7 *(tag v1.0.7; ships the P1 batch T-16/T-09/T-08)* |
+| `2155a72` | docs: reconcile to v1.8.0 (P1 backlog complete) |
+| `bf3658c` | feat(t-08): centralize shutdown teardown (KV-011/024) |
 | `53f0ad4` | feat(t-09): diff-update Entries + debounce + off-UI decrypt (KV-013/032/033) |
-| `ff78e6d` | test(t-16): Avalonia headless harness + VM filter/diff regressions (KV-045) |
+| `ff78e6d` | test(t-16): Avalonia headless harness + VM regressions (KV-045) |
 | `aee32b5` | release: v1.0.6 *(tag v1.0.6; ships F-01)* |
-| `dfa5d25` | docs: relocate repo to C:\DEV + update path refs |
-| `dc615ce` | docs: handoff reconciliation to v1.7.0 |
-| `ddc3ce4` | feat(export): Export Vault Database (F-01) + `DatabaseServiceBackupTests` |
-| `ffc3c9d` | release: v1.0.5 *(tag v1.0.5)* |
 
 **Backend repo** (`C:\dev\kapturevault-backend`, own history): `8795110`, `4758a50` — F-02 Phase 1 (Worker + Stripe webhook + R2 presign + D1 schema + 19 vitest).
 
