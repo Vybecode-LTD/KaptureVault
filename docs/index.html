@@ -56,24 +56,5 @@
   <div class="card"><div class="card-icon">&#128269;</div><div class="card-title">Quick Paste</div><div class="card-desc">Global hotkey to instantly search your vault and paste any entry into any app.</div></div>
 </div>
 <div class="links"><h2>Legal &amp; Source</h2><div class="link-row"><a class="link-btn" href="privacy-policy.html">Privacy Policy</a><a class="link-btn" href="terms-of-service.html">Terms of Service</a><a class="link-btn" href="https://github.com/Vybecode-LTD/KaptureVault">View on GitHub</a></div></div>
-<footer>&copy; 2026 Vybecode Ltd. &middot; KaptureVault &middot; <span id="kv-version">v1.0.7 - Freeware</span></footer>
-<script>
-  // Show the current release version next to "Freeware", auto-updating as new releases
-  // are cut. Reads the public GitHub Releases API; falls back to the build-time version
-  // baked into the span above if the request fails (offline / rate-limited).
-  (function () {
-    var el = document.getElementById('kv-version');
-    if (!el) return;
-    fetch('https://api.github.com/repos/Vybecode-LTD/KaptureVault/releases/latest', {
-      headers: { Accept: 'application/vnd.github+json' }
-    })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) {
-        if (data && data.tag_name) {
-          el.textContent = 'v' + data.tag_name.replace(/^v/i, '') + ' - Freeware';
-        }
-      })
-      .catch(function () { /* keep the static fallback */ });
-  })();
-</script>
+<footer>&copy; 2026 Vybecode Ltd. KaptureVault is open source software.</footer>
 </body></html>
