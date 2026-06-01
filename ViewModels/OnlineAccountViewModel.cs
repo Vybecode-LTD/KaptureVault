@@ -101,6 +101,10 @@ public partial class OnlineAccountViewModel : ObservableObject
         StatusMessage = "Signed out.";
     }
 
+    /// <summary>Open the web vault in the browser (shown once signed in).</summary>
+    [RelayCommand]
+    private void OpenVault() => _urlOpener.Open(_config.WebVaultUrl);
+
     [RelayCommand]
     private async Task SubscribeAsync()
     {

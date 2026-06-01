@@ -141,4 +141,12 @@ public class OnlineAccountViewModelTests
 
         NewVm().AccountSummary.Should().Be("Signed in as a@b.com");
     }
+
+    [Fact]
+    public void OpenVault_OpensTheWebVaultUrl()
+    {
+        NewVm().OpenVaultCommand.Execute(null);
+
+        _opener.Received(1).Open(Arg.Is<string>(u => u.Contains("kapture.tools/vault")));
+    }
 }

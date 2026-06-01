@@ -13,12 +13,16 @@ public sealed class OnlineVaultConfig
 
     public const string DefaultApiBaseUrl = "https://kapturevault-backend.kapture.workers.dev";
     public const string DefaultGoogleClientId = "232322018793-p6c6gmi0qug5ij427528gniclcol84rr.apps.googleusercontent.com";
+    public const string DefaultWebVaultUrl = "https://www.kapture.tools/vault";
 
     /// <summary>Base URL of the deployed Cloudflare Worker (no trailing slash needed).</summary>
     public string ApiBaseUrl { get; init; } = DefaultApiBaseUrl;
 
     /// <summary>The public OAuth client id of the dedicated sign-in client (audience of the ID token).</summary>
     public string GoogleClientId { get; init; } = DefaultGoogleClientId;
+
+    /// <summary>Where "Open Vault" sends the user — the web vault on kapture.tools.</summary>
+    public string WebVaultUrl { get; init; } = DefaultWebVaultUrl;
 
     /// <summary>Loopback port for the PKCE redirect (distinct from Drive's 48721 to avoid clashes).</summary>
     public int LoopbackPort { get; init; } = 48722;
