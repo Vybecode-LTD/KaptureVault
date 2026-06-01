@@ -1,9 +1,9 @@
 ---
 document: HANDOFF
-version: 1.7.0
-app-version: 1.0.5
-last-updated: 2026-05-31
-last-audit: 2026-05-31
+version: 1.8.0
+app-version: 1.0.6
+last-updated: 2026-06-01
+last-audit: 2026-06-01
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT-LOG.md, CHANGELOG.md, docs/F-02-online-vault-design.md]
 ---
@@ -18,18 +18,18 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 
 ```powershell
 cd C:\DEV\Utilities\KaptureVault
-git ls-remote origin refs/heads/main                     # main expected = dc615ce (pre-v1.0.6)
+git ls-remote origin refs/heads/main                     # main expected = bf3658c
 git status --porcelain                                   # expect CLEAN
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 49 passing
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 71 passing
 ```
 
-**If those match, the client repo is healthy** (v1.0.5 shipped, F-01 merged-but-unreleased, tree clean) — proceed to "Next moves".
+**If those match, the client repo is healthy** (v1.0.6 shipped, the whole P1 backlog done on main/unreleased, tree clean) — proceed to "Next moves".
 
 **Backend lives in a SEPARATE repo** (off OneDrive): `C:\dev\kapturevault-backend` (own git + GitHub remote `github.com/Vybecode-LTD/kapturevault-backend`, private). Verify with `npm test` there → **19 vitest passing**. See "Related repos / human prereqs".
 
 ## TL;DR
 
-KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **v1.0.5 SHIPPED** this session (tag `v1.0.5` = `ffc3c9d`, GitHub Release created by the workflow). **F-01 (Export Vault Database) DONE but UNRELEASED** (on main, CHANGELOG `[Unreleased]`; ships in **v1.0.6**). **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **49 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD `ddc3ce4` = `origin/main` (verified), tree clean. The latest *released* version is **v1.0.5**; the next *new* release will be **v1.0.6** (it promotes the staged F-01).
+KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Repo now lives at `C:\DEV\Utilities\KaptureVault` (off OneDrive).** **v1.0.6 SHIPPED** (tag `v1.0.6` = `aee32b5`, GitHub Release by the workflow) — it shipped **F-01 (Export Vault Database)**. The **entire P1 audit backlog is now COMPLETE on `main` (unreleased → v1.0.7):** T-16 (Avalonia.Headless.XUnit harness + VM regressions), T-09 (Entries diff-update + debounce + off-UI decrypt), T-08 (centralized shutdown teardown). **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **71 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD `bf3658c` = `origin/main`, tree clean. Latest *released* = **v1.0.6**; the P1 batch ships next as **v1.0.7** whenever a release is cut.
 
 ## ✅ RESOLVED — former OneDrive hazard (repo moved 2026-06-01)
 
@@ -37,34 +37,37 @@ KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screensho
 
 **Mitigations that worked (still good practice):** (1) verify every consequential action with a SECOND authoritative command — *especially git* (`git log` / `git status` / `git ls-remote` / `Test-Path`); (2) `Write` (full-file overwrite) is safe blind and repeatable; (3) targeted `Edit` is safe-on-failure but needs an in-session `Read` first; (4) build+test after every change. **The actual filesystem/git/build/test operations were sound — only result *reporting* was unreliable, and only on OneDrive.** The repo now lives alongside `kapturevault-backend` under `C:\DEV`.
 
-## ✅ What shipped this session (2026-05-31)
+## ✅ What happened this session (2026-06-01)
 
-- **F-01 (Export Vault Database) — DONE** (commit `ddc3ce4`, currently **UNRELEASED**, ships in v1.0.6): Export DB toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` run **off-thread**; covered by `DatabaseServiceBackupTests`. Client test count **47 → 49**. CHANGELOG entry is staged under `[Unreleased]`.
-- **F-02 Phase 1 — BACKEND DONE** in a SEPARATE private repo **`kapturevault-backend`** (`github.com/Vybecode-LTD/kapturevault-backend`; on disk `C:\dev\kapturevault-backend`, **off OneDrive**). Cloudflare Worker providing: Google-auth sessions, Stripe billing + webhook → D1 subscription state machine, presigned R2 URLs scoped to `users/{uid}/`, an entitlement gate, and the D1 schema. **19 vitest tests + `tsc` + GitHub CI green** (commits `4758a50`, `8795110`). This **retires KV-007 / T-12** — the backend broker holds the OAuth/token secrets, so the client carries none.
-- (Earlier this session, already released) **v1.0.5** — P1 hardening batch 2 (T-07 hook-thread DB writes, T-11 PBKDF2 600k, T-10 DI) + `dotnet format`/vuln CI gates in `tests.yml` (the format/vuln half of T-16).
+- **Repo relocated off OneDrive** → `C:\DEV\Utilities\KaptureVault` (robocopy + verify + delete source; retires the OneDrive tooling hazard). Path refs + memory updated. **Future sessions: launch Claude Code from `C:\DEV\Utilities`.**
+- **v1.0.6 RELEASED** — shipped **F-01 (Export Vault Database)**: Export DB toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off-thread (`DatabaseServiceBackupTests`). `Invoke-Release.ps1` → `auto-release.yml` created the GitHub Release v1.0.6 (`aee32b5`).
+- **P1 backlog COMPLETE (on `main`, unreleased → v1.0.7), test-first:** **T-16** (`ff78e6d` — `Avalonia.Headless.XUnit` harness `TestAppBuilder` + `MainWindowSmokeTests` + `MainWindowViewModelFilterTests`/`…EntriesDiffTests`); **T-09** (`53f0ad4` — `SyncEntries` diff-update + debounced `RequestRefresh` + off-UI `RefreshAsync`; `CaptureEntry` observable — KV-013/032/033); **T-08** (`bf3658c` — `ShutdownCoordinator` + `OnShutdownRequested` centralize teardown; ServiceProvider disposed on every exit — KV-011/024). Tests **49 → 71**.
+- **F-02 Phase 1 backend** (prior session) remains DONE in `kapturevault-backend` (19 vitest + CI green); retires KV-007/T-12 via the broker. **All P0 + P1 audit issues are now resolved.**
 
-## Recent commit stack (client `origin/main`, 2026-05-31 — verify with `git log --oneline`)
+## Recent commit stack (client `origin/main`, 2026-06-01 — verify with `git log --oneline`)
 
-Newest first; HEAD = `origin/main` (verified via `git ls-remote`). **If yours differ, trust `git log`, not this table** (tooling has fabricated SHAs before — see ⚠️).
+Newest first; HEAD = `origin/main` (verified via `git ls-remote`).
 
 | Commit | What |
 |---|---|
-| `ddc3ce4` | feat: Export Vault Database (F-01) + `DatabaseServiceBackupTests` *(HEAD = origin/main; UNRELEASED → v1.0.6)* |
-| `d92952d` | ci: format + vuln gates in tests.yml |
-| `12b7122` | chore: format tests project |
-| `ffc3c9d` | release: v1.0.5 *(tag v1.0.5 here)* |
-| `51dc9fd` | chore: format app project |
-| `0351500` | refactor(di): HotkeyService + MainWindowViewModel in DI (T-10, KV-010) |
-| `5748f9f` | fix(crypto): PBKDF2 → 600k + persisted KDF params (T-11, KV-006) |
-| `e5977dd` | fix(capture): SQLite INSERT off the keyboard-hook thread (T-07, KV-012) |
+| `bf3658c` | feat(t-08): centralize shutdown teardown via ShutdownRequested (KV-011/024) *(HEAD = origin/main)* |
+| `53f0ad4` | feat(t-09): diff-update Entries + debounce + off-UI decrypt (KV-013/032/033) |
+| `ff78e6d` | test(t-16): Avalonia headless harness + VM filter/diff regressions (KV-045) |
+| `aee32b5` | release: v1.0.6 *(tag v1.0.6; ships F-01)* |
+| `dfa5d25` | docs: relocate repo to C:\DEV + update path refs |
+| `dc615ce` | docs: handoff reconciliation to v1.7.0 |
+| `ddc3ce4` | feat(export): Export Vault Database (F-01) + `DatabaseServiceBackupTests` |
+| `ffc3c9d` | release: v1.0.5 *(tag v1.0.5)* |
 
 **Backend repo** (`C:\dev\kapturevault-backend`, own history): `8795110`, `4758a50` — F-02 Phase 1 (Worker + Stripe webhook + R2 presign + D1 schema + 19 vitest).
 
 ## Next moves (recommended order)
 
-1. **F-02 Phase 2 (client side)** — wire the desktop app to the backend: `R2StorageProvider : ICloudStorageProvider` (ask the Worker for a presigned URL, then PUT/GET bytes to R2) + Google sign-in UI → `POST /auth/session` (store session + refresh in DPAPI `CloudTokenStore`) + `IEntitlementService` reading `/me` + a subscription gate on the Online Vault. **Blocked on the human prereqs below** for live testing, but the client code can be built/unit-tested against a mocked Worker first.
-2. **OR cut v1.0.6 first** — ship the already-done **F-01** (promote `[Unreleased]` → `[1.0.6]`, run `Invoke-Release.ps1 -BumpType minor`). Quick, decouples the shipped F-01 from the larger F-02 client work.
-3. **Older client backlog** (post-F-02 or interleaved): **T-16 remainder** — `Avalonia.Headless.XUnit` UI smoke + `MainWindowViewModel` filter-selection regression test (the harness that makes T-09/T-08 verifiable); **T-09 / KV-013/032/033** — **diff-update** `Entries` (NEVER `Clear()` a selection-bound list — see Lessons), debounce `Refresh()`, decrypt off the UI thread; **T-08 / KV-011/024** — one **idempotent `TeardownAsync`** (via `ShutdownRequested`) that disposes `HotkeyService` + `ServiceProvider` (four shutdown paths bypass the current teardown). Pair T-09/T-08 with T-16.
+**All P0 + P1 audit issues are resolved.** Remaining work is the F-02 product initiative and the P2/P3 polish backlog.
+
+1. **F-02 Phase 2 (client side)** — wire the desktop app to the backend: `R2StorageProvider : ICloudStorageProvider` (ask the Worker for a presigned URL, then PUT/GET bytes to R2) + Google sign-in UI → `POST /auth/session` (store session + refresh in DPAPI `CloudTokenStore`) + `IEntitlementService` reading `/me` + a subscription gate on the Online Vault. This also lands the secret-less client OAuth (ex-T-12/KV-007). **Blocked on the human prereqs below** for live testing, but the client code can be built/unit-tested against a mocked Worker first (use the new T-16 headless harness).
+2. **OR cut v1.0.7** — ship the completed P1 batch (T-16/T-09/T-08: UI responsiveness + clean shutdown). Promote CHANGELOG `[Unreleased]` → `[1.0.7]`, run `Invoke-Release.ps1 -BumpType minor`. Quick; decouples the hardening from the larger F-02 work.
+3. **P2 backlog** (`ROADMAP.md`): T-18 (known-plaintext key verifier, KV-019), T-19 (zero master key on lock, KV-020), T-20 (transactional bulk encrypt/decrypt, KV-021), T-21 (`wal_checkpoint(TRUNCATE)` before DB copy), T-22 (extract Settings/QuickPaste/ContentViewer VMs, KV-015/027/037), T-24 (harden `CloudSyncManager` timer/retry).
 
 ## Related repos / human prereqs (NEW — for F-02 live)
 

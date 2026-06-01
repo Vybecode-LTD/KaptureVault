@@ -1,9 +1,9 @@
 ---
 document: TESTING
-version: 1.7.0
-app-version: 1.0.5
-last-updated: 2026-05-31
-last-audit: 2026-05-31
+version: 1.8.0
+app-version: 1.0.6
+last-updated: 2026-06-01
+last-audit: 2026-06-01
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TESTING_PROCEDURES.md]
 ---
@@ -12,7 +12,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet, on `KaptureVault.slnx`). **49 tests passing** as of 2026-05-31. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **71 tests passing** as of 2026-06-01. Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
 
 Suite inventory:
 | Suite | Covers | Tests |
@@ -25,8 +25,12 @@ Suite inventory:
 | `Services/DatabaseServiceBackupTests` | F-01 local DB export: `CreateBackupCopy` writes a standalone copy containing every row; empty-vault backup is still a valid vault | 2 |
 | `Services/ServiceRegistrationTests` | KV-010/T-10 DI composition (`HotkeyService` + `MainWindowViewModel` resolve from `ServiceRegistration.cs`) | 13 |
 | `ViewModels/ConverterTests` | KV-033 brush caching + pure text/number converters | 16 |
+| `ViewModels/MainWindowViewModelFilterTests` | T-16/KV-013 filter-selection regression: app/tag filter + selected entry survive a background Refresh; filter narrows Entries; selection clears when it leaves the vault | 7 |
+| `ViewModels/MainWindowViewModelEntriesDiffTests` | T-09/KV-013 Entries diff-update: instance reuse, prepend ordering, removal; CaptureEntry IsPinned/Tags change notifications | 5 |
+| `Views/MainWindowSmokeTests` | T-16 headless `[AvaloniaFact]`: MainWindow constructs + shows; the real sidebar ListBox SelectedItem binding keeps the filter across a refresh | 2 |
+| `ShutdownCoordinatorTests` | T-08/KV-011 teardown: stops capture, sync-on-close gating, idempotency, swallows sync failures | 8 |
 
-**Total: 49 tests.**
+**Total: 71 tests.**
 
 > **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **19 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Those are **not** part of the .NET `KaptureVault.Tests` count above.
 
@@ -40,10 +44,11 @@ Suite inventory:
 - **Required C# checks before declaring done (report results — evidence ledger):** `dotnet build`, `dotnet build -c Release`, `dotnet test --collect:"XPlat Code Coverage"`, `dotnet format --verify-no-changes`, `dotnet list package --vulnerable --include-transitive`, `dotnet publish -c Release -r win-x64` (deliverables).
 - 2-strike on the same bug → enter the **DEBUG_PROTOCOL** diagnostic mode (freeze edits, get evidence). `BREAKLOOP` forces it.
 
-### Known gaps (KV-045 / T-16)
-- No `Avalonia.Headless.XUnit` UI smoke tests (app builder / window-open / binding-resolves) yet.
-- No **VM filter regression** test yet (the `AppList`/`TagList` diff-update fix) — high priority since it broke twice.
-- Coverage % not yet collected/tracked.
+### Known gaps
+- ✅ `Avalonia.Headless.XUnit` smoke tests — added 2026-06-01 (`MainWindowSmokeTests`: window constructs/shows + ListBox binding survives a refresh).
+- ✅ **VM filter regression** — added 2026-06-01 (`MainWindowViewModelFilterTests` + `MainWindowViewModelEntriesDiffTests`).
+- Coverage % not yet collected/tracked (the only remaining T-16 nicety; CI already emits Cobertura).
+- `KeyboardHookService`/`HotkeyService`/`ActiveWindowService` stay manual/E2E only (Win32 message loops) — by design.
 
 ---
 

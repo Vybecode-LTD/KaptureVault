@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **The vault list no longer flickers or loses your place while you work.** The entry list
+  now updates in place instead of being torn down and rebuilt on every capture, so your
+  selected entry and the active app/tag filter are preserved. Reading and decrypting entries
+  runs off the UI thread and rapid captures are coalesced, keeping the window responsive on
+  large, encrypted vaults.
+
+### Fixed
+- **Quitting or restarting now shuts everything down cleanly.** Every exit path — Quit, the
+  encryption-unlock cancel, and the Capture-Admin-Apps restart — now runs one shared shutdown
+  that stops capture, syncs once when enabled, and releases the global hotkey and other
+  resources. Previously only the tray "Quit" performed the full cleanup.
+
+---
+
 ## [1.0.6] — 2026-06-01
 
 A new free-tier feature — save a complete backup of your vault to a file you choose.

@@ -1,9 +1,9 @@
 ---
 document: BUGS
-version: 1.7.0
-app-version: 1.0.5
-last-updated: 2026-05-31
-last-audit: 2026-05-31
+version: 1.8.0
+app-version: 1.0.6
+last-updated: 2026-06-01
+last-audit: 2026-06-01
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT-LOG.md]
 ---
@@ -14,10 +14,11 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 >
 > **Remediation progress (2026-05-31):**
 > - **P0 (shipped v1.0.3):** ✅ KV-001 (secrets rotated + history purged, verified), KV-005/034, KV-002, KV-004. 🟡 KV-003 mitigated.
-> - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018. 🟡 KV-013 partial (brush caching + 1000-row cap; Entries diff-update remains).
-> - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, 🟡 KV-010 (DI done; disposal still needs T-08).
-> - **Tests:** 10 → 47 (at the v1.0.5 cut) → **49 now** (F-01 added `DatabaseServiceBackupTests`, 2). CI (`tests.yml`) runs `dotnet test` + `dotnet format --verify-no-changes` + `dotnet list package --vulnerable`, verified green (run 26725669973). 🟡 KV-045: headless (Avalonia.Headless.XUnit) smoke tests + a MainWindowViewModel filter-selection regression test still pending.
-> - **Next:** KV-013 remainder + KV-032/033 (T-09), KV-011/024 (shutdown teardown, T-08); KV-007 secret-less OAuth **retired → F-02 Phase 2** (backend broker built); KV-015 View-locator cleanup folded into T-22.
+> - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018.
+> - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, KV-010 (DI).
+> - **P1 — COMPLETED 2026-06-01 (on main, unreleased):** ✅ **KV-013** (Entries diff-update, T-09), ✅ **KV-032** (debounced refresh), ✅ **KV-033** (decrypt off the UI thread), ✅ **KV-011** + ✅ **KV-024** (centralized shutdown teardown, T-08), ✅ KV-010 residual (HotkeyService + provider disposal). **All P1 issues are now fixed.**
+> - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → **71 now** (T-16 headless harness + VM filter/diff regressions + ShutdownCoordinator). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression now exist. CI (`tests.yml`) green.
+> - **Next:** P2 backlog (T-18..T-26) and **F-02 Phase 2** (client Online Vault); KV-007 secret-less OAuth **retired → F-02 Phase 2** (backend broker built); KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 
@@ -82,14 +83,14 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix applied:** `ReadEntries` builds a case-insensitive name→ordinal map from the reader once and reads every field by name (optional post-migration columns tolerated). Test: `DatabaseServiceCrudTests` (all-field round-trip + null-expiry + pin/tags).
 
 ### KV-010 · `HotkeyService` created outside DI, never disposed
-- **Area:** Lifecycle · **Status:** 🟡 PARTIAL (2026-05-31, T-10, v1.0.5) · `App.axaml.cs:140-143`, `Services/HotkeyService.cs`
-- `new HotkeyService()` owns a message-only HWND + background STA thread; only `Stop()` on the Quit path, never `Dispose()`, never touched on restart/cancel shutdowns → orphaned global hotkey registration.
-- **Fix:** Register as a DI singleton; ensure teardown on every shutdown path (see KV-011). HotkeyService + MainWindowViewModel now resolved from DI via ServiceRegistration (shipped v1.0.5). Residual: HotkeyService disposal + provider teardown on all shutdown paths still pending T-08.
+- **Area:** Lifecycle · **Status:** ✅ FIXED (DI in v1.0.5/T-10; disposal 2026-06-01/T-08) · `App.axaml.cs`, `ShutdownCoordinator.cs`, `Services/HotkeyService.cs`
+- `new HotkeyService()` owned a message-only HWND + background STA thread; only `Stop()` on the Quit path, never `Dispose()`, never touched on restart/cancel shutdowns → orphaned global hotkey registration.
+- **Fix:** Registered as DI singletons (HotkeyService + MainWindowViewModel via `ServiceRegistration`, v1.0.5). Disposal residual closed by T-08: `OnShutdownRequested` disposes the ServiceProvider, which disposes HotkeyService (IDisposable) on every exit path.
 
 ### KV-011 · Service teardown only on tray-Quit path
-- **Area:** Lifecycle · **Status:** OPEN · `App.axaml.cs:266-288`, `Views/SettingsWindow.axaml.cs:237,250,278`, `App.axaml.cs:84`
-- `_capture/_clipboardMonitor/_screenshotService/_hotkeyService.Stop()`, tray disposal, and `SyncOnClose` live **only** in the Quit handler. The three `SettingsWindow` restart routes and the encryption-cancel `Shutdown()` bypass all of it → hooks/timers keep running, SyncOnClose silently skipped.
-- **Fix:** Centralize teardown in `ShutdownRequested`/`OnExit`; dispose the provider there (KV-024); run sync-on-close once regardless of trigger.
+- **Area:** Lifecycle · **Status:** ✅ FIXED (2026-06-01, T-08) · `App.axaml.cs`, `ShutdownCoordinator.cs`, `Views/SettingsWindow.axaml.cs`
+- `_capture/_clipboardMonitor/_screenshotService/_hotkeyService.Stop()`, tray disposal, and `SyncOnClose` lived **only** in the Quit handler. The three `SettingsWindow` restart routes and the encryption-cancel `Shutdown()` bypassed all of it → hooks/timers kept running, SyncOnClose silently skipped.
+- **Fix (shipped to main):** `desktop.ShutdownRequested` now drives one idempotent teardown (`ShutdownCoordinator` + `OnShutdownRequested`): stops capture, runs a bounded sync-on-close once (gated on settings + intent — restarts skip it), then disposes the tray and ServiceProvider (KV-024). The encryption-cancel and the three SettingsWindow restart paths all route through it. **Tests:** `ShutdownCoordinatorTests`.
 
 ### KV-012 · Synchronous WAL+AES SQLite INSERT on the keyboard-hook thread
 - **Area:** Performance · **Status:** ✅ **FIXED — shipped in v1.0.5** (2026-05-31, T-07, commit e5977dd) · `Services/CaptureService.cs`
@@ -98,10 +99,10 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Tests:** `CaptureServiceTests.Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite` (RED->GREEN) + `Stop_DrainsBufferedEntriesAndDoesNotLoseData`.
 
 ### KV-013 · Entry `ListBox` effectively non-virtualized
-- **Area:** Performance · **Status:** 🟡 PARTIAL (2026-05-30, P1) · `MainWindowViewModel.cs`, `Services/DatabaseService.cs`, `ViewModels/Converters.cs`
-- (a) no LIMIT → whole table loaded; (b) `Entries.Clear()`+rebuild tears down realized containers each flush; (c) per-row converters `new SolidColorBrush` per call.
+- **Area:** Performance · **Status:** ✅ FIXED (a/c v1.0.4; b 2026-06-01, T-09) · `MainWindowViewModel.cs`, `Services/DatabaseService.cs`, `ViewModels/Converters.cs`
+- (a) no LIMIT → whole table loaded; (b) `Entries.Clear()`+rebuild tears down realized containers each flush AND drops the bound selection; (c) per-row converters `new SolidColorBrush` per call.
 - **Done:** (a) `GetAll`/`GetByApp` take an optional `limit`; the entry list caps at `MaxDisplayedEntries = 1000` (search still scans the full vault) — `DatabaseServiceCrudTests.GetAll_WithLimit_…`. (c) converters return cached `ImmutableSolidColorBrush` — `ConverterTests`.
-- **Remaining:** (b) diff-update `Entries` instead of `Clear()`+rebuild (apply the sidebar pattern, preserving order + selection) — pairs with **KV-032** (debounce `Refresh`) and **KV-033** (move whole-table decrypt off the UI thread). Deferred to the next P1 batch (threading/UI-thread work).
+- **Done (b, T-09):** `SyncEntries` diff-updates `Entries` in place (reuse instances by Id, reorder, trim) instead of `Clear()`+rebuild, preserving the two-way bound selection; `CaptureEntry.IsPinned/Tags` are now observable so in-place edits repaint without a rebuild. Shipped with **KV-032** (debounced refresh) + **KV-033** (off-UI decrypt). **Tests:** `MainWindowViewModelFilterTests`, `MainWindowViewModelEntriesDiffTests`, `MainWindowSmokeTests`.
 
 ### KV-014 · Annotation editor base `Bitmap` never disposed
 - **Area:** Performance/Memory · **Status:** ✅ FIXED (2026-05-30, P1) · `Views/Dialogs/ScreenshotEditorWindow.axaml.cs`
@@ -155,9 +156,9 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix applied:** `using var rtb = …` inside the try/catch — released on every path.
 
 ### KV-024 · `ServiceProvider` never disposed
-- **Area:** Lifecycle · **Status:** OPEN · `App.axaml.cs:18,53`
-- Singleton `IDisposable` services (Capture/Clipboard/Screenshot/CloudSyncManager) never get `Dispose()`d.
-- **Fix:** `(_serviceProvider as IDisposable)?.Dispose()` on the centralized shutdown (KV-011).
+- **Area:** Lifecycle · **Status:** ✅ FIXED (2026-06-01, T-08) · `App.axaml.cs`
+- Singleton `IDisposable` services (Capture/Clipboard/Screenshot/CloudSyncManager/HotkeyService) never got `Dispose()`d.
+- **Fix (shipped to main):** `(_serviceProvider as IDisposable)?.Dispose()` runs in `OnShutdownRequested`, disposing every IDisposable singleton the container created. See KV-011.
 
 ### KV-025 · Single-instance mutex released before relaunch confirmed
 - **Area:** Lifecycle · **Status:** OPEN · `Program.cs:51-56`, `SettingsWindow.axaml.cs:225,264`
@@ -195,14 +196,14 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 - **Fix:** Log via Serilog, classify severity, surface auth-revoked distinctly.
 
 ### KV-032 · `Refresh()` rebuilds 4 collections per capture event, no debounce
-- **Area:** Performance · **Status:** OPEN · `MainWindowViewModel.cs:99-105`
+- **Area:** Performance · **Status:** ✅ FIXED (2026-06-01, T-09) · `MainWindowViewModel.cs`
 - `RefreshStats+RefreshAppList+RefreshTagList+RefreshEntries` on every flush; clipboard/screenshot pollers fire every 500 ms.
-- **Fix:** Debounce behind a 250-500 ms `DispatcherTimer` that coalesces bursts.
+- **Fix (shipped to main):** capture-driven refreshes go through `RequestRefresh`, a ~200 ms `DispatcherTimer` that coalesces bursts into one `RefreshAsync`; `_refreshing`/`_refreshPending` prevent overlapping runs.
 
 ### KV-033 · Per-call connection + WAL pragma; whole-table decrypt on UI thread
-- **Area:** Performance · **Status:** OPEN · `DatabaseService.cs:386-394`, `MainWindowViewModel.cs:152-186`
+- **Area:** Performance · **Status:** ✅ FIXED (UI-thread decrypt, 2026-06-01, T-09) · `MainWindowViewModel.cs`
 - Each `Refresh` opens 4 connections (re-running the WAL pragma) and `GetAll` decrypts every row synchronously on the UI thread → multi-hundred-ms stalls on encrypted vaults, every capture event.
-- **Fix:** Reuse a connection/pooling; move the read to a worker, marshal back the list; combine with KV-032 debounce.
+- **Fix (shipped to main):** the capture-driven `RefreshAsync` runs `QueryEntries` (query + decrypt) on a background thread via `Task.Run`, then diff-updates on the UI thread, so capture no longer stalls the UI. (Connection pooling in `DatabaseService` wasn't required for the stall fix; left as a possible future optimization.)
 
 ---
 
@@ -246,4 +247,4 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 **Status:** FIXED 2026-05-30 (this session). Described the pre-fork 8-tab Kapture (v1.0.27, `requireAdministrator`, mutex `…B7E3F4A2`, `SystemTweaks/`, `%LOCALAPPDATA%\Kapture`). Rewritten to vault-only reality (v1.0.2, `asInvoker`, mutex `…C9D2E5F6`, `%LOCALAPPDATA%\KaptureVault`).
 
 ### KV-045 · 0% automated test coverage
-**Status:** OPEN — no test project, no test packages, no test CI job. See `TESTING.md` for the strategy and first-PR plan. Regression test for the KV-013-area filter fix is the priority.
+**Status:** ✅ FIXED. `KaptureVault.Tests` is live with **71 tests** (xUnit + NSubstitute + FluentAssertions + `Avalonia.Headless.XUnit`), including the headless smoke tests (`MainWindowSmokeTests`) and the MainWindowViewModel filter-selection regression (`MainWindowViewModelFilterTests`) that this issue called for. CI (`tests.yml`) runs build + `dotnet format --verify` + `dotnet list package --vulnerable` + test on every push/PR to `main`. See `TESTING.md`.

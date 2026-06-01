@@ -1,9 +1,9 @@
 ---
 document: ROADMAP
-version: 1.7.0
-app-version: 1.0.5
-last-updated: 2026-05-31
-last-audit: 2026-05-31
+version: 1.8.0
+app-version: 1.0.6
+last-updated: 2026-06-01
+last-audit: 2026-06-01
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT-LOG.md]
 ---
@@ -21,7 +21,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 > **P1 — in progress (batch 1 shipped in v1.0.4; batch 2 shipped in v1.0.5):**
 > ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite now **49** — was 47 at the v1.0.5 cut, +2 from F-01's `DatabaseServiceBackupTests`; CI `dotnet test` + `dotnet format --verify` + `--vulnerable` scan added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
 > **Shipped in v1.0.5 (2026-05-31):** the **T-07 + T-11 + T-10** batch (DB-writes-off-hook-thread, PBKDF2 600k + KDF params, DI via `ServiceRegistration`), plus the `dotnet format`/`--vulnerable` CI gates from T-16.
-> **Remaining P1, recommended order:** **T-16 remainder** (Avalonia.Headless.XUnit smoke + VM filter-selection regression — do first, it makes the next two verifiable; the `dotnet format --verify`/`--vulnerable`-into-CI part is now done), **T-09 + KV-032/033** (Entries diff-update / debounce / off-UI decrypt), **T-08** (KV-011/024 shutdown teardown — pairs with T-16). **T-12 (secret-less OAuth, residual KV-007) is RETIRED** — F-02 Phase 1's backend now brokers the OAuth exchange (built 2026-05-31, repo `kapturevault-backend`), so the client-side secret-less auth lands in **F-02 Phase 2** client work, not as a standalone P1. _Resequenced 2026-05-31: T-11 + T-10 pulled early (clean wins); T-08/T-09 moved after T-16 so the lifecycle/UI refactors are verifiable via headless tests._
+> **P1 — ✅ COMPLETE (final batch on `main` 2026-06-01, unreleased).** **T-16** (Avalonia.Headless.XUnit harness + VM filter-selection/diff regressions; test suite **71**), **T-09** (Entries diff-update via `SyncEntries` + debounced `RequestRefresh` + off-UI-thread query/decrypt; `CaptureEntry` observable), and **T-08** (centralized idempotent teardown via `ShutdownRequested` + `ShutdownCoordinator`; ServiceProvider disposed on every exit path) all landed test-first. **T-12 (secret-less OAuth, residual KV-007) is RETIRED** — F-02 Phase 1's backend brokers the OAuth exchange, so the client-side cutover lands in **F-02 Phase 2**. **Next focus: F-02 Phase 2** (client Online Vault) and/or the **P2 backlog**; the P1 batch can ship as **v1.0.7** whenever a release is cut. _Resequenced 2026-05-31: T-08/T-09 followed T-16 so the lifecycle/UI refactors were verifiable via the headless harness — which is how they shipped._
 
 ---
 
@@ -96,15 +96,15 @@ Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0
 | # | Status | Task | Issues | Effort |
 |---|--------|------|--------|--------|
 | T-07 | ✅ done | Move SQLite INSERT off the keyboard-hook thread (bounded `Channel` + writer task) | KV-012 | M |
-| T-08 | ⬜ | Centralize shutdown/teardown (`ShutdownRequested`/`OnExit`): stop all services, dispose tray + ServiceProvider, run SyncOnClose once | KV-011, KV-010, KV-024 | M |
-| T-09 | 🟡 partial | Make the entry `ListBox` virtualize. **Done:** brush caching + 1000-row cap. **Left:** diff-update `Entries`, debounce, off-UI decrypt | KV-013, KV-032, KV-033 | M |
+| T-08 | ✅ done | Centralized idempotent teardown via `ShutdownRequested` + `ShutdownCoordinator`: stops capture, bounded SyncOnClose once (restarts skip it), disposes tray + ServiceProvider (→ HotkeyService/CloudSyncManager) on every exit path. 2026-06-01 | KV-011, KV-024 | M |
+| T-09 | ✅ done | Entry list diff-update (`SyncEntries`, reuse-by-Id) replacing `Clear()`+rebuild; debounced `RequestRefresh`; query/decrypt off the UI thread; `CaptureEntry` observable. (Brush caching + 1000-row cap shipped earlier.) 2026-06-01 | KV-013, KV-032, KV-033 | M |
 | T-10 | ✅ done | Register `HotkeyService` + `MainWindowViewModel` in DI (`ServiceRegistration.cs`); resolved from container, not `new`ed in `App`. View `App.Services` locator cleanup (KV-015) folded into T-22 | KV-010, KV-015(partial) | M |
 | T-11 | ✅ done | PBKDF2 raised to 600k for new vaults; KDF params persisted in `encryption.json` (legacy vaults default to 100k, still open); re-key + Argon2id deferred (needs KV-021/T-20) | KV-006 | S→M |
 | ~~T-12~~ | ✅ RETIRED → **F-02** | Secret-less client OAuth. **Retired 2026-05-31:** F-02 Phase 1's backend (repo `kapturevault-backend`, built + CI green) now **brokers the Google token exchange**, so the client holds no secret. The client-side change (stop bundling `client_secret.json`, remove `FallbackClientId`) is now **F-02 Phase 2 client work** — no longer a standalone P1. | KV-007 | M |
 | T-13 | ✅ done | Apply DB concurrency gate consistently (all public methods) | KV-008 | S |
 | T-14 | ✅ done | Read columns by name (case-insensitive map) in `ReadEntries` | KV-009 | S |
 | T-15 | ✅ done | Dispose annotation-editor base `Bitmap` (`OnClosed`) + `using` the `RenderTargetBitmap` + SaveAs guard | KV-014, KV-023, KV-018 | XS |
-| T-16 | 🟡 partial | test suite now **49** (47 at the v1.0.5 cut + 2 from F-01); CI `dotnet test` + **`dotnet format --verify` + `--vulnerable` scan** all live in tests.yml (green). Left: Avalonia headless smoke + VM filter regression. | KV-045 | M |
+| T-16 | ✅ done | test suite **71**; CI `dotnet test` + `dotnet format --verify` + `--vulnerable` scan live in tests.yml (green); `Avalonia.Headless.XUnit` harness (`TestAppBuilder`) + headless MainWindow smoke + VM filter/diff regressions added. (Only coverage-% tracking remains — optional.) 2026-06-01 | KV-045 | M |
 
 ## P2 — Medium (correctness, hardening, MVVM hygiene)
 

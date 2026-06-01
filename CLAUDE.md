@@ -1,7 +1,7 @@
 ---
 document: CLAUDE
-version: 1.7.0
-app-version: 1.0.5
+version: 1.8.0
+app-version: 1.0.6
 last-updated: 2026-05-31
 last-audit: 2026-05-31
 managed-by: manual-reconciliation
@@ -24,7 +24,7 @@ managed-by: manual-reconciliation
 | `docs/AUDIT-LOG.md` | Audit + reconciliation history |
 | `CHANGELOG.md` | Versioned release history (+ Unreleased section) |
 
-All managed docs share **one `version`** (currently **1.7.0**) and carry YAML frontmatter. App version (`1.0.5` (shipped 2026-05-31)) is tracked separately via `app-version`. *(There is also a non-managed design reference, `docs/F-02-online-vault-design.md`, with no shared version.)*
+All managed docs share **one `version`** (currently **1.8.0**) and carry YAML frontmatter. App version (`1.0.6` (shipped 2026-06-01)) is tracked separately via `app-version`. *(There is also a non-managed design reference, `docs/F-02-online-vault-design.md`, with no shared version.)*
 
 > **Note:** the paid **Online Vault backend (F-02)** lives in a separate **private** repo `kapturevault-backend` (`C:\dev\kapturevault-backend`, off OneDrive — github.com/Vybecode-LTD/kapturevault-backend), not in this client repo.
 
@@ -36,7 +36,7 @@ All managed docs share **one `version`** (currently **1.7.0**) and carry YAML fr
 
 It does **NOT** contain the original app's system-tweak suite — there are no Tweaks/Services/Dashboard/Profiles/Startup/Scheduler/Privacy sections, no `SystemTweaks/`, and no `ITweak` infrastructure. It runs as a standard user (`asInvoker`), not admin.
 
-- **Version:** 1.0.5 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
+- **Version:** 1.0.6 (`KaptureVault.csproj` `<Version>`; see `CHANGELOG.md`)
 - **Repo root (= project root):** `C:\DEV\Utilities\KaptureVault` *(moved off OneDrive 2026-06-01; was `…\OneDrive\Documents\Development\Utilities\KaptureVault`)*
 - **Remote:** `github.com/Vybecode-LTD/KaptureVault` (private) · **Site:** `kapture.tools`
 - **Backend repo (F-02 paid Online Vault):** `github.com/Vybecode-LTD/kapturevault-backend` (private) at `C:\dev\kapturevault-backend` (off OneDrive)
@@ -195,12 +195,12 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - ✅ Test suite live (`KaptureVault.Tests`, 10 tests) — was KV-045.
 
 **P1 shipped in v1.0.4:** ✅ KV-008, KV-009, KV-014/023/018, KV-013 (partial).
-**P1 shipped in v1.0.5 (released 2026-05-31):** ✅ KV-012 (DB writes off the keyboard-hook thread → bounded `Channel` + writer task; T-07), ✅ KV-006 (PBKDF2 600k + persisted KDF params, legacy vaults still open; T-11), 🟡 KV-010 (HotkeyService + MainWindowViewModel now resolved from DI; T-10 — disposal-on-all-shutdown-paths half still needs T-08).
+**P1 shipped in v1.0.5 (released 2026-05-31):** ✅ KV-012 (DB writes off the keyboard-hook thread → bounded `Channel` + writer task; T-07), ✅ KV-006 (PBKDF2 600k + persisted KDF params, legacy vaults still open; T-11), ✅ KV-010 (HotkeyService + MainWindowViewModel resolved from DI; T-10 — disposal-on-all-shutdown-paths half completed by T-08, 2026-06-01).
 **Dev-infra debt CLOSED + CI-GATED:** the pre-existing `dotnet format` whitespace debt is fixed (app `51dc9fd` + test project `12b7122`, both clean) and `.github/workflows/tests.yml` now runs `dotnet format --verify-no-changes` + `dotnet list package --vulnerable` on push/PR to `main` (verified green on GitHub, Actions run 26725669973). This completes the **format/vuln half of T-16/KV-045**. Tests **30 → 47**; no vulnerable packages.
-**F-01 (Export Vault Database) IMPLEMENTED — UNRELEASED (for v1.0.6):** an "Export DB" toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off the UI thread; regression covered by `DatabaseServiceBackupTests` (2). Client tests **47 → 49**. Shipped to `main` (`ddc3ce4`) and **staged in CHANGELOG `[Unreleased]`** — not yet released; next release is v1.0.6.
+**F-01 (Export Vault Database) — ✅ RELEASED in v1.0.6 (2026-06-01):** an "Export DB" toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off the UI thread; regression covered by `DatabaseServiceBackupTests`. Released via `Invoke-Release.ps1` → `auto-release.yml` (GitHub Release v1.0.6, commit `aee32b5`).
 **F-02 Phase 1 BACKEND BUILT (separate repo):** a new **private** repo `kapturevault-backend` (`C:\dev\kapturevault-backend`, off OneDrive — github.com/Vybecode-LTD/kapturevault-backend) holds a Cloudflare Worker (TypeScript): Google-token verify + first-party session JWT, Stripe billing + webhook→D1 state machine, presigned R2 URLs scoped to `users/{uid}/`, entitlement gate, D1 schema. **19 vitest tests + tsc clean + GitHub CI green** (commits 4758a50 foundation + 8795110 router).
 **KV-007/T-12 — path is now the F-02 backend broker:** secret-less OAuth retires via the `kapturevault-backend` broker (the backend brokers Google's desktop token exchange so the client holds no `client_secret`), completed as part of **F-02 Phase 2** client work. The installer still bundles `client_secret.json` meanwhile (Google-"non-confidential", PKCE-protected).
-**Remaining P1, before wide distribution:** **T-16 remainder** — `Avalonia.Headless.XUnit` UI smoke + `MainWindowViewModel` filter-selection regression tests (the format/vuln CI half is now done); **T-09** (Entries diff-update / entry-list virtualization, KV-013/032/033); **T-08** (centralize shutdown/teardown, KV-011/024 — pairs with T-16's headless harness). **T-12/KV-007 folds into F-02 (backend broker, Phase 2).** Next: **F-02 Phase 2** (client `R2StorageProvider` + login + entitlement gate), or cut **v1.0.6** to ship F-01. See `docs/ROADMAP.md` (P1) and `docs/HANDOFF.md` to pick up.
+**P1 — ✅ COMPLETE (final batch on `main` 2026-06-01, unreleased — ships v1.0.7):** **T-16** (`Avalonia.Headless.XUnit` harness + headless MainWindow smoke + VM filter/diff regressions; suite **71**), **T-09** (Entries diff-update via `SyncEntries` + debounced `RequestRefresh` + off-UI-thread query/decrypt; `CaptureEntry` observable — KV-013/032/033), **T-08** (centralized idempotent teardown via `ShutdownRequested` + `ShutdownCoordinator`; ServiceProvider disposed on every exit — KV-011/024). **T-12/KV-007 folds into F-02 Phase 2 (backend broker).** **Next:** **F-02 Phase 2** (client `R2StorageProvider` + Google login + entitlement gate) and/or the **P2 backlog**; cut **v1.0.7** to ship the P1 batch whenever desired. See `docs/ROADMAP.md` + `docs/HANDOFF.md` to pick up.
 
 ---
 
@@ -232,3 +232,4 @@ A full audit (2026-05-30) catalogued **45 issues** in `docs/BUGS.md`. **All P0 (
 - **2026-05-31 (v1.0.5 release + CI hardening):** Released **v1.0.5** (P1 batch 2: T-07 hook-thread DB writes, T-11 PBKDF2 600k, T-10 DI) via Invoke-Release.ps1 → auto-release.yml. Closed pre-existing `dotnet format` whitespace debt (app `51dc9fd` + tests `12b7122`) and **wired `dotnet format --verify` + `dotnet list --vulnerable` gates into `tests.yml` CI** (verified green, run 26725669973) — the format/vuln half of T-16. **KV-007/T-12 decision:** defer secret-less OAuth to F-02 Phase 1 (backend broker). Corrected false doc drift caught this session (the prior "~12 commits unpushed" and "format-clean" claims were both wrong — OneDrive tooling-hazard artifacts). HEAD `d92952d`.
 - **2026-05-31 (F-01 + F-02 Phase 1 backend):** Shipped **F-01** to `main` (Export Vault Database button + `DatabaseServiceBackupTests`, `ddc3ce4`; tests 47→49; staged in CHANGELOG `[Unreleased]` for v1.0.6). Built **F-02 Phase 1** in a new private repo **kapturevault-backend** (`C:\dev\kapturevault-backend`, off OneDrive — github.com/Vybecode-LTD/kapturevault-backend): Cloudflare Worker — Google-auth sessions, Stripe billing + webhook→D1, presigned R2 URLs scoped to `users/{uid}/`, entitlement gate; 19 tests + tsc + CI green. **KV-007/T-12 now retires via that backend broker** (Phase 2 client work). Next: F-02 Phase 2 (client `R2StorageProvider` + login + gate), or cut v1.0.6 to ship F-01.
 - **2026-06-01 (repo relocated off OneDrive):** Moved the client repo from `…\OneDrive\Documents\Development\Utilities\KaptureVault` to **`C:\DEV\Utilities\KaptureVault`** — robocopy preserving `.git` + the gitignored secrets, excluding regenerable `bin/obj/publish`; verified at the destination *before* deleting the source (`git fsck` clean, HEAD `dc615ce` = origin/main, `dotnet test` **49/49** at the new path), then removed the OneDrive copy. Retires the OneDrive tooling hazard; the client now sits beside `kapturevault-backend` under `C:\DEV`. Updated repo-path references (CLAUDE/HANDOFF/ROADMAP/AUDIT-LOG + project memory). **Future sessions: launch Claude Code from `C:\DEV\Utilities`.** Next: cut v1.0.6 (F-01) → P1 backlog T-16 → T-09 → T-08.
+- **2026-06-01 (v1.0.6 release + P1 backlog complete):** Cut **v1.0.6** (ships F-01 Export Vault Database) from the new `C:\DEV` location via `Invoke-Release.ps1` → `auto-release.yml` (GitHub Release verified, release commit `aee32b5`). Then completed the **final P1 batch**, test-first, each its own commit: **T-16** (`ff78e6d` — Avalonia.Headless.XUnit harness `TestAppBuilder` + `MainWindowSmokeTests` + VM filter/diff regressions), **T-09** (`53f0ad4` — Entries diff-update `SyncEntries` + debounced `RequestRefresh` + off-UI-thread decrypt; `CaptureEntry` observable), **T-08** (`bf3658c` — centralized teardown via `ShutdownCoordinator`/`ShutdownRequested` + ServiceProvider disposal). Tests **49 → 71**, Release build 0/0, `dotnet format` clean, pushed (HEAD `bf3658c` = origin/main). **All P1 audit issues resolved.** Reconciled all managed docs to **v1.8.0**. Next: F-02 Phase 2 and/or cut v1.0.7.

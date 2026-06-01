@@ -1,14 +1,33 @@
 ---
 document: AUDIT-LOG
-version: 1.7.0
-app-version: 1.0.5
-last-updated: 2026-05-31
-last-audit: 2026-05-31
+version: 1.8.0
+app-version: 1.0.6
+last-updated: 2026-06-01
+last-audit: 2026-06-01
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md]
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-01 (PM) — v1.0.6 released, P1 backlog (T-16/T-09/T-08) completed, docs → v1.8.0
+
+**Trigger:** Same-day continuation after the repo relocation (entry below). User: cut v1.0.6 (ship F-01), then run the P1 backlog T-16 → T-09 → T-08.
+
+**v1.0.6 released (single-creator pipeline held):** promoted CHANGELOG `[Unreleased]` (F-01 Export Vault Database) → `[1.0.6] — 2026-06-01`; ran `Invoke-Release.ps1 -BumpType minor` from the new `C:\DEV` location (bumped csproj+iss to 1.0.6, published, built the installer, committed `aee32b5`, tagged `v1.0.6`, pushed). `auto-release.yml` (`github-actions[bot]`) VirusTotal-scanned + created the **GitHub Release v1.0.6** with `KaptureVaultSetup-1.0.6-x64.exe` — verified live via `gh`.
+
+**P1 backlog COMPLETE (test-first, each its own commit; on `main`, unreleased — ships v1.0.7):**
+- **T-16** (`ff78e6d`) — `Avalonia.Headless.XUnit` harness (`TestAppBuilder` over the real `App`); `MainWindowViewModelFilterTests` (filter/selection survive a background Refresh) + `MainWindowSmokeTests` (headless MainWindow constructs/binds). Closes KV-045.
+- **T-09** (`53f0ad4`) — `SyncEntries` diff-updates `Entries` in place (reuse-by-Id, reorder, trim) replacing `Clear()`+rebuild (KV-013); debounced `RequestRefresh` (KV-032); query/decrypt off the UI thread via `RefreshAsync` + `Task.Run` (KV-033); `CaptureEntry.IsPinned/Tags` made observable; `MainWindowViewModelEntriesDiffTests`.
+- **T-08** (`bf3658c`) — centralized idempotent teardown: `ShutdownCoordinator` + `OnShutdownRequested` wired to `desktop.ShutdownRequested`; stops capture, bounded sync-on-close once (restarts pass false via `App.ShutdownForRestart`), disposes tray + ServiceProvider → HotkeyService/CloudSyncManager (KV-011/KV-024); encryption-cancel + the 3 SettingsWindow restart paths now route through it; `ShutdownCoordinatorTests`.
+
+**Verification (proof, not assertion):** at each step `dotnet test` (49 → 56 → 58 → 63 → 71, all passing), `dotnet build -c Release` 0/0, `dotnet format --verify` clean. Backlog pushed (`aee32b5..bf3658c`); `git ls-remote` HEAD = `bf3658c` = origin/main.
+
+**Documentation reconciliation → shared `version` 1.8.0 / `app-version` 1.0.6:** CLAUDE, HANDOFF, ROADMAP, BUGS, TESTING, AUDIT-LOG bumped; CHANGELOG `[Unreleased]` staged for v1.0.7 (UI-responsiveness + clean-shutdown). Marked fixed: KV-011, KV-013, KV-024, KV-032, KV-033, KV-045 (+ KV-010 disposal residual). **All P1 audit issues are now resolved.** ROADMAP↔code, BUGS↔code, TESTING↔suite (8 suites / 71 tests) reconciled.
+
+**Auditor:** Claude (Opus 4.8). **Next:** F-02 Phase 2 (client Online Vault) and/or P2 backlog; cut **v1.0.7** to ship the P1 batch whenever desired.
+
+---
 
 ## 2026-06-01 — Repo relocated off OneDrive to C:\DEV\Utilities\KaptureVault
 
