@@ -1,6 +1,6 @@
 ---
 document: TESTING
-version: 1.10.0
+version: 1.11.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -12,7 +12,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **118 tests passing** as of 2026-06-01 (71 + 47 from F-02 Phase 2). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **120 tests passing** as of 2026-06-01 (71 + 49 from F-02 Phase 2; +2 from Phase 0/1a — email + OpenVault). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
 
 Suite inventory:
 | Suite | Covers | Tests |
@@ -34,7 +34,7 @@ Suite inventory:
 | `Services/CloudSync/R2StorageProviderTests` | F-02 P2: Online Vault as `ICloudStorageProvider` — upload/download over presigned URLs + meta, find/mtime, R2 failure surfaced | 6 |
 | `ViewModels/OnlineAccountViewModelTests` | F-02 P2: Settings account-panel logic — sign-in gating + persist provider, subscribe/billing open URLs, sign-out clears provider | 9 |
 
-**Total: 118 tests.**
+**Total: 120 tests.** *(F-02 client suites: KaptureOnlineApiClientTests 11, OnlineAccountServiceTests 13, R2StorageProviderTests 6, OnlineAccountViewModelTests 11.)*
 
 > **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **26 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Those are **not** part of the .NET `KaptureVault.Tests` count above.
 

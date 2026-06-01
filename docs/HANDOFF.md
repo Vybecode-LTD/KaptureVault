@@ -1,115 +1,80 @@
 ---
 document: HANDOFF
-version: 1.10.0
+version: 1.11.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
 managed-by: manual-reconciliation
-see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT-LOG.md, CHANGELOG.md, docs/F-02-online-vault-design.md]
+see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT-LOG.md, docs/F-02-online-vault-design.md, docs/F-02-PROVISIONING.md]
 ---
 
 # HANDOFF.md — KaptureVault
 
-> **Canary doc — read first when picking up the project.** Pairs with `CLAUDE.md` (project facts + **standing directives**), `ROADMAP.md` (all to-dos), `BUGS.md` (issue register), `TESTING.md` (test plan), `AUDIT-LOG.md` (history), `F-02-online-vault-design.md` (paid-tier design).
+> **Canary doc — read first.** Pairs with `CLAUDE.md` (facts + standing directives + Lessons), `ROADMAP.md` (all to-dos + the F-02 build phases), `BUGS.md`, `TESTING.md`, `AUDIT-LOG.md` (full session history — see the **2026-06-01 PM-4** entry for everything below in detail), `F-02-online-vault-design.md` (§ Revision 2 = the agreed product model), `F-02-PROVISIONING.md` (go-live runbook).
 
-## ▶ Start here (fresh session) — DO THIS FIRST
-
-**The client repo was moved off OneDrive to `C:\DEV\Utilities\KaptureVault` on 2026-06-01** (joining `kapturevault-backend` under `C:\dev`), which retires the OneDrive tooling hazard noted below. Establish ground truth with these exact commands:
+## ▶ Start here (fresh session)
 
 ```powershell
 cd C:\DEV\Utilities\KaptureVault
 git status --porcelain                                   # expect CLEAN
-git ls-remote origin refs/heads/main                     # should equal your local HEAD (git log -1)
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 118 passing
+git log -1 --oneline                                     # expect 97f4ca8 (the F-02 stack is LOCAL/unpushed)
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 120 passing
 ```
+Backend (separate repo): `cd C:\dev\kapturevault-backend && npm test` → **26 vitest**; HEAD `8480022`.
 
-**If those match, the client repo is healthy** (v1.0.7 shipped — it shipped the P1 backlog; tree clean) — proceed to "Next moves".
-
-**Backend lives in a SEPARATE repo** (off OneDrive): `C:\dev\kapturevault-backend` (own git + GitHub remote `github.com/Vybecode-LTD/kapturevault-backend`, private). Verify with `npm test` there → **26 vitest passing**. See "Related repos / human prereqs".
+> **⚠️ The F-02 work is committed LOCALLY but NOT pushed** — client `6ad70e5`..`97f4ca8` (16 commits) on top of `origin/main` = `505adf1`; backend `9a969d9`+`8480022`. Push when ready (CI runs format/vuln/test gates).
+> **⚠️ Capture Admin Apps self-elevates the app** — when it's running you can't `Stop-Process` it (it locks the build output); tray-Quit it before rebuilding, or toggle it off (Settings → Advanced) to iterate freely.
 
 ## TL;DR
 
-KaptureVault = the **vault-only fork** of Kapture: keystroke/clipboard/screenshot capture → SQLite, optional AES-256-GCM encryption, optional Google Drive sync, Quick Paste, screenshot annotation editor. C# 13 / .NET 9 / Avalonia 11.3.12. **Repo lives at `C:\DEV\Utilities\KaptureVault` (off OneDrive); public repo.** **Latest release: v1.0.7** (tag `v1.0.7` = `2d09aa3`) — it shipped the **P1 audit backlog**: T-16 (Avalonia.Headless.XUnit harness + VM regressions), T-09 (Entries diff-update + debounce + off-UI decrypt), T-08 (centralized shutdown teardown); **v1.0.6** before it shipped **F-01 (Export Vault Database)**. **All P0 + P1 audit issues resolved.** **F-02 Phase 1 backend DONE** in the separate `kapturevault-backend` repo. Client `dotnet test` → **71 passing**; build Debug+Release **0/0**; format+vuln CI gates green. HEAD = `origin/main`, tree clean. **F-02 Phase 2 (client Online Vault) is now BUILT** (test-first): secret-less Google sign-in via the backend `/auth/google` broker, `R2StorageProvider` (encrypted vault ↔ R2 over presigned URLs + `vault.db.meta`), DPAPI session + entitlement gate, and the Settings "Online Vault" panel. Client suite **118** / backend **26**, Debug+Release 0/0, `dotnet format` clean. The F-02 commits are **LOCAL/unpushed** (`6ad70e5`..`9bd7369`; `origin/main` = `505adf1`), and the feature is **inactive until the cloud accounts are provisioned + config filled** (panel shows "not available in this build yet"). **Next: make Phase 2 live, then F-02 Phase 3 (file hosting) and/or the P2 backlog.**
+KaptureVault = vault-only fork (keystroke/clipboard/screenshot → SQLite, AES-256-GCM, Drive sync, Quick Paste, annotation editor). C# 13 / .NET 9 / Avalonia 11.3.12. Repo `C:\DEV\Utilities\KaptureVault` (off OneDrive), public. Latest release **v1.0.7**.
 
-## ✅ RESOLVED — former OneDrive hazard (repo moved 2026-06-01)
+**The current initiative is F-02 "Online Vault"** (paid tier + free cloud sync). This session: the F-02 **engine was provisioned and deployed LIVE** (Cloudflare Worker at `kapturevault-backend.kapture.workers.dev`, `/health` ok; D1 + R2 + Stripe-live + Google OIDC all wired), and **Phases 0–1** shipped (polish + the desktop Online-Vault panel + the Export-DB/Run-on-startup relocation + the Settings-layout overflow fix). Client suite **120**, backend **26**, Debug+Release **0/0**, format clean. **Next: F-02 Phase 2** (backend free-vault tier + quota).
 
-**The client repo was moved off OneDrive to `C:\DEV\Utilities\KaptureVault` on 2026-06-01, so this hazard no longer applies.** Kept here as history. While the repo lived on a OneDrive path, the tool harness repeatedly returned **stale, delayed, fabricated, or empty** tool output — including reporting commits, files, a CI workflow, and a `git push` as DONE when none had happened, and going **dark (empty results)** on the read/verify channel mid-task while `Write`/`git commit` kept working.
+## Agreed product model (Revision 2)
 
-**Mitigations that worked (still good practice):** (1) verify every consequential action with a SECOND authoritative command — *especially git* (`git log` / `git status` / `git ls-remote` / `Test-Path`); (2) `Write` (full-file overwrite) is safe blind and repeatable; (3) targeted `Edit` is safe-on-failure but needs an in-session `Read` first; (4) build+test after every change. **The actual filesystem/git/build/test operations were sound — only result *reporting* was unreliable, and only on OneDrive.** The repo now lives alongside `kapturevault-backend` under `C:\DEV`.
+| Capability | Free (offline) | Free (registered) | Paid — $49/yr |
+|---|:---:|:---:|:---:|
+| App · local vault · DB export · Drive sync | ✓ | ✓ | ✓ |
+| Account — Google **or** email/password | — | ✓ | ✓ |
+| Online vault sync (capture DB + re-encoded screenshots) + web vault | — | ✓ (≤250 MB) | ✓ (~10 GB) |
+| File hosting + private/public + share links | — | — | ✓ |
 
-## ✅ What happened this session (2026-06-01, PM-3 — F-02 Phase 2 client built)
-
-- **F-02 Phase 2 implemented end-to-end, test-first** — **local commits, NOT pushed** (client `6ad70e5`..`9bd7369`; backend `9a969d9`):
-  - **Backend** (`kapturevault-backend`): `POST /auth/google` (secret-less PKCE broker — exchanges the desktop auth code with Google server-side, holding the new `GOOGLE_CLIENT_SECRET`) + `PUT /vault/meta`. vitest **19 → 26**, tsc clean.
-  - **Client**: `KaptureOnlineApiClient` (typed Worker contract), `OnlineAccountService` (DPAPI session + auto-refresh-on-401 + cached entitlement from `/me`), `R2StorageProvider : ICloudStorageProvider` (encrypted vault ↔ R2 via presigned URLs + `vault.db.meta`), DI wiring so it's selectable in `CloudSyncManager`, `OnlineAccountViewModel` + the Settings "Online Vault" panel (sign in/out, Subscribe/Manage-billing, entitlement-gated). Client suite **71 → 118**; Debug+Release 0/0; `dotnet format` clean.
-- **KV-007 (honest status):** the secret-less model is delivered and in use **for the Online Vault** (the client holds no Google secret on that path). **`GoogleDriveProvider` still bundles `client_secret.json`** for Drive sync — routing Drive through the broker too is the remaining piece (added as a Next move).
-- **Live gating:** inactive until a human provisions Cloudflare/Stripe/Google + fills `OnlineVaultConfig` (`ApiBaseUrl` + `GoogleClientId`) and `wrangler secret put`s the Worker secrets (incl. `GOOGLE_CLIENT_SECRET`). The UI shows "not available in this build yet" until configured.
-
-## ✅ What happened earlier (2026-06-01)
-
-- **Repo relocated off OneDrive** → `C:\DEV\Utilities\KaptureVault` (robocopy + verify + delete source; retires the OneDrive tooling hazard). Path refs + memory updated. **Future sessions: launch Claude Code from `C:\DEV\Utilities`.**
-- **v1.0.6 RELEASED** — shipped **F-01 (Export Vault Database)**: Export DB toolbar button → `SaveFilePickerAsync(.db)` → `DatabaseService.CreateBackupCopy` off-thread (`DatabaseServiceBackupTests`). `Invoke-Release.ps1` → `auto-release.yml` created the GitHub Release v1.0.6 (`aee32b5`).
-- **P1 backlog COMPLETE (shipped in v1.0.7), test-first:** **T-16** (`ff78e6d` — `Avalonia.Headless.XUnit` harness `TestAppBuilder` + `MainWindowSmokeTests` + `MainWindowViewModelFilterTests`/`…EntriesDiffTests`); **T-09** (`53f0ad4` — `SyncEntries` diff-update + debounced `RequestRefresh` + off-UI `RefreshAsync`; `CaptureEntry` observable — KV-013/032/033); **T-08** (`bf3658c` — `ShutdownCoordinator` + `OnShutdownRequested` centralize teardown; ServiceProvider disposed on every exit — KV-011/024). Tests **49 → 71**.
-- **v1.0.7 RELEASED** (`2d09aa3`) — shipped the P1 batch above.
-- **F-02 Phase 1 backend** (prior session) remains DONE in `kapturevault-backend` (19 vitest + CI green); retires KV-007/T-12 via the broker. **All P0 + P1 audit issues are now resolved.**
-- **kapture.tools is a SEPARATE repo** — `Kapture.Tools-Website` (cloned to `C:\DEV\Kapture.Tools-Website`), **not** this repo's `docs/`. It was rebranded: hero badge "Free & Open Source" → **"v{version} - Freeware"** (auto-updates from the KaptureVault Releases API via `download.js`) + stale download card fixed. It has **no GitHub Pages** — deploys via an external host. This repo's `docs/` is a redundant legacy landing page.
-
-## Recent commit stack (client `origin/main`, 2026-06-01 — verify with `git log --oneline`)
-
-Newest first; HEAD = `origin/main` (verified via `git ls-remote`).
-
-| Commit | What |
-|---|---|
-| `85d3ddc` | docs: reconcile to v1.9.0 / app 1.0.7; repo visibility private→public *(HEAD = origin/main)* |
-| `8c33a0b` | revert: restore docs/index.html footer (wrong site) |
-| `9879d83` | feat(site): footer version+Freeware *(superseded — real site is the separate repo)* |
-| `2d09aa3` | release: v1.0.7 *(tag v1.0.7; ships the P1 batch T-16/T-09/T-08)* |
-| `2155a72` | docs: reconcile to v1.8.0 (P1 backlog complete) |
-| `bf3658c` | feat(t-08): centralize shutdown teardown (KV-011/024) |
-| `53f0ad4` | feat(t-09): diff-update Entries + debounce + off-UI decrypt (KV-013/032/033) |
-| `ff78e6d` | test(t-16): Avalonia headless harness + VM regressions (KV-045) |
-| `aee32b5` | release: v1.0.6 *(tag v1.0.6; ships F-01)* |
-
-**Backend repo** (`C:\dev\kapturevault-backend`, own history): `8795110`, `4758a50` — F-02 Phase 1 (Worker + Stripe webhook + R2 presign + D1 schema + 19 vitest).
+Paid differentiator = **file hosting + share links**; vault sync is **free** for any account. Full design + the build phases (Engine/0/1 done, 2–6 to go) are in `ROADMAP.md` (§ F-02) and `docs/F-02-online-vault-design.md` (§ Revision 2).
 
 ## Next moves (recommended order)
 
-**All P0 + P1 audit issues are resolved.** Remaining work is the F-02 product initiative and the P2/P3 polish backlog.
+1. **F-02 Phase 2 — backend free-vault + foundations** (in `kapturevault-backend`, + a little client). The functional unlock:
+   - Drop the `/vault/*` `requireEntitled` gate (move entitlement to the future `/files/*`) so **free** accounts sync.
+   - **Quota + a server-pinned object-size cap** — MANDATORY: `/vault/put-url` currently signs an *unbounded* PUT and `storage_used` is never enforced; free R2 writes without a cap are an abuse hole. Pin max size in the presigned signature and/or HEAD the object; maintain `storage_used`; reject over-quota.
+   - **Fix refresh ≠ session token** (today both are minted identically — a 30-day refresh is accepted as a session bearer). Give refresh a distinct audience/`typ`.
+   - Add **CORS** (Worker **and** the R2 bucket); `/me` → `{tier,features,quota,used}`; build the **`/account`** page (Stripe redirects there + it 404s).
+2. **Phase 3** — client vault-sync v2: multi-object sync (`vault.db` + re-encoded screenshot images), quota-aware; salt/KDF in `vault.db.meta` for web unlock.
+3. **Phase 4** — web vault (needs the **T-34** repo-consolidation decision); **Phase 5** — email/password auth; **Phase 6** — file hosting (paid).
+4. **Or** pause F-02 and clear the **P2 backlog** (T-18..T-26, **T-35** = route Drive through the broker to close residual KV-007).
 
-1. **F-02 Phase 2 (client side)** — wire the desktop app to the backend: `R2StorageProvider : ICloudStorageProvider` (ask the Worker for a presigned URL, then PUT/GET bytes to R2) + Google sign-in UI → `POST /auth/session` (store session + refresh in DPAPI `CloudTokenStore`) + `IEntitlementService` reading `/me` + a subscription gate on the Online Vault. This also lands the secret-less client OAuth (ex-T-12/KV-007). **Blocked on the human prereqs below** for live testing, but the client code can be built/unit-tested against a mocked Worker first (use the new T-16 headless harness).
-2. **OR cut v1.0.7** — ship the completed P1 batch (T-16/T-09/T-08: UI responsiveness + clean shutdown). Promote CHANGELOG `[Unreleased]` → `[1.0.7]`, run `Invoke-Release.ps1 -BumpType minor`. Quick; decouples the hardening from the larger F-02 work.
-3. **P2 backlog** (`ROADMAP.md`): T-18 (known-plaintext key verifier, KV-019), T-19 (zero master key on lock, KV-020), T-20 (transactional bulk encrypt/decrypt, KV-021), T-21 (`wal_checkpoint(TRUNCATE)` before DB copy), T-22 (extract Settings/QuickPaste/ContentViewer VMs, KV-015/027/037), T-24 (harden `CloudSyncManager` timer/retry).
+## Recent commit stack (client, local/unpushed — verify with `git log --oneline`)
 
-## Related repos / human prereqs (NEW — for F-02 live)
+`97f4ca8` www→kapture.tools · `8b8e964` Phase 1c relocate Export/startup · `1941c56` lessons · `55f2279` Settings overflow real fix · `d21efe2` overflow partial · `7c7a7f8` Phase 1b panel · `d4e1ff8` Phase 1a Open Vault · `e0c49f2` Phase 0 polish · `ead72ab` design Rev 2 · `624f351` config→Worker · `bbc5a80` provisioning runbook · `f703a77` reconcile v1.10.0 · `9bd7369`..`6ad70e5` Phase 2 engine (slices 5b→1). Backend: `8480022` client-id + `9a969d9` broker/meta on top of Phase 1 (`8795110`/`4758a50`).
 
-The backend (`C:\dev\kapturevault-backend`) is code-complete + CI-green but **cannot run live** until a human provides the cloud accounts and fills the placeholders:
+## Live status / human prereqs
 
-1. **Cloudflare account** with **R2 + Workers + D1** enabled.
-2. **Stripe** test **and** live keys + the **$49/yr price id**.
-3. A **Google OIDC sign-in client** (web/installed) for `/auth/session`.
+**Online Vault is provisioned + LIVE** (Cloudflare R2+D1+Workers, Stripe **live** price `price_1TdVtY…` + keys + webhook, Google OIDC sign-in client; secrets set; D1 schema applied; Worker deployed). Runbook: `docs/F-02-PROVISIONING.md`.
+- **Rotate the exposed secrets:** the Google client secret + Stripe **live** secret key were pasted into chat during setup — roll both before wide use (Google Console → reset secret; Stripe → Developers → roll key; re-`wrangler secret put`).
+- **`www` DNS:** the site has no `www` host yet (app now links bare `kapture.tools`); the maintainer plans to add the `www` record.
+- **Vault sync currently still 402s for non-subscribers** until Phase 2 lifts the `/vault/*` paywall.
 
-Then, in the backend repo: fill `wrangler.toml` `REPLACE_WITH_*` (account id, R2 bucket, D1 db id, price id, Google client id), `wrangler secret put` the secrets (Stripe keys, webhook signing secret, session-signing key), and `npm run db:schema:remote` to apply the D1 schema. **Until then, F-02 stays Phase 1 (local/mocked tests only).**
-
-## Release pipeline reminder (unchanged)
-
-`Invoke-Release.ps1` builds/packages/bumps/commits-CHANGELOG/**pushes** — it does **NOT** create the GitHub release. The pushed `releases/latest/*.exe` triggers `.github/workflows/auto-release.yml` (the **single** release creator) → VirusTotal scan + GitHub Release. `kapture.tools` reads release + CHANGELOG live from GitHub. **Never re-add `gh release create` to the script.** Stable URL: `github.com/Vybecode-LTD/KaptureVault/releases/latest/download/KaptureVaultSetup-<ver>-x64.exe`.
-
-## Blockers / human-only (carried over)
-
-- **Google Cloud Console:** finish the OAuth consent screen for `kapture.tools` (authorized domain + TOS/Privacy URLs, exit Testing mode). **Secret-less OAuth now lands via the F-02 backend broker (KV-007 retired)** — the Cloud Console reconfigure happens as part of wiring the Google OIDC client above, not standalone.
-- **GitHub Pages + DNS:** point `kapture.tools` at Pages (A `@` → 185.199.108–111.153; CNAME `www` → `vybecode-ltd.github.io`), enforce HTTPS; verify in Google Search Console.
-- **Mobile viewer:** paste the web client ID `…70gd1j2j…` into `docs/vault/index.html` (`GOOGLE_WEB_CLIENT_ID`).
-- **F-02 cloud accounts / placeholders:** see "Related repos / human prereqs" above.
-- **Repo hygiene:** ✅ DONE 2026-06-01 — client repo moved off OneDrive to `C:\DEV\Utilities\KaptureVault` (now alongside the backend under `C:\dev`).
+## Gotchas (also in CLAUDE Lessons)
+- **Settings layout overflow** (recurs): the settings `ScrollViewer` measures content at **unbounded width**, so wrapping text won't wrap and spills out. `HorizontalScrollBarVisibility="Disabled"` did NOT fix it — `SettingsWindow` code-behind pins the content `StackPanel.MaxWidth` to the ScrollViewer `Bounds.Width − Padding`. Don't undo that.
+- **Avalonia incremental builds keep stale compiled XAML** — use `dotnet build --no-incremental` when iterating on `.axaml`.
+- **Elevated app can't be killed from a non-elevated shell** — tray-Quit, or toggle Capture Admin Apps off.
 
 ## Build / run quick reference
-
 ```powershell
-# Client
-dotnet build -c Debug
-.\bin\Debug\net9.0-windows\win-x64\KaptureVault.exe        # kill any running (maybe elevated) instance first
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 118 passing
+dotnet build -c Debug                                      # kill/tray-quit any running instance first
+.\bin\Debug\net9.0-windows\win-x64\KaptureVault.exe
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 120 passing
 # Backend (C:\dev\kapturevault-backend)
 npm test                                                   # 26 vitest passing
 ```
-Inno Setup ISCC: `C:\Users\vybec\AppData\Local\Programs\Inno Setup 6\ISCC.exe`.
+Inno Setup ISCC: `C:\Users\vybec\AppData\Local\Programs\Inno Setup 6\ISCC.exe`. Release: `scripts\Invoke-Release.ps1` (see `CLAUDE.md` release directive — never re-add `gh release create`).

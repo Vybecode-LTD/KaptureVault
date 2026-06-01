@@ -1,6 +1,6 @@
 ---
 document: ROADMAP
-version: 1.10.0
+version: 1.11.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -21,13 +21,13 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 > **P1 — in progress (batch 1 shipped in v1.0.4; batch 2 shipped in v1.0.5):**
 > ✅ T-13 (KV-008 gate), T-14 (KV-009 named columns), T-15 (KV-014/023/018 editor leaks), **T-07** (KV-012 — DB writes off the hook thread, bounded `Channel` + writer task), **T-11** (KV-006 — PBKDF2 600k + persisted KDF params), **T-10** (KV-010 — HotkeyService + MainWindowViewModel in DI via `ServiceRegistration`) — all test-first. 🟡 T-09 partial (KV-013: brush caching + 1000-row cap done; Entries diff-update remains). 🟡 T-16 partial (test suite now **49** — was 47 at the v1.0.5 cut, +2 from F-01's `DatabaseServiceBackupTests`; CI `dotnet test` + `dotnet format --verify` + `--vulnerable` scan added — headless + VM-filter regression tests pending). Release pipeline single-creator (`auto-release.yml`).
 > **Shipped in v1.0.5 (2026-05-31):** the **T-07 + T-11 + T-10** batch (DB-writes-off-hook-thread, PBKDF2 600k + KDF params, DI via `ServiceRegistration`), plus the `dotnet format`/`--vulnerable` CI gates from T-16.
-> **P1 — ✅ COMPLETE (final batch on `main` 2026-06-01, unreleased).** **T-16** (Avalonia.Headless.XUnit harness + VM filter-selection/diff regressions; test suite **71**), **T-09** (Entries diff-update via `SyncEntries` + debounced `RequestRefresh` + off-UI-thread query/decrypt; `CaptureEntry` observable), and **T-08** (centralized idempotent teardown via `ShutdownRequested` + `ShutdownCoordinator`; ServiceProvider disposed on every exit path) all landed test-first. **T-12 (secret-less OAuth, residual KV-007) is RETIRED** — F-02 Phase 1's backend brokers the OAuth exchange, so the client-side cutover lands in **F-02 Phase 2**. **F-02 Phase 2 (client Online Vault) is now BUILT** (2026-06-01, local/unpushed; v1.0.7 already shipped the P1 batch). **Next focus: make Phase 2 live (cloud provisioning), then F-02 Phase 3 and/or the P2 backlog (incl. T-35).** _Resequenced 2026-05-31: T-08/T-09 followed T-16 so the lifecycle/UI refactors were verifiable via the headless harness — which is how they shipped._
+> **P1 — ✅ COMPLETE (final batch on `main` 2026-06-01, unreleased).** **T-16** (Avalonia.Headless.XUnit harness + VM filter-selection/diff regressions; test suite **71**), **T-09** (Entries diff-update via `SyncEntries` + debounced `RequestRefresh` + off-UI-thread query/decrypt; `CaptureEntry` observable), and **T-08** (centralized idempotent teardown via `ShutdownRequested` + `ShutdownCoordinator`; ServiceProvider disposed on every exit path) all landed test-first. **T-12 (secret-less OAuth, residual KV-007) is RETIRED** — F-02 Phase 1's backend brokers the OAuth exchange, so the client-side cutover lands in **F-02 Phase 2**. **F-02 engine BUILT + provisioned LIVE; Phases 0–1 (polish + desktop UX) done** (2026-06-01, local/unpushed; v1.0.7 already shipped the P1 batch). **Next focus: F-02 Phase 2 (backend free-vault tier + quota), then the P2 backlog (incl. T-35).** _Resequenced 2026-05-31: T-08/T-09 followed T-16 so the lifecycle/UI refactors were verifiable via the headless harness — which is how they shipped._
 
 ---
 
 # 🚀 FEATURE ROADMAP (product — CURRENT FOCUS)
 
-Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0.6)**; F-02 is a larger, phased initiative — **Phase 1 (backend foundation) is now DONE**. Full feasibility/architecture discussion is recorded in `AUDIT-LOG.md` (2026-05-30 PM-4).
+**F-01 (DB export) shipped in v1.0.6.** F-02 is the major initiative — its **engine is built and provisioned LIVE**, Phases 0–1 (polish + desktop UX) are done, and **Phase 2 (backend free-vault + quota) is next**. The agreed product model + build phases are below; full design + rationale in `docs/F-02-online-vault-design.md` (§ Revision 2).
 
 ## F-01 · Export vault DB to local disk  *(free tier · ✅ IMPLEMENTED 2026-05-31 — unreleased, ships v1.0.6)*
 
@@ -38,28 +38,39 @@ Two new product directions (added 2026-05-30). **F-01 is implemented (ships v1.0
 - If encryption is on, the export is the encrypted SQLite (valid backup; restoring needs the password) — label it so.
 - **Test-first:** in-memory DB → insert rows → `CreateBackupCopy(temp)` → open the copy → assert rows present. Small, self-contained, ships in the free tier.
 
-## F-02 · Paid "Online Vault" — accounts + R2 storage + file hosting  *(epic · multi-week · separate private backend repo)*
+## F-02 · "Online Vault" — accounts, free cloud sync, paid file hosting  *(epic · multi-week · separate backend repo)*
 
-**Goal:** a paid tier (**$49/yr**) where registered users get cloud storage for their vault **and** can upload files (**< 250 MB**), get **share links**, and see bucket items in the vault.
+> **Agreed product model — Revision 2 (2026-06-01).** Supersedes the earlier "paid-only vault" framing. Full design + critique constraints in `docs/F-02-online-vault-design.md` (§ Revision 2).
 
-**Three load-bearing decisions (settled in discussion):**
-1. **Per-user *namespace* in ONE shared bucket** (`users/{uid}/…`) — not a bucket-per-user (buckets are account-capped).
-2. **One feature-gated app**, not two versions — free = offline + DB export; paid features unlock on login with an active subscription. One codebase.
-3. **🔒 No storage/Stripe secrets in the desktop client, ever** — a backend brokers short-lived **presigned URLs** (and now the OAuth token exchange). (Same lesson as the KV-001 OAuth leak, higher stakes; leans on the VERSION_CONTROL secret discipline. **The backend now exists** — see Phase 1 below — so the client-side secret-less auth that was T-12/KV-007 lands in Phase 2.)
+**Tiers:**
+| Capability | Free (offline) | Free (registered) | Paid — $49/yr |
+|---|:---:|:---:|:---:|
+| Desktop app · local vault · DB export · Google Drive sync | ✓ | ✓ | ✓ |
+| Account — **Google OR email/password** | — | ✓ | ✓ |
+| **Online vault sync** (encrypted capture DB + re-encoded screenshots) + **web vault** | — | ✓ (≤ **250 MB**) | ✓ (~**10 GB**) |
+| **File hosting** (arbitrary files) · private/public · **shareable links** | — | — | ✓ |
 
-**Recommended stack:** Cloudflare **R2** (no egress fees — ideal for share links) + **Workers** (backend API) + **D1** (user/file/share metadata) + **Stripe** (subscription); reuse the existing **Google sign-in** for identity. An `R2StorageProvider : ICloudStorageProvider` slots next to `GoogleDriveProvider` for DB sync.
+- The **paid differentiator is file hosting + share links** — vault sync is **free** for any registered account. Screenshots sync **re-encoded** (BMP→PNG/JPEG), counted against the quota. Free cap **250 MB**, paid **~10 GB** (config, tunable).
+- **Settled:** per-user namespace in ONE R2 bucket (`users/{uid}/`); one feature-gated app; **no storage/Stripe/Google secret in the client, ever** — the Worker brokers presigned URLs **and** the OAuth code exchange.
+- **Stack:** Cloudflare **R2 + Workers + D1** + **Stripe**; identity = Google **and** email/password. Backend repo `kapturevault-backend` (`C:\dev\kapturevault-backend`, private). `R2StorageProvider : ICloudStorageProvider` slots beside `GoogleDriveProvider`.
 
-**Backend repo (NEW, off OneDrive):** `kapturevault-backend` — `https://github.com/Vybecode-LTD/kapturevault-backend`, on disk `C:\dev\kapturevault-backend`. Separate private repo (deliberately not on the OneDrive path; see the OneDrive tooling hazard in `CLAUDE.md` Lessons).
+**Build phases (replaces the old 4-phase table):**
+| # | Phase | Status |
+|---|-------|--------|
+| Engine | Backend foundation (auth/billing/presign/D1) + client API client, account/session layer, `R2StorageProvider`, DI wiring, account UI | **✅ BUILT + provisioned LIVE** — backend `8480022` (Worker at `kapturevault-backend.kapture.workers.dev`, `/health` ok); client `6ad70e5`..`9bd7369`. Backend **26** vitest; client suite **120**. |
+| 0 | Polish — UTF-8 "Connected" page, email-not-uid, 402→message | **✅ DONE** (`e0c49f2`) |
+| 1 | Desktop UX — Online Vault panel (sign-in → Open Vault → Upgrade); relocate Export-DB + Run-on-startup → **Settings → General**; Settings overflow fix; kapture.tools (no www) | **✅ DONE** (`d4e1ff8`,`7c7a7f8`,`8b8e964`,`55f2279`,`97f4ca8`) |
+| 2 | **Backend free-vault + foundations** — drop the `/vault/*` subscription gate (free sync); **per-user quota + server-pinned object-size cap** (MANDATORY now free users write to R2 — `/vault/put-url` is currently unbounded + `storage_used` never enforced); fix refresh≠session token; add **CORS** (Worker **and** R2 bucket); `/me` → `{tier,features,quota,used}`; build the **`/account`** page | ⏳ **NEXT** |
+| 3 | Client vault-sync v2 — multi-object sync (`vault.db` + re-encoded screenshot images), quota-aware; carry salt/KDF in `vault.db.meta` for web unlock | ⬜ |
+| 4 | Web vault (`kapture.tools/vault`) — Google + email/password login → read + decrypt → subscribe; fix the viewer's hardcoded PBKDF2 100k (read from meta). **Needs the repo-consolidation decision (T-34).** | ⬜ |
+| 5 | Email/password auth — `/auth/register|verify|login|reset` + transactional email + rate-limiting + the **account-password vs vault-password interlock**; closes the residual KV-007 for the sign-in client | ⬜ |
+| 6 | File hosting (paid) — `/files/*` + shares + 250 MB-per-file cap + desktop **Upload files** UI + public/private + share links | ⬜ |
 
-**Phases:**
-| # | Phase | Where | Status |
-|---|-------|-------|--------|
-| 1 | Backend foundation — Worker API + R2 + D1 + Stripe + auth (verify subscription → issue presigned URLs scoped to `users/{uid}/`) | **`kapturevault-backend`** | **✅ DONE (2026-05-31, repo `kapturevault-backend`)** — Cloudflare Worker: Google-auth sessions, Stripe billing + webhook→D1 state machine, presigned R2 URLs scoped to `users/{uid}/`, entitlement gate, D1 schema; **19 vitest tests + tsc + GitHub CI green**. Retires T-12/KV-007 (backend brokers the OAuth exchange). |
-| 2 | Client online vault — `R2StorageProvider` (DB-sync alt to Drive) + login UI + subscription gate **+ secret-less client OAuth via the backend broker** | KaptureVault | **✅ BUILT (2026-06-01, local/unpushed)** — `KaptureOnlineApiClient`, `OnlineAccountService` (DPAPI session + refresh + entitlement), `R2StorageProvider`, DI into `CloudSyncManager`, `OnlineAccountViewModel` + Settings panel; backend gained `POST /auth/google` (secret-less broker) + `PUT /vault/meta`. Client **118** / backend **26** tests. **Inactive until cloud accounts provisioned + config filled.** Secret-less model is in use for the Online Vault; **Drive's bundled secret (KV-007) still remains → T-35.** |
-| 3 | Client file hosting — upload (presigned PUT, 250 MB cap enforced client + server) + file list + share links + files-in-vault | KaptureVault | ⏳ **NEXT (after Phase 2 goes live)** |
-| 4 | Ops — quotas, billing portal, deletion, abuse/DMCA handling | both | ⬜ |
+**Hard constraints (from the design critique — honor in the relevant phase):** refresh token ≠ session token (fix before passwords); web-viewer KDF 100k→600k; account-password ≠ vault-encryption-password (silent data-loss trap → hard interlock); PBKDF2-on-Worker is attacker-triggerable → rate-limit (needs a new CF KV/DO binding); never trust client-reported size (pin in the presigned signature / HEAD from R2); CORS on the Worker **and** the R2 bucket.
 
-**Reality check:** this turns KaptureVault into a hosted product — a separate backend repo (`kapturevault-backend`), recurring infra cost (R2 cheap + no egress; Workers/D1 ~free at small scale; Stripe ~2.9% + 30¢), and a real operational/legal surface (ToS/privacy updates, share-link abuse/DMCA, data deletion, account management). The economics work; the commitment is the ops surface. **Phase 1 is started AND done** (backend foundation built + 19 tests + CI green, 2026-05-31); **Phase 2 (client `R2StorageProvider` + login + subscription gate, including the secret-less client OAuth folded in from T-12/KV-007) is next**, then Phase 3 (client file hosting), then Phase 4 (ops).
+**Open product decisions:** confirm the paid quota (~10 GB); the **kapture.tools repo consolidation (T-34)** — gates Phase 4.
+
+**Live prereqs (human — ✅ DONE 2026-06-01):** Cloudflare R2+D1+Workers, Stripe (live price `price_1TdVtY…` + keys + webhook), Google OIDC sign-in client, all secrets set, D1 schema applied, Worker deployed. Runbook: `docs/F-02-PROVISIONING.md`.
 
 ---
 

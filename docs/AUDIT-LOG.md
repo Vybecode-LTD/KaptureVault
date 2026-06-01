@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.10.0
+version: 1.11.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -9,6 +9,49 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-01 (PM-4) — F-02 provisioned LIVE + Phases 0–1 (polish, desktop UX, Settings layout fix)
+
+**Trigger:** User — take the built F-02 Phase 2 live, then build out the agreed free/paid model. Long session. All commits **LOCAL/unpushed** (client HEAD `97f4ca8`; backend HEAD `8480022`).
+
+### Provisioning (human-driven, agent-guided) — the Online Vault is now LIVE
+- Wrote `docs/F-02-PROVISIONING.md` — a Cloudflare/Google/Stripe go-live runbook mapping every value to its destination (`wrangler.toml [vars]` vs `wrangler secret put` vs client `OnlineVaultConfig`).
+- **Cloudflare:** account `4558289c…`; D1 `kapturevault` (`89330b45…`); R2 bucket `kapturevault`; R2 S3 keys (Account API token, Object R&W). Non-secrets → `wrangler.toml` (`R2_ACCOUNT_ID`, D1 id); R2 keys → Worker secrets. Registered the `kapture.workers.dev` subdomain; deployed → **`https://kapturevault-backend.kapture.workers.dev`** (`/health` → `{"ok":true}`).
+- **Google:** dedicated OIDC sign-in client (Web-app type), redirect `http://localhost:48722/`, scopes openid+email → client id in `wrangler.toml [vars] GOOGLE_CLIENT_ID` + client `OnlineVaultConfig.DefaultGoogleClientId`; client SECRET → `GOOGLE_CLIENT_SECRET` Worker secret (`POST /auth/google` brokers the exchange so the client stays secret-less). JS-origins left empty (loopback code flow needs only the redirect URI).
+- **Stripe (LIVE, user's choice):** $49/yr price `price_1TdVtY…` + live secret key + live webhook → `STRIPE_PRICE_ID`/`STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`. `SESSION_JWT_SECRET` generated + set.
+- Client pointed at the Worker URL + sign-in client id (`624f351`). Sign-in verified end-to-end (Google consent → loopback → `/auth/google` → session).
+- **Secret hygiene:** the Google + Stripe-live secrets were pasted into chat → advised rotation before wide use; only non-secret values were ever written to files (each staged diff was checked).
+
+### Phase 0 — polish (`e0c49f2`)
+- `OAuthHelper` "Connected" page: was `text/html` (no charset) over UTF-8 bytes → mojibake. Now `text/html; charset=utf-8` + a branded page (inline styles + HTML entities, ASCII-safe source). Shared by Drive + Online sign-in.
+- `IOnlineAccountService.Email` cached from `/me` (cleared on sign-out); panel shows "Signed in as {email}" not the uid.
+
+### Phase 1 — desktop UX
+- **1a (`d4e1ff8`):** `OnlineVaultConfig.WebVaultUrl` + `OnlineAccountViewModel.OpenVaultCommand`.
+- **1b (`7c7a7f8`):** Settings "Online Vault" panel reworked into the free/paid funnel (sign-in → Open Vault → upgrade pitch); intro states vault sync is free.
+- **1c (`8b8e964`):** relocated **Export DB** + **Run-on-startup** off the main toolbar into a new **Settings → General** card (frees room for the future paid Upload button). Run-on-startup binds to `MainWindowViewModel.ToggleStartupCommand` (kept on the VM → no ctor/DI/test churn); Export DB moved to `SettingsWindow.ExportDb_Click` code-behind so its picker parents to the Settings dialog. Removed `MainWindowViewModel.ExportVaultDatabase` + the two toolbar buttons.
+- **www fix (`97f4ca8`):** `Open Vault` + About-dialog link/text → `https://kapture.tools` (site has no www); `/vault` for Open Vault.
+
+### ⭐ Settings panel layout overflow — root cause + DEFINITIVE fix (this keeps recurring — documenting fully)
+- **Symptom:** long text in Settings cards ran off the right edge / pushed the panel wider than the window. Cards whose first child is a long *wrapping* paragraph (Encryption, Online Vault) overflowed; short-text cards were fine; the affected cards were *different widths* — the tell.
+- **Root cause:** the settings `ScrollViewer` measures its content at **UNBOUNDED width** in this layout, so `TextWrapping="Wrap"` never fires (it wraps only to the *available* width, which is effectively infinite) and the paragraph lays out single-line and spills past the card. `HorizontalScrollBarVisibility="Disabled"` did **NOT** constrain it; a `MaxWidth="{Binding #sv.Viewport.Width}"` binding was *unstable* and made it worse.
+- **Fix that worked (`55f2279`):** in `SettingsWindow` code-behind, pin the content `StackPanel.MaxWidth` to the ScrollViewer's real visible width (`Bounds.Width − Padding`) on every `Bounds` change — a stable, window-driven value that forces wrapping and adapts on resize. Plus: moved the Cloud Sync `SyncNow` status out of a *horizontal* StackPanel (infinite child width) onto its own wrapping line (`d21efe2`); added `TextWrapping="Wrap"` to every variable status TextBlock.
+- **If it recurs: do NOT rely on `HorizontalScrollBarVisibility="Disabled"` — bind the content `MaxWidth` to the viewer width.** (Also in CLAUDE Lessons.)
+
+### Avalonia / iteration gotchas (now in CLAUDE Lessons)
+- **Incremental builds keep STALE compiled XAML** — `.axaml`-only edits may not recompile; the app showed the OLD layout despite "Build succeeded." Use `dotnet build --no-incremental` when iterating on XAML.
+- **Elevated app (Capture Admin Apps ON) can't be killed by a non-elevated `Stop-Process`** and locks the build output → required a manual tray-Quit on each rebuild; toggling it off restarts de-elevated.
+- The PowerShell tool has no `tail` (masked a passing build as failed once).
+
+### Verification (proof, not assertion)
+Client `dotnet test` **120 passing** (118 at the Phase-2 reconcile; +1 Email, +1 OpenVault); Debug **and** Release builds **0/0**; `dotnet format --verify` clean; backend `npm test` **26** + `tsc` clean; Worker `/health` ok. Tree clean; HEAD `97f4ca8`.
+
+### Docs reconciled → shared `version` 1.11.0
+ROADMAP restructured to the agreed tier model + 0–6 build phases (Engine/0/1 done, Phase 2 next); HANDOFF refreshed; TESTING → 120; BUGS + CLAUDE (Session Log + Health + Lessons) updated; this entry.
+
+**Auditor:** Claude (Opus 4.8). **Next:** F-02 **Phase 2** (backend free-vault tier — drop `/vault/*` gate + quota/size cap + refresh-token fix + CORS + `/me` tier + `/account`), then Phase 3 (vault-sync v2 incl. screenshots). Push the local stack when ready.
+
+---
 
 ## 2026-06-01 (PM-3) — F-02 Phase 2 client Online Vault built (test-first, local/unpushed)
 
