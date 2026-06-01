@@ -2,6 +2,7 @@ using FluentAssertions;
 using Kapture;
 using Kapture.Services;
 using Kapture.Services.CloudSync;
+using Kapture.Services.CloudSync.Online;
 using Kapture.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -32,6 +33,11 @@ public class ServiceRegistrationTests
     [InlineData(typeof(CloudSyncManager))]
     [InlineData(typeof(HotkeyService))]
     [InlineData(typeof(MainWindowViewModel))]
+    [InlineData(typeof(OnlineVaultConfig))]
+    [InlineData(typeof(IGoogleSignIn))]
+    [InlineData(typeof(IOnlineTokenStore))]
+    [InlineData(typeof(IKaptureOnlineApiClient))]
+    [InlineData(typeof(IOnlineAccountService))]
     public void AddKaptureServices_RegistersExpectedType(Type serviceType)
     {
         var services = new ServiceCollection().AddKaptureServices();
@@ -48,5 +54,16 @@ public class ServiceRegistrationTests
 
         services.Should().Contain(d => d.ServiceType == typeof(HotkeyService));
         services.Should().Contain(d => d.ServiceType == typeof(MainWindowViewModel));
+    }
+
+    [Fact]
+    public void AddKaptureServices_RegistersBothCloudProviders()
+    {
+        // CloudSyncManager consumes IEnumerable<ICloudStorageProvider>; both the free (Drive) and
+        // paid (Online Vault) providers must be present so either can be selected by name.
+        var services = new ServiceCollection().AddKaptureServices();
+
+        services.Where(d => d.ServiceType == typeof(ICloudStorageProvider))
+            .Should().HaveCount(2, "Google Drive (free) and Online Vault (paid) are both selectable");
     }
 }

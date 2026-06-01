@@ -24,10 +24,13 @@ public class CloudSyncManager : IDisposable
     public string LastSyncStatus { get; private set; } = "Not synced";
     public bool IsSyncing => _syncing != 0;
 
-    public CloudSyncManager(IDatabaseService db)
+    public CloudSyncManager(IDatabaseService db, IEnumerable<ICloudStorageProvider> providers)
     {
         _db = db;
-        _providers["Google Drive"] = new GoogleDriveProvider();
+        // Providers are injected (Google Drive + Online Vault) and keyed by ProviderName so the
+        // active one can be selected from settings. (Was: new GoogleDriveProvider() inline.)
+        foreach (var provider in providers)
+            _providers[provider.ProviderName] = provider;
     }
 
     public IReadOnlyDictionary<string, ICloudStorageProvider> Providers => _providers;

@@ -1,5 +1,6 @@
 using Kapture.Services;
 using Kapture.Services.CloudSync;
+using Kapture.Services.CloudSync.Online;
 using Kapture.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +28,24 @@ public static class ServiceRegistration
         services.AddSingleton<IClipboardMonitorService, ClipboardMonitorService>();
         services.AddSingleton<IScreenshotService, ScreenshotService>();
         services.AddSingleton<IStartupService, StartupService>();
+
+        // F-02 Online Vault (paid tier): the account/session layer + its R2 sync provider.
+        // OnlineVaultConfig carries the (deploy-time) Worker base URL + public sign-in client id;
+        // no Google/storage secret ever lives client-side. HttpClients are simple singletons here,
+        // matching GoogleDriveProvider's existing pattern.
+        services.AddSingleton<OnlineVaultConfig>();
+        services.AddSingleton<IGoogleSignIn, LoopbackGoogleSignIn>();
+        services.AddSingleton<IOnlineTokenStore, DpapiOnlineTokenStore>();
+        services.AddSingleton<IKaptureOnlineApiClient>(sp =>
+            new KaptureOnlineApiClient(new HttpClient(), sp.GetRequiredService<OnlineVaultConfig>().ApiBaseUrl));
+        services.AddSingleton<IOnlineAccountService, OnlineAccountService>();
+
+        // Cloud sync providers, selectable by ProviderName: Google Drive (free) + Online Vault (paid).
+        services.AddSingleton<ICloudStorageProvider, GoogleDriveProvider>();
+        services.AddSingleton<ICloudStorageProvider>(sp => new R2StorageProvider(
+            sp.GetRequiredService<IOnlineAccountService>(),
+            sp.GetRequiredService<IKaptureOnlineApiClient>(),
+            new HttpClient()));
         services.AddSingleton<CloudSyncManager>();
 
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`
