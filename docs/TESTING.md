@@ -1,6 +1,6 @@
 ---
 document: TESTING
-version: 1.12.0
+version: 1.13.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -12,7 +12,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **123 tests passing** as of 2026-06-01 (71 + 49 from F-02 Phase 2; +2 from Phase 0/1a — email + OpenVault; +3 from Phase 2 client storage wiring — quota/used). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **124 tests passing** as of 2026-06-01 (71 + 49 from F-02 Phase 2; +2 from Phase 0/1a — email + OpenVault; +3 from Phase 2 client storage wiring — quota/used; +1 from Phase 3 slice A — KDF in `vault.db.meta`). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
 
 Suite inventory:
 | Suite | Covers | Tests |
@@ -31,10 +31,10 @@ Suite inventory:
 | `ShutdownCoordinatorTests` | T-08/KV-011 teardown: stops capture, sync-on-close gating, idempotency, swallows sync failures | 8 |
 | `Services/CloudSync/KaptureOnlineApiClientTests` | F-02 P2: Online Vault HTTP contract (auth/session, auth/google, /me, billing, vault put/get-url, meta read+write, 401/402 mapping) via a stub handler | 11 |
 | `Services/CloudSync/OnlineAccountServiceTests` | F-02 P2: secret-less sign-in, DPAPI session + auto-refresh (near-expiry + 401), sign-out, entitlement from /me, **cached quota/used from /me**, checkout/portal URLs | 14 |
-| `Services/CloudSync/R2StorageProviderTests` | F-02 P2: Online Vault as `ICloudStorageProvider` — upload/download over presigned URLs + meta, find/mtime, R2 failure surfaced | 6 |
+| `Services/CloudSync/R2StorageProviderTests` | F-02 P2: Online Vault as `ICloudStorageProvider` — upload/download over presigned URLs + meta, find/mtime, R2 failure surfaced; **Phase 3 A: KDF params written into meta** | 7 |
 | `ViewModels/OnlineAccountViewModelTests` | F-02 P2: Settings account-panel logic — sign-in gating + persist provider, subscribe/billing open URLs, sign-out clears provider, **storage-summary formatting** | 13 |
 
-**Total: 123 tests.** *(F-02 client suites: KaptureOnlineApiClientTests 11, OnlineAccountServiceTests 14, R2StorageProviderTests 6, OnlineAccountViewModelTests 13.)*
+**Total: 124 tests.** *(F-02 client suites: KaptureOnlineApiClientTests 11, OnlineAccountServiceTests 14, R2StorageProviderTests 7, OnlineAccountViewModelTests 13.)*
 
 > **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **51 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Phase 2 added `auth-tokens`, `free-vault`, `quota`, `vault-quota`, `cors`, and `me-tier` suites (26 → 51). Those are **not** part of the .NET `KaptureVault.Tests` count above.
 

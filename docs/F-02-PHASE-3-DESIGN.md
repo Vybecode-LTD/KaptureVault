@@ -1,8 +1,9 @@
 # F-02 Phase 3 Design — Client Vault-Sync v2 (multi-object, quota-aware, web-unlock-ready)
 
-> **Status: DRAFT for review (2026-06-01).** No code written yet. This is the agreed design to
-> approve before implementation. Companion to `F-02-online-vault-design.md` (§ Revision 2) and
-> `F-02-PROVISIONING.md`. Spans **both** repos: `kapturevault-backend` (Worker) + `KaptureVault` (client).
+> **Status: APPROVED 2026-06-01 — implementation underway.** Decisions locked (§6). **Slice A (web-unlock
+> meta) shipped** (`3b5c131`); slices B–H remain (B = encryption interlock, next). Companion to
+> `F-02-online-vault-design.md` (§ Revision 2) and `F-02-PROVISIONING.md`. Spans **both** repos:
+> `kapturevault-backend` (Worker) + `KaptureVault` (client).
 
 ## 1. Goal
 

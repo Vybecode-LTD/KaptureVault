@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.12.0
+version: 1.13.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -9,6 +9,29 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-01 (PM-6) — Audit + quality gate; CI flake found & fixed; Phase 2 go-live verified; Phase 3 design + slice A
+
+**Trigger:** User — "complete audit and testing to make sure everything is solid" before continuing Phase 3.
+
+### Quality gate (proof, not assertion) — both repos GREEN
+- **Client (`KaptureVault`):** `dotnet build -c Release` **0/0**; `dotnet test` **124 passing**; `dotnet format --verify` clean; `dotnet list package --vulnerable --include-transitive` **none**; tree clean = `origin/main`.
+- **Backend (`kapturevault-backend`):** `npm test` **51 passing**; `tsc --noEmit` clean; `npm audit --omit=dev` **0 vulnerabilities**; tree clean = `origin/main`.
+
+### CI flake found + fixed (the audit's catch)
+The client **CI had failed** on the slice-A push (run 26792950330) although local was green: `CaptureServiceTests.Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite` (T-07/KV-012) timed out its **2 s** wait for the background `Channel` writer task to begin the gated insert — task-scheduling starvation under parallel-test load on the windows-2025 runner. The core non-blocking assertion (producer < 2 s) passed; only the secondary "writer began off-thread" wait flaked. **Fix:** widened that ceiling to 30 s (it asserts *off-thread*, not latency; returns in ms in the green path) — commit `7275594`. **Verified GREEN** on the same runner (`gh run watch` exit 0, run 26793266479).
+
+### Earlier this session (folded in)
+- **Phase 2 deployed LIVE + smoke-passed:** Worker `17ba084b`; R2-bucket CORS applied (`r2-cors.json`, `0103f5b`); Google + Stripe-live secrets rotated. The maintainer ran the full **Part F** smoke end-to-end (sign-in → sync → quota → checkout) and **confirmed it works**.
+- **Phase 3 designed + APPROVED** (`docs/F-02-PHASE-3-DESIGN.md`, `d0190ff`): decisions locked — PNG; **require a vault password** to use the Online Vault; oldest-first over-quota; client pre-check + server prefix-sum quota; 8 slices A–H.
+- **Phase 3 slice A done** (`3b5c131`): KDF params (salt/iterations/kdf) carried in `vault.db.meta` (v2) for web-vault key derivation; new `IEncryptionService.GetKdfInfo`; suite 123 → 124.
+
+### Docs reconciled → shared `version` 1.13.0
+HANDOFF/ROADMAP/TESTING/BUGS/CLAUDE/AUDIT-LOG + the Phase-3 design status; CLAUDE **Lessons** gained a guard about timing-tight waits on background-task pickup flaking on loaded CI. CHANGELOG unchanged (no client release cut — Phase 3 is internal groundwork; the shipped app stays v1.0.7).
+
+**Auditor:** Claude (Opus 4.8). **Next:** Phase 3 **slice B** — the encryption interlock (require a vault password to enable the Online Vault; "sole key" warning).
+
+---
 
 ## 2026-06-01 (PM-5) — F-02 Phase 2 backend (free vault + quota + token/CORS/tier) + client storage wiring
 
