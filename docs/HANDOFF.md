@@ -1,7 +1,7 @@
 ---
 document: HANDOFF
-version: 1.17.0
-app-version: 1.0.7
+version: 1.17.1
+app-version: 1.1.0
 last-updated: 2026-06-02
 last-audit: 2026-06-02
 managed-by: manual-reconciliation
@@ -22,17 +22,13 @@ dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 182 passing
 ```
 Backend (separate repo): `cd C:\dev\kapturevault-backend && npm test` → **65 vitest**; HEAD `2bd0bee` (P5c handoff, **LOCAL/unpushed**; live Worker still serves Phase 2 `17ba084b` until the P5c deploy).
 
-> **✅ F-02 Phases 3 + 4 + "P5" (UX redesign) ALL BUILT + AUDITED (2026-06-02). Ships as v1.1.0.** Phase 3 (screenshot sync) + the **KV-046 ShutdownMode crash fix** are on `origin/main`. Phase 4 (web vault) + **P5** (decouple Drive backup from the Online Vault, a main-window Login→Sync/Web Vault/Upload toolbar, and a **true web-vault handoff** = browser auto-login) are built across all three repos, **independently audited** (P5c = "SAFE TO DEPLOY"), and **held LOCAL pending the maintainer's go-live** (see commit stack). Client suite **182**, backend **65**. **➡️ To go live (human, in order):**
-> 1. **Backend deploy (NEW — required for the handoff):** `cd C:\dev\kapturevault-backend; npm run db:schema:remote` (adds the `handoff_codes` table) then `npx wrangler deploy`.
-> 2. Add `https://kapture.tools` as an authorized JS origin to the sign-in Google client `…p6c6gmi0…`.
-> 3. **Push** (the maintainer chose to hold these): client `KaptureVault` (`git push`), backend `kapturevault-backend` (`git push`), and the website `Kapture.Tools-Website` (`git push` — **auto-deploys**).
-> 4. **Smoke:** desktop **Login** → **Web Vault** (browser should land signed-in) → enter the vault password → see the vault + screenshots. Try **Sync** (icon spins) and **Upload** (free → upgrade pitch).
-> 5. Cut **v1.1.0**: `Invoke-Release.ps1 -BumpType major`.
+> **✅ v1.1.0 RELEASED (2026-06-02) — F-02 Phases 3 + 4 + "P5".** All three repos are **pushed** (client `49c8dd4` incl. the `release: v1.1.0` tag, backend `2bd0bee`, website `0907f51` — the web vault auto-deployed). `auto-release.yml` created the GitHub Release (installer `KaptureVaultSetup-1.1.0-x64.exe`, VT-scanned): <https://github.com/Vybecode-LTD/KaptureVault/releases/tag/v1.1.0>. v1.1.0 = screenshot sync (Phase 3) + the web vault (Phase 4) + **P5** (decoupled Drive backup ⟂ Online Vault, the main-window Login→Log out/Web Vault/Upload/Sync toolbar with the spinning Sync icon, and the **true web-vault handoff** = browser auto-login). Client suite **182**, backend **65**; both P5 audits PASS / "SAFE TO DEPLOY". **Backend Worker is now live with the handoff endpoint** (the maintainer ran `db:schema:remote` + `wrangler deploy`) and `kapture.tools` is an authorized Google JS origin.
+> **➡️ NEXT:** **Phase 6** = real file hosting behind the **Upload** button (the paid differentiator — Upload is currently a tier-adaptive upgrade/coming-soon dialog). Then **Phase 5** (`/account`), the **P2 backlog** (incl. T-35), and the LOW **handoff-codes rate-limit/GC** hardening (ROADMAP).
 > **⚠️ Capture Admin Apps self-elevates the app** — when it's running you can't `Stop-Process` it (it locks the build output); tray-Quit it before rebuilding, or toggle it off (Settings → Advanced) to iterate freely.
 
 ## TL;DR
 
-KaptureVault = vault-only fork (keystroke/clipboard/screenshot → SQLite, AES-256-GCM, Drive sync, Quick Paste, annotation editor). C# 13 / .NET 9 / Avalonia 11.3.12. Repo `C:\DEV\Utilities\KaptureVault` (off OneDrive), public. Latest release **v1.0.7**.
+KaptureVault = vault-only fork (keystroke/clipboard/screenshot → SQLite, AES-256-GCM, Drive sync, Quick Paste, annotation editor). C# 13 / .NET 9 / Avalonia 11.3.12. Repo `C:\DEV\Utilities\KaptureVault` (off OneDrive), public. Latest release **v1.1.0** (2026-06-02 — the Online Vault).
 
 **The current initiative is F-02 "Online Vault"** (paid file hosting + free cloud sync). The engine is live-provisioned and Phases 0–1 (polish + desktop UX) shipped; **Phase 2 is now built** (2026-06-01): free vault sync (the `/vault/*` paywall dropped), per-user quota + server-side vault size cap, refresh≠session token, Worker CORS, `/me` tier model, and the desktop panel shows quota/used. Client suite **130**, backend **59**, Release **0/0**, format clean, **both repos pushed + CI green**, Worker **deployed LIVE + smoke-verified** (version `17ba084b`; R2 CORS applied; secrets rotated). **Phase 3 is COMPLETE + PUSHED and Phase 4 (web vault) is BUILT (2026-06-02)** — screenshots sync to the Online Vault (pipeline `a00ee25`, restore `5cc03e6`) and a new **web vault** at `kapture.tools/vault` reads the Online Vault + shows screenshots (`b5e2fc7` in `Kapture.Tools-Website`, **unpushed**), plus a desktop "Use the Online Vault for sync" control (`86cfc30`) and the **KV-046 ShutdownMode crash fix** (`cbfbf5e`). Client suite **168**, backend **59**. **Then "P5" (2026-06-02) redesigned the Online-Vault UX** — decoupled Google Drive backup from the Online Vault (now auto-syncs when signed in), added a main-window **Login → Log out/Web Vault/Upload/Sync** toolbar (spinning Sync icon; tier-adaptive Upload upgrade popup), and a **true web-vault handoff** (the browser auto-logs-in from a one-time code). Client **182**, backend **65**, both independent audits PASS / "SAFE TO DEPLOY". **The next release is v1.1.0** (Phase 3 + 4 + P5); it goes live after the human steps in the callout (backend deploy → Google JS-origin → push all three repos → smoke → release).
 
