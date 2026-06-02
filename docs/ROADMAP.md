@@ -1,6 +1,6 @@
 ---
 document: ROADMAP
-version: 1.16.0
+version: 1.17.0
 app-version: 1.0.7
 last-updated: 2026-06-02
 last-audit: 2026-06-02
@@ -27,7 +27,9 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 
 # 🚀 FEATURE ROADMAP (product — CURRENT FOCUS)
 
-**F-01 (DB export) shipped in v1.0.6.** F-02 is the major initiative — its **engine is built and provisioned LIVE**, Phases 0–1 (polish + desktop UX) are done, **Phase 2 (free vault + quota + refresh-token fix + CORS + `/me` tier + client storage display) is done, DEPLOYED LIVE + smoke-verified** (2026-06-01, Worker `17ba084b`; R2 CORS applied; secrets rotated; `/account` deferred to Phase 4/5), and **Phase 3 (client vault-sync v2) is ✅ COMPLETE (2026-06-02, slices A–H)** — screenshots sync to the Online Vault, end-to-end encrypted + quota-aware (F client pipeline `a00ee25`, G restore `5cc03e6`, H docs); **next is a live end-to-end smoke → cut v1.0.8**. The agreed product model + build phases are below; full design + rationale in `docs/F-02-online-vault-design.md` (§ Revision 2) and the slice tracker in `docs/F-02-PHASE-3-DESIGN.md` (§ 11).
+**F-01 (DB export) shipped in v1.0.6.** F-02 is the major initiative — its **engine is built and provisioned LIVE**, Phases 0–1 (polish + desktop UX) are done, **Phase 2 (free vault + quota + refresh-token fix + CORS + `/me` tier + client storage display) is done, DEPLOYED LIVE + smoke-verified** (2026-06-01, Worker `17ba084b`; R2 CORS applied; secrets rotated; `/account` deferred to Phase 4/5), **Phase 3 (vault-sync v2) ✅ COMPLETE (2026-06-02)**, **Phase 4 (web vault) ✅ BUILT**, and **"P5" (UX redesign) ✅ BUILT + AUDITED (2026-06-02)** — P5 decoupled Google Drive backup from the Online Vault (auto-syncs when signed in), added a main-window **Login → Log out/Web Vault/Upload/Sync** toolbar (spinning Sync icon; tier-adaptive Upload upgrade popup), and a **true web-vault handoff** (the browser auto-logs-in from a one-time code; backend `2bd0bee` + desktop `00c379d` + website `0907f51`). Client **182** / backend **65**; both independent audits PASS / "SAFE TO DEPLOY". **All ship together as v1.1.0** — **next is the human go-live** (backend D1 schema + `wrangler deploy` for the handoff → add the `kapture.tools` Google JS origin → push all three repos → end-to-end smoke → `Invoke-Release.ps1 -BumpType major`). The agreed product model + build phases are below; full design in `docs/F-02-online-vault-design.md` (§ Revision 2) + `docs/F-02-PHASE-3-DESIGN.md` (§ 11).
+
+> **P5 follow-up (LOW, from the P5c security audit):** the `handoff_codes` table is GC'd only opportunistically on exchange and `/auth/handoff/create` has no rate limit — bounded (single-use, 120 s TTL) + auth-gated, so deferred. *Optional hardening:* a Cloudflare WAF/rate-limit rule on `/auth/handoff/*`, a scheduled `DELETE WHERE expires_at <= now`, or a per-uid cap. Do only if abuse is observed.
 
 ## F-01 · Export vault DB to local disk  *(free tier · ✅ IMPLEMENTED 2026-05-31 — unreleased, ships v1.0.6)*
 

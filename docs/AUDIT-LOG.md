@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.16.0
+version: 1.17.0
 app-version: 1.0.7
 last-updated: 2026-06-02
 last-audit: 2026-06-02
@@ -9,6 +9,24 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-02 (PM-2) — F-02 "P5" UX redesign (decouple + main-window + true handoff) BUILT + AUDITED; docs → v1.17.0
+
+**Trigger:** After the v1.1.0 smoke, the maintainer's feedback was that Google Drive backup and "logging into our own system" were conflated/confusing, plus UX requests (a spinning Sync indicator, a main-window layout, and a *true* web-vault handoff). Built as "P5" (a/b/c), test-first, each sub-slice its own commit, with an independent audit per major piece.
+
+### P5a — decouple Drive backup ⟂ Online Vault (`3fe7082`)
+The two were conflated behind one selectable "active provider"; now INDEPENDENT. Google Drive backup = Settings → "Google Drive Backup" (`AppSettings.DriveBackupEnabled`); the Online Vault auto-syncs whenever signed in + a vault password is set. `CloudSyncManager.SyncAsync(provider)` + two timers + `SyncDriveNowAsync`/`SyncOnlineVaultNowAsync`. **Retired** the active-provider model (`SetActiveProvider`/`GetActiveProvider`/`StartPeriodicSync`) + `ISyncProviderController` + the Settings "Use the Online Vault for sync" control. Legacy settings migrate in `SettingsService.Load` (only a former "Google Drive" provider → `DriveBackupEnabled`). New `CloudSyncManagerTests` (9). **Independent audit: PASS** (decouple complete + correct; no orphaned refs; DI/lifecycle/migration sound; leak-free `_syncing` guard).
+
+### P5b — main-window UX (`03f43cf` + layout `84306aa`)
+Toolbar **Login** (signed out) → **Log out · Web Vault · Upload · Sync** (signed in), in the filter bar far-left; type filters moved to the entry-list **column header**; the **Sync icon spins** while syncing (`Classes.spin` + `RenderTransformOrigin="50%,50%"` — a bare `0.5,0.5` parses as 0.5 px from the corner → orbits; see CLAUDE Lessons). **Upload** opens a tier-adaptive `UploadDialog` (free → upgrade pitch → Stripe; paid → "coming soon", real hosting = Phase 6). `OnlineAccountViewModel` exposed on `MainWindowViewModel.Account` + `SyncNowCommand`/`ShowLogin` via a minimal `IOnlineVaultSync` seam. Smoke-tested with the maintainer ("perfect" — after fixing the spinner orbit).
+
+### P5c — true web-vault handoff (backend `2bd0bee` + desktop `00c379d` + website `0907f51`)
+`POST /auth/handoff/create` (behind `requireSession`) mints a single-use, 120 s, 256-bit url-safe code bound to the caller's uid; `POST /auth/handoff/exchange` (public) atomically consumes it (`DELETE … RETURNING`) and issues a real session+refresh. Desktop "Web Vault" opens `kapture.tools/vault#handoff=<code>`; the web vault reads the fragment, exchanges it, scrubs the URL (`history.replaceState`), and lands signed in — **still prompting for the vault password** (the code carries ONLY the account session; the encryption key never leaves the desktop; the server stays ciphertext-only). `handoff_codes` D1 table + Store methods (+ in-memory fake). **Independent SECURITY audit: SAFE TO DEPLOY** — PASS on all 10 checks (auth-on-create, single-use, expiry, 256-bit entropy, no-key-in-URL, fragment-not-query + scrubbing, audience separation, safe public exchange, leak-free fallback, no SQLi/cross-account). Two LOW notes: no rate-limit/cron-GC on `handoff_codes` (bounded + auth-gated → ROADMAP) and harmless email denormalization.
+
+### Verification + state
+Client `dotnet test` **182**, Debug+Release 0/0, `dotnet format --verify` clean (both projects), 0 vulnerable. Backend vitest **65**, `tsc` exit 0. Website `node --check` exit 0 (functional smoke is the maintainer's). Managed docs → **v1.17.0**; CHANGELOG `[Unreleased]`/v1.1.0 updated for the redesign (the old "use for sync" bullet replaced). **All P5 commits LOCAL — pushes held per the maintainer** (client `3fe7082`..`84306aa`+`00c379d`; backend `2bd0bee`; website `0907f51` — auto-deploys).
+
+**Auditor:** Claude (Opus 4.8) + two independent sub-agent audits. **Next (human go-live for v1.1.0):** backend D1 schema (`npm run db:schema:remote`) + `wrangler deploy`; add the `kapture.tools` Google JS origin; push all three repos; end-to-end smoke (Login → Web Vault auto-login → password → vault); `Invoke-Release.ps1 -BumpType major`. Then Phase 6 (file hosting behind Upload) / Phase 5 (`/account`) / P2 backlog.
 
 ## 2026-06-02 (PM) — v1.0.8 smoke → KV-046 fix + F-02 Phase 4 (web vault) BUILT → re-scoped to v1.1.0; docs → v1.16.0
 

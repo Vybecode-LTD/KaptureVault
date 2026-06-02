@@ -14,19 +14,30 @@ vault and screenshots, plus a web viewer to read them in a browser. Free, offlin
 Drive sync are unchanged. *(Goes live once the cloud accounts/origins are configured.)*
 
 ### Added
-- **Sync your vault and screenshots to your KaptureVault account.** Sign in with Google in
-  Settings → Online Vault and choose "Use the Online Vault for sync." Your encrypted vault and
-  your screenshots (re-encoded to PNG, end-to-end encrypted) upload to your account and restore
-  automatically on another device — counted against your storage quota (oldest kept first when
-  you run low). The server only ever stores ciphertext, and a vault password is required since
-  that password is the only key.
+- **Your Online Vault now syncs automatically — there's no provider to pick.** Google Drive backup
+  and the Online Vault are fully independent now. Sign in with Google and set a vault password, and
+  your encrypted vault and your screenshots (re-encoded to PNG, end-to-end encrypted) sync to your
+  account on their own and restore on another device — counted against your storage quota (oldest
+  kept first when you run low). The server only ever stores ciphertext, and the vault password is
+  the only key.
+- **One-click access to the Online Vault, right from the main window.** A new toolbar shows a
+  **Login** button when you're signed out, and **Sync**, **Web Vault**, and **Upload** once you're
+  signed in. The Sync icon spins while a sync is running so you can see it working.
+- **Open the web vault already signed in.** Clicking **Web Vault** hands your browser a one-time,
+  single-use code so it logs in automatically — you just enter your vault password to decrypt.
+  The code lives only in the URL fragment and never carries your encryption key; the server stays
+  ciphertext-only.
 - **View your vault — including screenshots — in any browser.** The web vault at
-  `kapture.tools/vault` can now open your Online Vault: sign in, enter your vault password, and
-  browse, search, and view your captured entries and screenshot images. Everything is decrypted
-  locally in your browser; the server only ever holds ciphertext.
-- **A clear "Use the Online Vault for sync" control** in Settings → Online Vault, with a
-  "✓ this is your sync target" indicator, so switching your sync destination takes effect
-  immediately.
+  `kapture.tools/vault` opens your Online Vault: enter your vault password and browse, search, and
+  view your captured entries and screenshot images. Everything is decrypted locally in your browser.
+- **Google Drive backup is now its own thing.** Drive backup moved to its own "Google Drive Backup"
+  section in Settings — an optional, independent whole-vault backup you can turn on without touching
+  the Online Vault.
+
+### Changed
+- **File hosting is on the way with KaptureVault Pro.** The new **Upload** button shows the plan and
+  pricing for free accounts (with an upgrade link); encrypted file hosting itself ships in a later
+  update.
 
 ### Fixed
 - **The app no longer closes immediately after you enter your vault password.** A startup
