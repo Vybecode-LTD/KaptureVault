@@ -1,14 +1,43 @@
 ---
 document: AUDIT-LOG
-version: 1.14.0
+version: 1.15.0
 app-version: 1.0.7
-last-updated: 2026-06-01
-last-audit: 2026-06-01
+last-updated: 2026-06-02
+last-audit: 2026-06-02
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md]
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-02 — F-02 Phase 3 slices F + G + H (screenshot sync COMPLETE) → v1.15.0
+
+**Trigger:** User — "let's do F, G and H in order. After each one, I want full spectrum testing done with a subsequent audit of the work for verification that everything was done properly. Please document everything in great detail… just proceed unless there is a major issue."
+
+**Process per slice:** implement (test-first where it added value) → full evidence ledger → independent audit (a fresh subagent reviewing the diff against the design) → fix audit findings → commit. Client suite **130 → 162**; backend untouched (**59**). Baseline at session start: 130 green.
+
+### Slice F — client screenshot sync pipeline (`a00ee25`, suite 130 → 152)
+- **Client object API** (the backend had it since D/E; the client didn't): `GetObjectPutUrlAsync`/`GetObjectGetUrlAsync`/`DeleteObjectAsync`/`ListObjectsAsync` on `IKaptureOnlineApiClient`; `VaultObject`/`VaultObjectList` DTOs; `OnlineApiException.IsPayloadTooLarge` (413). Wire contract pinned against the Worker (`GET /vault/objects` returns `{key,size}` only — the design draft's `uploaded` field doesn't exist).
+- **`SkiaScreenshotImageCodec`** (BMP→PNG, lossless). Hardened during testing: `SKBitmap.Decode` *throws* `ArgumentNullException` (internal null `SKCodec`) for undecodable bytes rather than returning null — normalized all decode/encode failures to one `InvalidOperationException` so a corrupt screenshot is skipped, never fatal. (Root-caused via a probe per DEBUG_PROTOCOL.)
+- **`ScreenshotSyncService.SyncUpAsync`**: enumerate non-expired screenshots whose file exists (dedupe by filename, oldest-first) → re-encode → `EncryptBytes` → upload only the ones not already on R2, oldest-first within the quota; orphan cleanup (delete R2 screenshots the DB no longer references; never touches `vault.db`/`.meta`); meta-recommit so the server banks usage, trimming the newest upload + retrying on a 413. Wired into `CloudSyncManager` after an Online-Vault upload/in-sync (best-effort).
+- **Deviation (documented):** the live remote object list is the source of truth for "already uploaded" — **no local `online_sync_state.json`** (design § 5.4.2). More robust across devices/reinstalls, no drift, and the list is needed anyway for orphan/quota.
+- **Independent audit verdict: correct & safe** — no plaintext-leak path (encrypt is always applied + double-gated); wire contract + key regex match; quota/413 logic terminates and trims correctly; orphan cleanup can't touch `vault.db`. Closed the one Medium gap it found: a test for the "no remote `vault.db.meta` yet" commit branch. Ledger: Debug+Release 0/0, format clean (after CRLF normalization), 0 vulnerable, publish ok.
+
+### Slice G — restore (`5cc03e6`, suite 152 → 162)
+- **`ScreenshotSyncService.RestoreAsync`**: `GET /vault/objects` → download each screenshot missing locally → `DecryptBytes` → write the PNG into the local screenshots dir keyed by filename. Runs on a download-wins sync. Decrypt-before-write confirmed: a tampered/wrong-key/truncated blob throws `DecryptionException` → skipped (never written).
+- **Deviation (documented):** resolve-by-filename at **display** (`CaptureEntry.ScreenshotPath` falls back to `ScreenshotDirectory` by filename) instead of mutating `Content` in the DB (design § 5.7/5.8). Mutating per device would ping-pong device-local paths under whole-DB LWW; the display fallback gives the same result with zero added churn.
+- **🔴 Audit caught a real blocker:** the new `ScreenshotPath` fallback was **bound nowhere** — the UI read raw `Content`, so restored images were written to disk yet never displayed. **Fixed all four read sites** to use `ScreenshotPath`: reader-pane preview (`MainWindow.axaml`), `ContentViewerWindow`, the Save command (`MainWindowViewModel`), and the annotation editor (`ScreenshotEditorWindow`). The audit named three; a completeness `grep` caught the fourth (the editor). Also serialized the two test classes that mutate the static `ScreenshotDirectory` into an xUnit collection (audit-flagged race). Re-ran the full ledger green (no-incremental Release build to recompile the XAML binding).
+
+### Slice H — UX + docs (this commit)
+- **UX was already delivered** by F/G: `CloudSyncManager` folds the screenshot result into `LastSyncStatus`, which Settings already shows in `SyncStatusText` ("· N screenshot(s)", "· N not synced — over quota", "· N restored"). No new UI code needed.
+- **Docs reconciled to v1.15.0:** all six managed-doc frontmatters + the CLAUDE body reference bumped together (`grep ^version:` confirmed); F-02 design § 11 marked F/G/H done + the two deviations recorded; CHANGELOG `[Unreleased]` gained the user-facing screenshot-sync entry (staged for v1.0.8); CLAUDE Health/Lessons/Session-Log, HANDOFF, ROADMAP (slice tracker + Phase-3 row), BUGS, TESTING (counts 130→162, new suites, the CloudSyncManager known gap) updated. Two new Lessons: CRLF/`dotnet format`, and "a model fallback is dead code unless the views bind it."
+
+### Verification (proof, not assertion)
+Final ledger (client): `dotnet build` 0/0, `dotnet build -c Release --no-incremental` 0/0, `dotnet test` **162/162** (+ coverage), `dotnet format --verify-no-changes` exit 0, `dotnet list package --vulnerable` none, `dotnet publish -c Release -r win-x64` ok. Backend not touched (no run needed). **Commits `a00ee25` (F), `5cc03e6` (G), + this v1.15.0 docs commit are LOCAL — not pushed.** v1.0.8 deferred to the maintainer pending a fresh live end-to-end smoke (sign-in → capture a screenshot → sync → restore on a second device).
+
+**Auditor:** Claude (Opus 4.8) + two independent review subagents. **Next:** live smoke → cut v1.0.8, or the P2 backlog (T-18..T-26, **T-35**).
+
+---
 
 ## 2026-06-01 (PM-7) — F-02 Phase 3 slices B–E + handoff reconciliation → v1.14.0
 

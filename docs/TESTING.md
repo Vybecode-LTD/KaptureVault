@@ -1,9 +1,9 @@
 ---
 document: TESTING
-version: 1.14.0
+version: 1.15.0
 app-version: 1.0.7
-last-updated: 2026-06-01
-last-audit: 2026-06-01
+last-updated: 2026-06-02
+last-audit: 2026-06-02
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TESTING_PROCEDURES.md]
 ---
@@ -12,7 +12,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **130 tests passing** as of 2026-06-01 (71 + 49 from F-02 Phase 2; +2 Phase 0/1a — email + OpenVault; +3 Phase 2 client storage wiring — quota/used; +1 Phase 3 A — KDF in `vault.db.meta`; +2 Phase 3 B — encryption interlock; +4 Phase 3 C — binary `EncryptBytes`/`DecryptBytes`). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **162 tests passing** as of 2026-06-02 (130 through Phase 3 A–E; **+22 Phase 3 F** — client object API +5, `SkiaScreenshotImageCodec` +3, `ScreenshotSyncService` upload pipeline +12, DI registration +2; **+10 Phase 3 G** — `ScreenshotSyncService` restore +6, `CaptureEntry` resolve-by-filename +4). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
 
 Suite inventory:
 | Suite | Covers | Tests |
@@ -23,18 +23,21 @@ Suite inventory:
 | `Services/DatabaseServiceReplaceTests` | KV-003 pre-sync backup retention | 1 |
 | `Services/DatabaseServiceCrudTests` | KV-009 full-field round-trip, null-expiry, pin/tags, GetAll limit | 4 |
 | `Services/DatabaseServiceBackupTests` | F-01 local DB export: `CreateBackupCopy` writes a standalone copy containing every row; empty-vault backup is still a valid vault | 2 |
-| `Services/ServiceRegistrationTests` | KV-010/T-10 DI composition + F-02 online services registered + both cloud providers present | 21 |
+| `Services/ServiceRegistrationTests` | KV-010/T-10 DI composition + F-02 online services registered + both cloud providers present; **Phase 3 F: `IScreenshotImageCodec` + `IScreenshotSyncService` registered** | 23 |
 | `ViewModels/ConverterTests` | KV-033 brush caching + pure text/number converters | 16 |
 | `ViewModels/MainWindowViewModelFilterTests` | T-16/KV-013 filter-selection regression: app/tag filter + selected entry survive a background Refresh; filter narrows Entries; selection clears when it leaves the vault | 7 |
 | `ViewModels/MainWindowViewModelEntriesDiffTests` | T-09/KV-013 Entries diff-update: instance reuse, prepend ordering, removal; CaptureEntry IsPinned/Tags change notifications | 5 |
 | `Views/MainWindowSmokeTests` | T-16 headless `[AvaloniaFact]`: MainWindow constructs + shows; the real sidebar ListBox SelectedItem binding keeps the filter across a refresh | 2 |
 | `ShutdownCoordinatorTests` | T-08/KV-011 teardown: stops capture, sync-on-close gating, idempotency, swallows sync failures | 8 |
-| `Services/CloudSync/KaptureOnlineApiClientTests` | F-02 P2: Online Vault HTTP contract (auth/session, auth/google, /me, billing, vault put/get-url, meta read+write, 401/402 mapping) via a stub handler | 11 |
+| `Services/CloudSync/KaptureOnlineApiClientTests` | F-02 P2: Online Vault HTTP contract (auth/session, auth/google, /me, billing, vault put/get-url, meta read+write, 401/402 mapping) via a stub handler; **Phase 3 F: object API (`object/put-url`, `object/get-url`, `object/delete`, `GET /vault/objects`) + 413→`IsPayloadTooLarge`** | 16 |
 | `Services/CloudSync/OnlineAccountServiceTests` | F-02 P2: secret-less sign-in, DPAPI session + auto-refresh (near-expiry + 401), sign-out, entitlement from /me, **cached quota/used from /me**, checkout/portal URLs | 14 |
 | `Services/CloudSync/R2StorageProviderTests` | F-02 P2: Online Vault as `ICloudStorageProvider` — upload/download over presigned URLs + meta, find/mtime, R2 failure surfaced; **Phase 3 A: KDF params in meta; Phase 3 B: refuse upload when vault not encrypted** | 8 |
 | `ViewModels/OnlineAccountViewModelTests` | F-02 P2: Settings account-panel logic — subscribe/billing open URLs, sign-out clears provider, storage-summary formatting; **Phase 3 B: enabling requires a vault password (persist-when-encrypted / prompt-when-not / `VaultPasswordRequired`)** | 14 |
+| `Services/CloudSync/ScreenshotSyncServiceTests` | **Phase 3 F+G:** `SyncUpAsync` — skip-when-not-signed-in/not-encrypted, upload-only-new (encrypted round-trip), orphan delete, no-change-no-recommit, recommit-after-upload (+KDF preserved), expired/missing exclusion, quota oldest-first, 413 trim-newest+retry, corrupt-skip, no-remote-meta-yet; `RestoreAsync` — download+decrypt+write, skip-present, missing-from-server, undecryptable-skip, not-signed-in/not-encrypted | 18 |
+| `Services/CloudSync/SkiaScreenshotImageCodecTests` | **Phase 3 F:** real BMP→PNG produces a decodable PNG of the same dimensions; undecodable bytes + null → throw | 3 |
+| `Models/CaptureEntryTests` | **Phase 3 G:** `ScreenshotPath` resolve-by-filename — stored-path-wins, fallback to `ScreenshotDirectory` by filename, null when neither exists, null for non-screenshot | 4 |
 
-**Total: 130 tests.** *(F-02 client suites: KaptureOnlineApiClientTests 11, OnlineAccountServiceTests 14, R2StorageProviderTests 8, OnlineAccountViewModelTests 14; plus the 4 binary-crypto tests in EncryptionServiceTests.)*
+**Total: 162 tests.** *(Phase 3 F/G client suites: ScreenshotSyncServiceTests 18, SkiaScreenshotImageCodecTests 3, CaptureEntryTests 4; KaptureOnlineApiClientTests 11→16, ServiceRegistrationTests 21→23.)*
 
 > **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **59 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Phase 2 added `auth-tokens`/`free-vault`/`quota`/`vault-quota`/`cors`/`me-tier` (26 → 51); **Phase 3 added `vault-objects` (object API) + extended `vault-quota` for the multi-object prefix-sum (51 → 59)**. Those are **not** part of the .NET `KaptureVault.Tests` count above.
 
@@ -53,6 +56,8 @@ Suite inventory:
 - ✅ **VM filter regression** — added 2026-06-01 (`MainWindowViewModelFilterTests` + `MainWindowViewModelEntriesDiffTests`).
 - Coverage % not yet collected/tracked (the only remaining T-16 nicety; CI already emits Cobertura).
 - `KeyboardHookService`/`HotkeyService`/`ActiveWindowService` stay manual/E2E only (Win32 message loops) — by design.
+- **`CloudSyncManager` push-vs-restore dispatch wiring is unit-untested** (Phase 3 F/G): its `static DbPath`/`SyncMetaPath` block unit isolation (same limitation predates Phase 3 — there is no `CloudSyncManager` test class). The dispatch (`pushScreenshots` on upload/in-sync, `restoreScreenshots` on download-wins, both gated to the `R2StorageProvider`, best-effort) was verified correct by an independent audit; the `ScreenshotSyncService` upload + restore logic it calls is fully unit-tested. A real seam would require making `DbPath` injectable (touches the untested core sync path — deferred, relates to T-24).
+- **Resolve-by-filename (Phase 3 G):** `CaptureEntry.ScreenshotPath` has a static `ScreenshotDirectory` test seam; `ScreenshotSyncServiceTests` + `CaptureEntryTests` mutate it, so both are in the `[Collection("ScreenshotDirectory")]` xUnit collection to serialize them (avoids a cross-class race on the static).
 
 ---
 

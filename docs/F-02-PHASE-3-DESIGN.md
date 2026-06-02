@@ -1,9 +1,10 @@
 # F-02 Phase 3 Design — Client Vault-Sync v2 (multi-object, quota-aware, web-unlock-ready)
 
-> **Status: APPROVED 2026-06-01 — implementation underway.** Decisions locked (§6). **Slice A (web-unlock
-> meta) shipped** (`3b5c131`); slices B–H remain (B = encryption interlock, next). Companion to
-> `F-02-online-vault-design.md` (§ Revision 2) and `F-02-PROVISIONING.md`. Spans **both** repos:
-> `kapturevault-backend` (Worker) + `KaptureVault` (client).
+> **Status: COMPLETE 2026-06-02 — all slices A–H landed.** Decisions locked (§6). Client suite **130 → 162**,
+> backend **59** (unchanged in F–H — those are client-only). Companion to `F-02-online-vault-design.md`
+> (§ Revision 2) and `F-02-PROVISIONING.md`. Spans **both** repos: `kapturevault-backend` (Worker, slices
+> D/E) + `KaptureVault` (client). **Two deliberate deviations from this design were made while building —
+> see § 11.**
 
 ## 1. Goal
 
@@ -122,9 +123,15 @@ The single-object HEAD no longer suffices. Recommended:
 - **C. Binary encryption (client)** — `EncryptBytes`/`DecryptBytes` + tamper tests.
 - **D. Backend object API** — `/vault/object/{put,get,delete}-url` + `/vault/objects` + key validation + tests.
 - **E. Multi-object quota (backend)** — meta-commit prefix-sum; `storage_used` across all objects; tests.
-- **F. Screenshot sync pipeline (client)** — enumerate/re-encode/encrypt/upload, sync-state, orphan cleanup, quota-aware (oldest-first); tests.
-- **G. Restore (client)** — download + decrypt + write images; resolve-by-filename; tests.
-- **H. UX + docs** — panel status ("syncing screenshots…", "N not synced — over quota"); reconcile managed docs.
+- **F. Screenshot sync pipeline (client)** — ✅ done (`a00ee25`). Client object API (`GetObjectPutUrlAsync`/`GetObjectGetUrlAsync`/`DeleteObjectAsync`/`ListObjectsAsync` + `VaultObject`/`VaultObjectList` + `OnlineApiException.IsPayloadTooLarge`); `SkiaScreenshotImageCodec` (BMP→PNG); `ScreenshotSyncService.SyncUpAsync` (enumerate non-expired → re-encode → `EncryptBytes` → upload; orphan cleanup; quota pre-check oldest-first + meta-recommit/413 trim backstop); wired into `CloudSyncManager`. Tests.
+- **G. Restore (client)** — ✅ done (`5cc03e6`). `ScreenshotSyncService.RestoreAsync` (list → download missing → `DecryptBytes` → write to the local screenshots dir by filename); `CloudSyncManager` runs it on download-wins; `CaptureEntry.ScreenshotPath` resolve-by-filename fallback + **all four screenshot read sites repointed to it** (preview, content viewer, Save, annotation editor). Tests.
+- **H. UX + docs** — ✅ done. Panel status is delivered via `CloudSyncManager` folding the screenshot result into `LastSyncStatus` (already shown in Settings → `SyncStatusText`): "· N screenshot(s)", "· N not synced — over quota", "· N restored". Managed docs reconciled to v1.15.0. (v1.0.8 deferred to the maintainer pending a fresh live end-to-end smoke.)
+
+### As-built deviations from this design (deliberate, reviewed)
+1. **No local `online_sync_state.json` (vs § 5.4.2).** The live remote object list (`GET /vault/objects`) is the source of truth for "already uploaded" — self-correcting across devices/reinstalls, no local cache to drift, and the list is needed anyway for orphan cleanup + quota. Screenshots are immutable (filename = identity), so presence-by-key is a complete signal.
+2. **Resolve-by-filename at DISPLAY, not by re-pointing `Content` in the DB (vs § 5.7/5.8 "rewrite/point Content").** Restore leaves the DB untouched and writes the image into `CaptureEntry.ScreenshotDirectory` keyed by filename; `CaptureEntry.ScreenshotPath` falls back to that dir. Mutating `Content` per device would, under whole-DB last-writer-wins, ping-pong device-local paths between devices every sync; the display-fallback achieves the same visible result with **zero** added multi-device churn (and the "store full path" debt of § 10 is untouched). Required pointing every screenshot read (preview/viewer/save/editor) at `ScreenshotPath`.
+
+**Known test gap:** the `CloudSyncManager` push-vs-restore dispatch wiring stays untested (its static `DbPath`/`SyncMetaPath` block unit isolation; same limitation predates Phase 3). The branch logic was verified correct by independent inspection; the pipeline + restore services themselves are fully unit-tested.
 
 ## 12. Acceptance criteria
 - A new screenshot captured on device 1 appears (decrypted) on device 2 after sync; the server holds only ciphertext.

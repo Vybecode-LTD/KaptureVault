@@ -1,9 +1,9 @@
 ---
 document: BUGS
-version: 1.14.0
+version: 1.15.0
 app-version: 1.0.7
-last-updated: 2026-06-01
-last-audit: 2026-06-01
+last-updated: 2026-06-02
+last-audit: 2026-06-02
 managed-by: manual-reconciliation
 see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT-LOG.md]
 ---
@@ -17,8 +17,8 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > - **P1 (shipped in v1.0.4):** ✅ KV-008, KV-009, KV-014, KV-023, KV-018.
 > - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, KV-010 (DI).
 > - **P1 — COMPLETED 2026-06-01 (on main, unreleased):** ✅ **KV-013** (Entries diff-update, T-09), ✅ **KV-032** (debounced refresh), ✅ **KV-033** (decrypt off the UI thread), ✅ **KV-011** + ✅ **KV-024** (centralized shutdown teardown, T-08), ✅ KV-010 residual (HotkeyService + provider disposal). **All P1 issues are now fixed.**
-> - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → 71 (P1 batch) → 118 (Phase 2 engine) → **120 now** (+ Phase 0/1 email + Open Vault; backend **26** vitest). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression now exist. CI (`tests.yml`) green.
-> - **F-02 Phase 2 LIVE (2026-06-01):** backend free-vault + quota/size-cap + refresh≠session-token + CORS + `/me` tier (vitest 26→51); client shows quota/used; **deployed + smoke-verified** (Worker `17ba084b`), R2-bucket CORS applied, secrets rotated. **F-02 Phase 3 in progress:** slices A–E done + CI-green (KDF meta, encryption interlock, binary crypto, backend object API, multi-object quota); client suite 124→**130**, backend 51→**59**. (A CI-only flake in `Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite` was de-flaked at v1.13.0 — `7275594` — not a product bug.) **Next:** Phase 3 slice F (client screenshot pipeline) + G/H, then the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault**; Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
+> - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → 71 (P1 batch) → 130 (Phase 3 A–E) → **162 now** (Phase 3 F/G/H: +20 F [object-API, codec, pipeline], +10 G [restore, CaptureEntry fallback]; backend **59** vitest). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression exist. CI (`tests.yml`) green.
+> - **F-02 Phase 2 LIVE (2026-06-01); Phase 3 COMPLETE (2026-06-02, slices A–H).** Phase 2: backend free-vault + quota/size-cap + refresh≠session-token + CORS + `/me` tier; deployed + smoke-verified (Worker `17ba084b`), R2-bucket CORS, secrets rotated. **Phase 3:** A–E (KDF meta, encryption interlock, binary crypto, backend object API, multi-object quota) + **F** (`a00ee25`, client screenshot pipeline) + **G** (`5cc03e6`, restore) + **H** (docs/UX); client **130→162**, backend **59**. **Next:** a live end-to-end smoke → cut v1.0.8, then the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault**; Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 

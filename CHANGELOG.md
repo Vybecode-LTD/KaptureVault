@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   management in Settings. Your data stays end-to-end encrypted — the server only ever
   stores ciphertext. The feature stays hidden ("not available in this build yet") until
   the backend is configured; the free, offline experience is unchanged.
+- **Your screenshots now sync with the Online Vault.** When the Online Vault is your sync
+  target, screenshots are re-encoded to PNG and end-to-end encrypted, then uploaded
+  alongside your vault and restored automatically on another device — counted against your
+  storage quota (oldest kept first when you run low). The server only ever holds ciphertext,
+  and a vault password is required, since that password is the only key. The free, offline
+  experience and Google Drive sync are unchanged.
 
 ---
 
