@@ -73,6 +73,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<string> EntryTags { get; } = [];
     public ObservableCollection<CaptureEntry> Entries { get; } = [];
 
+    // F-02 / P5: the Online Vault account panel, surfaced on the main window so the toolbar can show
+    // Login (signed out) and Sync / Web Vault / Upload (signed in). Same singleton the Settings panel uses.
+    public OnlineAccountViewModel Account { get; }
+
     // Selected entry
     [ObservableProperty] private CaptureEntry? _selectedEntry;
 
@@ -87,9 +91,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _capture = null!;
         _clipboardMonitor = null!;
         _startup = null!;
+        Account = null!;
     }
 
-    public MainWindowViewModel(IDatabaseService db, ICaptureService capture, IClipboardMonitorService clipboardMonitor, IStartupService startup, ISettingsService? settings = null, IScreenshotService? screenshotService = null)
+    public MainWindowViewModel(IDatabaseService db, ICaptureService capture, IClipboardMonitorService clipboardMonitor, IStartupService startup, ISettingsService? settings = null, IScreenshotService? screenshotService = null, OnlineAccountViewModel account = null!)
     {
         _db = db;
         _capture = capture;
@@ -97,6 +102,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _screenshotService = screenshotService;
         _startup = startup;
         _settings = settings;
+        Account = account;
 
         _capture.OnEntryFlushed += () => Dispatcher.UIThread.Post(RequestRefresh);
         _clipboardMonitor.OnEntryFlushed += () => Dispatcher.UIThread.Post(RequestRefresh);

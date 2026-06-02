@@ -62,20 +62,23 @@ public static class ServiceRegistration
             sp.GetRequiredService<IScreenshotImageCodec>(),
             sp.GetRequiredService<IDatabaseService>()));
         services.AddSingleton<CloudSyncManager>();
+        // The on-demand sync trigger the Online Vault UI binds to (same singleton).
+        services.AddSingleton<IOnlineVaultSync>(sp => sp.GetRequiredService<CloudSyncManager>());
 
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`
         // in App. HotkeyService is parameterless; MainWindowViewModel uses an explicit
         // factory that mirrors the original construction exactly, so resolution can't pick
         // a wrong/ambiguous constructor (the view model also has a design-time ctor).
         services.AddSingleton<HotkeyService>();
+        services.AddSingleton<OnlineAccountViewModel>();
         services.AddSingleton<MainWindowViewModel>(sp => new MainWindowViewModel(
             sp.GetRequiredService<IDatabaseService>(),
             sp.GetRequiredService<ICaptureService>(),
             sp.GetRequiredService<IClipboardMonitorService>(),
             sp.GetRequiredService<IStartupService>(),
             sp.GetRequiredService<ISettingsService>(),
-            sp.GetRequiredService<IScreenshotService>()));
-        services.AddSingleton<OnlineAccountViewModel>();
+            sp.GetRequiredService<IScreenshotService>(),
+            sp.GetRequiredService<OnlineAccountViewModel>()));
 
         return services;
     }

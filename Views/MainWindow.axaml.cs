@@ -50,6 +50,15 @@ public partial class MainWindow : Window
         await new AboutDialog().ShowDialog(this);
     }
 
+    // P5: the Upload button. File hosting is the paid differentiator (Phase 6). The dialog adapts to
+    // the account tier — a free user gets the upgrade pitch (→ Stripe checkout), a paid user gets the
+    // "coming soon" notice — so the gating lives in one place. DataContext is the shared account VM.
+    private async void Upload_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || vm.Account is null) return;
+        await new UploadDialog { DataContext = vm.Account }.ShowDialog(this);
+    }
+
     private async void ViewContent_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm && vm.SelectedEntry != null)

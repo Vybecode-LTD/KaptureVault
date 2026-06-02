@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kapture.Services;
+using Kapture.Services.CloudSync;
 using Kapture.Services.CloudSync.Online;
 
 namespace Kapture.ViewModels;
@@ -24,18 +25,20 @@ public partial class OnlineAccountViewModel : ObservableObject
     private readonly IUrlOpener _urlOpener;
     private readonly OnlineVaultConfig _config;
     private readonly IEncryptionService _encryption;
+    private readonly IOnlineVaultSync _sync;
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = "";
 
     public OnlineAccountViewModel(
         IOnlineAccountService account, IUrlOpener urlOpener, OnlineVaultConfig config,
-        IEncryptionService encryption)
+        IEncryptionService encryption, IOnlineVaultSync sync)
     {
         _account = account;
         _urlOpener = urlOpener;
         _config = config;
         _encryption = encryption;
+        _sync = sync;
         _account.StateChanged += OnAccountStateChanged;
     }
 
@@ -51,6 +54,9 @@ public partial class OnlineAccountViewModel : ObservableObject
     // Panel visibility helpers.
     public bool CanSubscribe => _account.IsSignedIn && !_account.IsPaid;
     public bool CanManageBilling => _account.IsSignedIn && _account.IsPaid;
+
+    /// <summary>Main-window "Login" button: shown when the Online Vault is configured and nobody is signed in.</summary>
+    public bool ShowLogin => _config.IsConfigured && !_account.IsSignedIn;
 
     /// <summary>Signed in but no active vault password — the Online Vault is end-to-end encrypted and
     /// cannot sync until one is set. The panel shows the "set a password / sole key" guidance.</summary>
@@ -114,6 +120,38 @@ public partial class OnlineAccountViewModel : ObservableObject
     /// <summary>Open the web vault in the browser (shown once signed in).</summary>
     [RelayCommand]
     private void OpenVault() => _urlOpener.Open(_config.WebVaultUrl);
+
+    /// <summary>
+    /// Manually sync the Online Vault now (the main-window "Sync" button). Gated the same way auto-sync
+    /// is: signed in + an active vault password (the Online Vault is end-to-end encrypted).
+    /// </summary>
+    [RelayCommand]
+    private async Task SyncNowAsync()
+    {
+        if (!_account.IsSignedIn) { StatusMessage = "Sign in to the Online Vault first."; return; }
+        if (!_encryption.IsActive)
+        {
+            StatusMessage = "Set a vault password in Settings → Encryption first — the Online Vault is end-to-end encrypted.";
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = "Syncing to the Online Vault…";
+        try
+        {
+            var ok = await _sync.SyncOnlineVaultNowAsync();
+            StatusMessage = ok ? "Synced to the Online Vault." : "Sync didn't complete — check Settings → Online Vault.";
+            await _account.RefreshAccountAsync(); // refresh quota / used after an upload
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Sync failed: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     [RelayCommand]
     private async Task SubscribeAsync()
@@ -181,6 +219,7 @@ public partial class OnlineAccountViewModel : ObservableObject
         OnPropertyChanged(nameof(AccountSummary));
         OnPropertyChanged(nameof(CanSubscribe));
         OnPropertyChanged(nameof(CanManageBilling));
+        OnPropertyChanged(nameof(ShowLogin));
         OnPropertyChanged(nameof(HasStorageInfo));
         OnPropertyChanged(nameof(StorageSummary));
         OnPropertyChanged(nameof(VaultPasswordRequired));

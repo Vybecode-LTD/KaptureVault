@@ -88,6 +88,36 @@
                     </Button>
                     <!-- Run-on-startup and Export DB moved to Settings → General (frees room for the
                          paid Upload-files button). -->
+
+                    <!-- Online Vault account (P5): Login when signed out; Sync / Web Vault / Upload when
+                         signed in. The Online Vault is independent of Google Drive backup (Settings). -->
+                    <Button Content="Login" Command="{Binding Account.SignInCommand}"
+                            IsVisible="{Binding Account.ShowLogin}" Classes="accent"
+                            Padding="10,5" FontSize="12" ToolTip.Tip="Sign in to your Online Vault"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding Account.IsSignedIn}">
+                        <Button Command="{Binding Account.SyncNowCommand}" IsEnabled="{Binding !Account.IsBusy}"
+                                Padding="10,5" FontSize="12" ToolTip.Tip="{Binding Account.StatusMessage}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="&#xE895;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="Sync" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding Account.OpenVaultCommand}" Padding="10,5" FontSize="12"
+                                ToolTip.Tip="Open your vault in the browser">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="Web Vault" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Click="Upload_Click" Padding="10,5" FontSize="12"
+                                ToolTip.Tip="Upload files to your vault">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="&#xE898;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="Upload" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
                     <Button Padding="10,5" FontSize="12" Click="Settings_Click">
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <TextBlock Text="&#xE713;" FontFamily="{StaticResource SymbolFont}" FontSize="12" VerticalAlignment="Center"/>

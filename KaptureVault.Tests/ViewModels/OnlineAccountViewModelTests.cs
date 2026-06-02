@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Kapture.Services;
+using Kapture.Services.CloudSync;
 using Kapture.Services.CloudSync.Online;
 using Kapture.ViewModels;
 using NSubstitute;
@@ -19,13 +20,14 @@ public class OnlineAccountViewModelTests
     private readonly IOnlineAccountService _account = Substitute.For<IOnlineAccountService>();
     private readonly IUrlOpener _opener = Substitute.For<IUrlOpener>();
     private readonly IEncryptionService _enc = Substitute.For<IEncryptionService>();
+    private readonly IOnlineVaultSync _sync = Substitute.For<IOnlineVaultSync>();
 
     private OnlineAccountViewModel NewVm(bool configured = true)
     {
         var config = configured
             ? new OnlineVaultConfig { ApiBaseUrl = "https://api.kapture.tools", GoogleClientId = "client-123" }
             : new OnlineVaultConfig { ApiBaseUrl = "REPLACE_WITH_API", GoogleClientId = "REPLACE_WITH_ID" }; // explicit not-configured (defaults are now real)
-        return new OnlineAccountViewModel(_account, _opener, config, _enc);
+        return new OnlineAccountViewModel(_account, _opener, config, _enc, _sync);
     }
 
     [Fact]
@@ -203,5 +205,61 @@ public class OnlineAccountViewModelTests
         NewVm().OpenVaultCommand.Execute(null);
 
         _opener.Received(1).Open(Arg.Is<string>(u => u.Contains("kapture.tools/vault")));
+    }
+
+    // ── Main-window Login button (P5b) ──
+
+    [Fact]
+    public void ShowLogin_TrueOnlyWhenConfiguredAndSignedOut()
+    {
+        _account.IsSignedIn.Returns(false);
+        NewVm(configured: true).ShowLogin.Should().BeTrue();
+
+        NewVm(configured: false).ShowLogin.Should().BeFalse("not configured → no Online Vault in this build");
+
+        _account.IsSignedIn.Returns(true);
+        NewVm(configured: true).ShowLogin.Should().BeFalse("already signed in");
+    }
+
+    // ── Main-window Sync button (P5b) ──
+
+    [Fact]
+    public async Task SyncNow_WhenSignedInAndEncrypted_TriggersTheSync()
+    {
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(true);
+        _sync.SyncOnlineVaultNowAsync(Arg.Any<CancellationToken>()).Returns(true);
+        var vm = NewVm();
+
+        await vm.SyncNowCommand.ExecuteAsync(null);
+
+        await _sync.Received(1).SyncOnlineVaultNowAsync(Arg.Any<CancellationToken>());
+        await _account.Received(1).RefreshAccountAsync(Arg.Any<CancellationToken>()); // refresh quota after upload
+        vm.StatusMessage.Should().Contain("Synced");
+    }
+
+    [Fact]
+    public async Task SyncNow_WhenNotSignedIn_DoesNotSync()
+    {
+        _account.IsSignedIn.Returns(false);
+        var vm = NewVm();
+
+        await vm.SyncNowCommand.ExecuteAsync(null);
+
+        await _sync.DidNotReceive().SyncOnlineVaultNowAsync(Arg.Any<CancellationToken>());
+        vm.StatusMessage.Should().Contain("Sign in");
+    }
+
+    [Fact]
+    public async Task SyncNow_WhenNoVaultPassword_DoesNotSync_AndPrompts()
+    {
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(false);
+        var vm = NewVm();
+
+        await vm.SyncNowCommand.ExecuteAsync(null);
+
+        await _sync.DidNotReceive().SyncOnlineVaultNowAsync(Arg.Any<CancellationToken>());
+        vm.StatusMessage.Should().Contain("vault password");
     }
 }

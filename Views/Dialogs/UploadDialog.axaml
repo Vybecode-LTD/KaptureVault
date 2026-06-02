@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Kapture.ViewModels"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        x:Class="Kapture.Views.Dialogs.UploadDialog"
+        x:DataType="vm:OnlineAccountViewModel"
+        Title="Upload files"
+        Icon="/Assets/app.ico"
+        Width="430"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppBgBrush}">
+
+    <StackPanel Margin="24" Spacing="16">
+        <TextBlock Text="Upload files to your vault" FontSize="18" FontWeight="SemiBold"
+                   Foreground="{DynamicResource AppTextPrimary}"/>
+
+        <!-- Free account: the conversion pitch (file hosting is the paid differentiator) -->
+        <StackPanel Spacing="14" IsVisible="{Binding CanSubscribe}">
+            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondary}"
+                       Text="File hosting is part of KaptureVault Pro. Store files in your end-to-end encrypted vault and share them with private links — on top of the free encrypted vault sync you already have."/>
+            <Border Background="{DynamicResource AppBgTertiary}" CornerRadius="8" Padding="16,12">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="KaptureVault Pro" FontWeight="SemiBold" Foreground="{DynamicResource AppTextPrimary}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="$49" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                        <TextBlock Text="/ year" VerticalAlignment="Bottom" Margin="0,0,0,5"
+                                   Foreground="{DynamicResource AppTextSecondary}"/>
+                    </StackPanel>
+                    <TextBlock Text="• Encrypted file hosting (~10 GB)" FontSize="12" Foreground="{DynamicResource AppTextSecondary}"/>
+                    <TextBlock Text="• Private, shareable links" FontSize="12" Foreground="{DynamicResource AppTextSecondary}"/>
+                    <TextBlock Text="• Everything in the free tier" FontSize="12" Foreground="{DynamicResource AppTextSecondary}"/>
+                </StackPanel>
+            </Border>
+            <Button Content="Upgrade — $49/yr" Command="{Binding SubscribeCommand}" Classes="accent"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="12,8"/>
+        </StackPanel>
+
+        <!-- Paid account: file hosting ships in Phase 6 -->
+        <StackPanel Spacing="12" IsVisible="{Binding IsPaid}">
+            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondary}"
+                       Text="You're on KaptureVault Pro — thank you! File hosting is coming soon and will light up here in an upcoming update. Your encrypted vault and screenshots are already syncing."/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding StatusMessage}" FontSize="11" FontStyle="Italic" TextWrapping="Wrap"
+                   Foreground="{DynamicResource AppTextSecondary}"
+                   IsVisible="{Binding StatusMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"/>
+
+        <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Padding="16,6"/>
+    </StackPanel>
+</Window>

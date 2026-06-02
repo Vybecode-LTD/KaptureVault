@@ -13,7 +13,7 @@ namespace Kapture.Services.CloudSync;
 /// <see cref="SyncAsync(ICloudStorageProvider, CancellationToken)"/> (serialized by one guard so the
 /// local vault.db is never replaced concurrently). The Online Vault path additionally syncs screenshots.
 /// </summary>
-public class CloudSyncManager : IDisposable
+public class CloudSyncManager : IDisposable, IOnlineVaultSync
 {
     private const string SyncFileName = "vault.db";
     public const string DriveProviderName = "Google Drive";

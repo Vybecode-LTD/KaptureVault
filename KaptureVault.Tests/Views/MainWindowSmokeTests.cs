@@ -3,6 +3,8 @@ using Avalonia.Threading;
 using FluentAssertions;
 using Kapture.Models;
 using Kapture.Services;
+using Kapture.Services.CloudSync;
+using Kapture.Services.CloudSync.Online;
 using Kapture.ViewModels;
 using Kapture.Views;
 using NSubstitute;
@@ -33,13 +35,23 @@ public class MainWindowSmokeTests
           .Returns(ci => all.Where(e => e.AppName == (string)ci[0]!).ToList());
         db.Search(Arg.Any<string>(), Arg.Any<string?>()).Returns(_ => all.ToList());
 
+        // P5: the main window now binds the Online Vault account panel (Login / Sync / Web Vault /
+        // Upload). Give it a real account VM over mocks so those toolbar bindings resolve under headless.
+        var account = new OnlineAccountViewModel(
+            Substitute.For<IOnlineAccountService>(),
+            Substitute.For<IUrlOpener>(),
+            new OnlineVaultConfig(),
+            Substitute.For<IEncryptionService>(),
+            Substitute.For<IOnlineVaultSync>());
+
         return new MainWindowViewModel(
             db,
             Substitute.For<ICaptureService>(),
             Substitute.For<IClipboardMonitorService>(),
             Substitute.For<IStartupService>(),
             Substitute.For<ISettingsService>(),
-            Substitute.For<IScreenshotService>());
+            Substitute.For<IScreenshotService>(),
+            account);
     }
 
     [AvaloniaFact]
