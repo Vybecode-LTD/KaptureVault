@@ -75,6 +75,21 @@ public class KaptureOnlineApiClientTests
     }
 
     [Fact]
+    public async Task CreateHandoffCodeAsync_PostsWithBearer_AndParsesCode()
+    {
+        var (client, handler) = Make((_, _) =>
+            Json(HttpStatusCode.OK, """{"code":"handoff-abc123","expiresIn":120}"""));
+
+        var result = await client.CreateHandoffCodeAsync("sess-123");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/auth/handoff/create");
+        handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-123");
+        result.Code.Should().Be("handoff-abc123");
+        result.ExpiresIn.Should().Be(120);
+    }
+
+    [Fact]
     public async Task PutVaultMetaAsync_PutsMetaJson_WithBearer()
     {
         var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK, """{"ok":true}"""));

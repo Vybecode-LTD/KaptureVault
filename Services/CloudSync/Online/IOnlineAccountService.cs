@@ -46,6 +46,13 @@ public interface IOnlineAccountService
     Task<string?> GetBillingPortalUrlAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// Mint a one-time web-vault handoff code (P5c) so the browser can auto-log-in. Returns the code,
+    /// or null if not signed in or the call fails (the caller then opens the web vault for a manual
+    /// sign-in instead). The code conveys only the account session, never the vault encryption key.
+    /// </summary>
+    Task<string?> CreateWebVaultHandoffCodeAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Run an authenticated backend call with a valid session, refreshing the session once and
     /// retrying if it is rejected with 401. Throws <see cref="InvalidOperationException"/> if not signed in.
     /// </summary>

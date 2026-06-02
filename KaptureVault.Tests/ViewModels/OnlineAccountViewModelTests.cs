@@ -200,11 +200,26 @@ public class OnlineAccountViewModelTests
     }
 
     [Fact]
-    public void OpenVault_OpensTheWebVaultUrl()
+    public async Task OpenVault_WhenNoHandoffCode_OpensThePlainWebVaultUrl()
     {
-        NewVm().OpenVaultCommand.Execute(null);
+        _account.CreateWebVaultHandoffCodeAsync(Arg.Any<CancellationToken>()).Returns((string?)null);
+        var vm = NewVm();
 
-        _opener.Received(1).Open(Arg.Is<string>(u => u.Contains("kapture.tools/vault")));
+        await vm.OpenVaultCommand.ExecuteAsync(null);
+
+        _opener.Received(1).Open(Arg.Is<string>(u => u.Contains("kapture.tools/vault") && !u.Contains("#handoff")));
+    }
+
+    [Fact]
+    public async Task OpenVault_WithHandoffCode_AppendsTheHandoffFragment()
+    {
+        // P5c true handoff: the browser auto-logs-in from the one-time code in the URL fragment.
+        _account.CreateWebVaultHandoffCodeAsync(Arg.Any<CancellationToken>()).Returns("code-xyz");
+        var vm = NewVm();
+
+        await vm.OpenVaultCommand.ExecuteAsync(null);
+
+        _opener.Received(1).Open(Arg.Is<string>(u => u.Contains("kapture.tools/vault#handoff=code-xyz")));
     }
 
     // ── Main-window Login button (P5b) ──

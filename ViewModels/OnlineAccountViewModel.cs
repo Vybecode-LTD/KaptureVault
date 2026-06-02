@@ -117,9 +117,20 @@ public partial class OnlineAccountViewModel : ObservableObject
         StatusMessage = "Signed out.";
     }
 
-    /// <summary>Open the web vault in the browser (shown once signed in).</summary>
+    /// <summary>
+    /// Open the web vault in the browser (shown once signed in). P5c true handoff: first try to mint a
+    /// one-time code so the browser auto-logs-in (passed in the URL fragment, never a query — it stays
+    /// out of server logs/referrers); if that fails, fall back to the plain URL for a manual sign-in.
+    /// </summary>
     [RelayCommand]
-    private void OpenVault() => _urlOpener.Open(_config.WebVaultUrl);
+    private async Task OpenVaultAsync()
+    {
+        var code = await _account.CreateWebVaultHandoffCodeAsync();
+        var url = string.IsNullOrEmpty(code)
+            ? _config.WebVaultUrl
+            : $"{_config.WebVaultUrl}#handoff={Uri.EscapeDataString(code)}";
+        _urlOpener.Open(url);
+    }
 
     /// <summary>
     /// Manually sync the Online Vault now (the main-window "Sync" button). Gated the same way auto-sync

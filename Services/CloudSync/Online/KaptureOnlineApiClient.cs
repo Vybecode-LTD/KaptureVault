@@ -42,6 +42,9 @@ public sealed class KaptureOnlineApiClient : IKaptureOnlineApiClient
     public Task<RefreshedSession> RefreshSessionAsync(string refreshToken, CancellationToken ct = default) =>
         SendAsync<RefreshedSession>(HttpMethod.Post, "/auth/refresh", session: null, new { refresh = refreshToken }, ct);
 
+    public Task<HandoffCode> CreateHandoffCodeAsync(string session, CancellationToken ct = default) =>
+        SendAsync<HandoffCode>(HttpMethod.Post, "/auth/handoff/create", session, body: null, ct);
+
     public Task<MeResponse> GetMeAsync(string session, CancellationToken ct = default) =>
         SendAsync<MeResponse>(HttpMethod.Get, "/me", session, body: null, ct);
 

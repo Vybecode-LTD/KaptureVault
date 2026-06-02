@@ -14,6 +14,11 @@ public sealed record OnlineSession(
     [property: JsonPropertyName("uid")] string Uid,
     [property: JsonPropertyName("expiresIn")] int ExpiresIn);
 
+/// <summary>Response of <c>POST /auth/handoff/create</c> — a one-time web-vault handoff code (P5c).</summary>
+public sealed record HandoffCode(
+    [property: JsonPropertyName("code")] string Code,
+    [property: JsonPropertyName("expiresIn")] int ExpiresIn);
+
 /// <summary>Response of <c>POST /auth/refresh</c> — a rotated session token.</summary>
 public sealed record RefreshedSession(
     [property: JsonPropertyName("session")] string Session,

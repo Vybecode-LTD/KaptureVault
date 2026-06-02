@@ -213,6 +213,36 @@ public class OnlineAccountServiceTests
         (await svc.GetBillingPortalUrlAsync()).Should().Be("https://stripe/portal");
     }
 
+    // ── Web-vault handoff (P5c) ──
+
+    [Fact]
+    public async Task CreateWebVaultHandoffCode_ReturnsCode_WhenSignedIn()
+    {
+        _store.Tokens = new OnlineTokens("s", "r", _now.AddMinutes(30), "u-1");
+        _api.CreateHandoffCodeAsync("s", Arg.Any<CancellationToken>()).Returns(new HandoffCode("handoff-xyz", 120));
+        var svc = NewService();
+
+        (await svc.CreateWebVaultHandoffCodeAsync()).Should().Be("handoff-xyz");
+    }
+
+    [Fact]
+    public async Task CreateWebVaultHandoffCode_WhenNotSignedIn_ReturnsNull()
+    {
+        (await NewService().CreateWebVaultHandoffCodeAsync()).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateWebVaultHandoffCode_WhenApiFails_ReturnsNull()
+    {
+        // Best-effort: a failure must not break "Open Vault" — the caller falls back to a manual sign-in.
+        _store.Tokens = new OnlineTokens("s", "r", _now.AddMinutes(30), "u-1");
+        _api.CreateHandoffCodeAsync("s", Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OnlineApiException(HttpStatusCode.InternalServerError, "boom"));
+        var svc = NewService();
+
+        (await svc.CreateWebVaultHandoffCodeAsync()).Should().BeNull();
+    }
+
     private sealed class InMemoryTokenStore : IOnlineTokenStore
     {
         public OnlineTokens? Tokens;

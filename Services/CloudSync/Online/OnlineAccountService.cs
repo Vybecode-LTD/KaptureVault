@@ -154,6 +154,22 @@ public sealed class OnlineAccountService : IOnlineAccountService
         }
     }
 
+    public async Task<string?> CreateWebVaultHandoffCodeAsync(CancellationToken ct = default)
+    {
+        if (!IsSignedIn) return null;
+        try
+        {
+            var result = await ExecuteAuthedAsync((s, c) => _api.CreateHandoffCodeAsync(s, c), ct);
+            return result.Code;
+        }
+        catch (Exception ex)
+        {
+            // Best-effort: on any failure the caller falls back to a plain web-vault open (manual sign-in).
+            LastError = ex.Message;
+            return null;
+        }
+    }
+
     public async Task<T> ExecuteAuthedAsync<T>(Func<string, CancellationToken, Task<T>> call, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(call);

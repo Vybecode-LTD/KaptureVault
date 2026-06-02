@@ -23,6 +23,12 @@ public interface IKaptureOnlineApiClient
     /// <summary><c>POST /auth/refresh</c> — rotate a session token using the refresh token.</summary>
     Task<RefreshedSession> RefreshSessionAsync(string refreshToken, CancellationToken ct = default);
 
+    /// <summary>
+    /// <c>POST /auth/handoff/create</c> — mint a one-time, short-lived code (P5c) to hand the web vault
+    /// so the browser auto-logs-in without repeating Google sign-in. Requires a valid session bearer.
+    /// </summary>
+    Task<HandoffCode> CreateHandoffCodeAsync(string session, CancellationToken ct = default);
+
     /// <summary><c>GET /me</c> — profile, subscription status, entitlement, storage used.</summary>
     Task<MeResponse> GetMeAsync(string session, CancellationToken ct = default);
 
