@@ -371,7 +371,7 @@
                                           IsVisible="{Binding SelectedEntry.IsScreenshot}"
                                           HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Auto">
-                                <Image Source="{Binding SelectedEntry.Content, Converter={x:Static vm:MainWindowViewModel.ScreenshotThumbnailConverter}}"
+                                <Image Source="{Binding SelectedEntry.ScreenshotPath, Converter={x:Static vm:MainWindowViewModel.ScreenshotThumbnailConverter}}"
                                        Stretch="Uniform"
                                        MaxHeight="500"/>
                             </ScrollViewer>

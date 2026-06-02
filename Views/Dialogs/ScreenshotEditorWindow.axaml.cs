@@ -64,13 +64,15 @@ public partial class ScreenshotEditorWindow : Window
 
     private void LoadImage()
     {
-        if (!System.IO.File.Exists(_entry.Content))
+        // Resolve-by-filename so a screenshot restored from another device (Phase 3 slice G) opens too.
+        var imagePath = _entry.ScreenshotPath;
+        if (imagePath == null)
         {
             StatusText.Text = "Screenshot file not found — nothing to edit.";
             return;
         }
 
-        _baseBitmap = new Bitmap(_entry.Content);
+        _baseBitmap = new Bitmap(imagePath);
         AnnotationCanvas.Width = _baseBitmap.PixelSize.Width;
         AnnotationCanvas.Height = _baseBitmap.PixelSize.Height;
 

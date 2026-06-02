@@ -14,3 +14,17 @@ public sealed record ScreenshotSyncResult(
     /// <summary>The sync did not run (not signed in or the vault has no password).</summary>
     public static ScreenshotSyncResult NotRun { get; } = new(false, 0, 0, 0);
 }
+
+/// <summary>
+/// Outcome of one <see cref="IScreenshotSyncService.RestoreAsync"/> pass (download-wins sync / fresh
+/// device). <see cref="MissingRemote"/> counts referenced screenshots that aren't on the server
+/// (older captures from before screenshot sync) — expected, not an error.
+/// </summary>
+public sealed record ScreenshotRestoreResult(
+    bool Ran,
+    int Restored,
+    int MissingRemote)
+{
+    /// <summary>The restore did not run (not signed in or the vault has no password).</summary>
+    public static ScreenshotRestoreResult NotRun { get; } = new(false, 0, 0);
+}

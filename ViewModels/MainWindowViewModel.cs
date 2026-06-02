@@ -443,8 +443,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (SelectedEntry.IsScreenshot)
         {
-            var sourcePath = SelectedEntry.Content;
-            if (!File.Exists(sourcePath))
+            // Resolve-by-filename so a screenshot restored from another device (whose stored path is
+            // that device's) still saves correctly (Phase 3 slice G).
+            var sourcePath = SelectedEntry.ScreenshotPath;
+            if (sourcePath == null)
             {
                 ShowToast("Screenshot file not found");
                 return;

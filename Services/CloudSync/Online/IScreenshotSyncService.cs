@@ -20,4 +20,13 @@ public interface IScreenshotSyncService
     /// vault password is active — there is no plaintext-upload path.
     /// </summary>
     Task<ScreenshotSyncResult> SyncUpAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Restore screenshots referenced by the (just-downloaded) DB that are missing locally — for each,
+    /// download its encrypted object from the Online Vault, decrypt it, and write the image into the
+    /// local screenshots directory keyed by filename (<see cref="Kapture.Models.CaptureEntry.ScreenshotDirectory"/>).
+    /// Screenshots already present locally are skipped; ones not on the server (older, never synced) are
+    /// counted but not an error. A no-op unless signed in and a vault password is active.
+    /// </summary>
+    Task<ScreenshotRestoreResult> RestoreAsync(CancellationToken ct = default);
 }

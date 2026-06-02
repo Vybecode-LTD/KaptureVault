@@ -26,8 +26,32 @@ public partial class CaptureEntry : ObservableObject
     public bool IsClipboard => EntryType == "clipboard";
     public bool IsScreenshot => EntryType == "screenshot";
 
-    /// <summary>For screenshot entries, Content holds the file path to the image.</summary>
-    public string? ScreenshotPath => IsScreenshot && File.Exists(Content) ? Content : null;
+    /// <summary>
+    /// Directory where screenshot images live on THIS device. Screenshots restored from another device
+    /// (Phase 3 slice G) are written here keyed by filename, so a row whose <see cref="Content"/> path
+    /// was captured elsewhere still resolves. Defaults to the standard location (matches
+    /// <c>ScreenshotService</c> and <c>ScreenshotSyncService</c>); overridable for tests.
+    /// </summary>
+    public static string ScreenshotDirectory { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KaptureVault", "screenshots");
+
+    /// <summary>
+    /// For a screenshot entry, a locally-readable path to the image, or null. Prefers the stored path
+    /// (this device's own capture); falls back to <see cref="ScreenshotDirectory"/> keyed by filename
+    /// so a screenshot restored from another device — whose stored path is that device's — resolves
+    /// (resolve-by-filename; the DB stores a device-local absolute path, only the filename is portable).
+    /// </summary>
+    public string? ScreenshotPath
+    {
+        get
+        {
+            if (!IsScreenshot) return null;
+            if (File.Exists(Content)) return Content;
+            var byName = Path.Combine(ScreenshotDirectory, Path.GetFileName(Content));
+            return File.Exists(byName) ? byName : null;
+        }
+    }
 
     public List<string> TagList =>
         string.IsNullOrWhiteSpace(Tags)

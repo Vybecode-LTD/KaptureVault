@@ -15,14 +15,17 @@ namespace KaptureVault.Tests.Services.CloudSync;
 /// client, a fake image codec (so no real images are needed), a mocked DB, and a stub R2 endpoint
 /// that captures PUT bodies. No network, no live backend, no SkiaSharp.
 /// </summary>
+[Collection("ScreenshotDirectory")] // serialized with CaptureEntryTests: both mutate the static ScreenshotDirectory
 public sealed class ScreenshotSyncServiceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"kv-shotsync-{Guid.NewGuid():N}");
+    private readonly string _originalScreenshotDir = CaptureEntry.ScreenshotDirectory;
 
     public ScreenshotSyncServiceTests() => Directory.CreateDirectory(_root);
 
     public void Dispose()
     {
+        CaptureEntry.ScreenshotDirectory = _originalScreenshotDir; // restore the global (restore tests set it)
         try { Directory.Delete(_root, recursive: true); } catch { /* best effort */ }
     }
 
@@ -60,9 +63,11 @@ public sealed class ScreenshotSyncServiceTests : IDisposable
         api.ListObjectsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new VaultObjectList(remoteObjects));
 
-        // A presigned PUT URL that encodes the key, so the stub can map uploaded bodies back to keys.
+        // Presigned PUT/GET URLs that encode the key, so the stub can map bodies/payloads to keys.
         api.GetObjectPutUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(ci => new PresignedUrl($"https://r2.test/put?key={Uri.EscapeDataString(ci.ArgAt<string>(1))}", 300));
+        api.GetObjectGetUrlAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci => new PresignedUrl($"https://r2.test/get?key={Uri.EscapeDataString(ci.ArgAt<string>(1))}", 300));
 
         // A remote vault.db meta exists, so the meta re-commit (server quota backstop) proceeds.
         api.GetVaultMetaAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -302,6 +307,100 @@ public sealed class ScreenshotSyncServiceTests : IDisposable
         h.R2.BodyForKey(Key("sc_corrupt.bmp")).Should().BeNull();
     }
 
+    // ── Restore (slice G) ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RestoreAsync_NotRun_WhenNotSignedIn()
+    {
+        var h = Make(quota: long.MaxValue, dbEntries: [Screenshot("sc_a.bmp", 9, createFile: false)],
+            remoteObjects: [], signedIn: false);
+
+        var result = await h.Service.RestoreAsync();
+
+        result.Ran.Should().BeFalse();
+        await h.Api.DidNotReceiveWithAnyArgs().ListObjectsAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_NotRun_WhenVaultNotEncrypted()
+    {
+        var h = Make(quota: long.MaxValue, dbEntries: [Screenshot("sc_a.bmp", 9, createFile: false)],
+            remoteObjects: [], encrypted: false);
+
+        var result = await h.Service.RestoreAsync();
+
+        result.Ran.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RestoreAsync_DownloadsDecryptsAndWritesMissingScreenshots()
+    {
+        // The DB row's Content is another device's path (no local file); restore must fetch the
+        // encrypted object, decrypt it, and write the image into the local screenshots dir by filename.
+        var restoreDir = Path.Combine(_root, "restored");
+        CaptureEntry.ScreenshotDirectory = restoreDir;
+        var h = Make(quota: long.MaxValue, dbEntries: [Screenshot("sc_a.bmp", 9, createFile: false)],
+            remoteObjects: [new VaultObject(Key("sc_a.bmp"), 50)]);
+        var pngBytes = new byte[] { 9, 9, 9, 9 };
+        h.R2.GetPayloads[Key("sc_a.bmp")] = h.Enc.EncryptBytes(pngBytes);
+
+        var result = await h.Service.RestoreAsync();
+
+        result.Ran.Should().BeTrue();
+        result.Restored.Should().Be(1);
+        var written = Path.Combine(restoreDir, "sc_a.bmp");
+        File.Exists(written).Should().BeTrue();
+        (await File.ReadAllBytesAsync(written)).Should().Equal(pngBytes); // decrypted back to the plaintext image
+    }
+
+    [Fact]
+    public async Task RestoreAsync_SkipsScreenshotsAlreadyPresentLocally()
+    {
+        var restoreDir = Path.Combine(_root, "restored2");
+        Directory.CreateDirectory(restoreDir);
+        CaptureEntry.ScreenshotDirectory = restoreDir;
+        await File.WriteAllBytesAsync(Path.Combine(restoreDir, "sc_a.bmp"), [1]); // already have it
+        var h = Make(quota: long.MaxValue, dbEntries: [Screenshot("sc_a.bmp", 9, createFile: false)],
+            remoteObjects: [new VaultObject(Key("sc_a.bmp"), 50)]);
+
+        var result = await h.Service.RestoreAsync();
+
+        result.Restored.Should().Be(0);
+        await h.Api.DidNotReceiveWithAnyArgs().GetObjectGetUrlAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_CountsScreenshotsMissingFromServer()
+    {
+        // Referenced by the DB but never synced (older capture, before screenshot sync existed) — not an error.
+        var restoreDir = Path.Combine(_root, "restored3");
+        CaptureEntry.ScreenshotDirectory = restoreDir;
+        var h = Make(quota: long.MaxValue, dbEntries: [Screenshot("sc_a.bmp", 9, createFile: false)],
+            remoteObjects: []);
+
+        var result = await h.Service.RestoreAsync();
+
+        result.Restored.Should().Be(0);
+        result.MissingRemote.Should().Be(1);
+        await h.Api.DidNotReceiveWithAnyArgs().GetObjectGetUrlAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task RestoreAsync_SkipsUndecryptableBlob_WithoutFailing()
+    {
+        var restoreDir = Path.Combine(_root, "restored4");
+        CaptureEntry.ScreenshotDirectory = restoreDir;
+        var h = Make(quota: long.MaxValue, dbEntries: [Screenshot("sc_a.bmp", 9, createFile: false)],
+            remoteObjects: [new VaultObject(Key("sc_a.bmp"), 3)]);
+        h.R2.GetPayloads[Key("sc_a.bmp")] = [1, 2, 3]; // too short to be a valid blob → DecryptionException
+
+        var result = await h.Service.RestoreAsync();
+
+        result.Ran.Should().BeTrue();
+        result.Restored.Should().Be(0);
+        File.Exists(Path.Combine(restoreDir, "sc_a.bmp")).Should().BeFalse();
+    }
+
     // ── Fakes ──────────────────────────────────────────────────────────────────
 
     /// <summary>Deterministic stand-in for the SkiaSharp codec: PNG = 0xAA prefix + source; throws on 0xFF.</summary>
@@ -317,10 +416,13 @@ public sealed class ScreenshotSyncServiceTests : IDisposable
         }
     }
 
-    /// <summary>Stub R2 endpoint: records every PUT (URL + body); answers OK to everything.</summary>
+    /// <summary>Stub R2 endpoint: records every PUT (URL + body); serves GET payloads mapped by object key.</summary>
     private sealed class StubR2 : HttpMessageHandler
     {
         public List<(string Url, byte[] Body)> Puts { get; } = [];
+
+        /// <summary>Payload returned on GET when the request URL carries this (relative) object key.</summary>
+        public Dictionary<string, byte[]> GetPayloads { get; } = new(StringComparer.Ordinal);
 
         public StubR2 Capture(out StubR2 self) { self = this; return this; }
 
@@ -339,8 +441,15 @@ public sealed class ScreenshotSyncServiceTests : IDisposable
             {
                 var body = request.Content is null ? [] : await request.Content.ReadAsByteArrayAsync(cancellationToken);
                 Puts.Add((request.RequestUri!.AbsoluteUri, body));
+                return new HttpResponseMessage(HttpStatusCode.OK);
             }
-            return new HttpResponseMessage(HttpStatusCode.OK);
+
+            // GET: return the payload whose key is encoded in the URL, else 404.
+            var url = request.RequestUri!.AbsoluteUri;
+            foreach (var (key, payload) in GetPayloads)
+                if (url.Contains(Uri.EscapeDataString(key), StringComparison.Ordinal))
+                    return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(payload) };
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
         }
     }
 }

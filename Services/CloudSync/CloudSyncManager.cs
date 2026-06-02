@@ -29,6 +29,9 @@ public class CloudSyncManager : IDisposable
     /// <summary>Outcome of the most recent screenshot sync pass (Online Vault only), for the UI. Null until one runs.</summary>
     public ScreenshotSyncResult? LastScreenshotSync { get; private set; }
 
+    /// <summary>Outcome of the most recent screenshot restore pass (Online Vault only), for the UI. Null until one runs.</summary>
+    public ScreenshotRestoreResult? LastScreenshotRestore { get; private set; }
+
     public CloudSyncManager(
         IDatabaseService db,
         IEnumerable<ICloudStorageProvider> providers,
@@ -106,8 +109,9 @@ public class CloudSyncManager : IDisposable
             bool result;
             // True only after a vault upload or an already-in-sync state — when the local screenshots
             // are the source of truth and should be pushed up (Phase 3 slice F). A download-wins sync
-            // instead restores screenshots (slice G), not handled here.
+            // instead restores screenshots from the server (slice G) via restoreScreenshots.
             var pushScreenshots = false;
+            var restoreScreenshots = false;
 
             if (remoteFileId == null)
             {
@@ -153,8 +157,9 @@ public class CloudSyncManager : IDisposable
                     {
                         await _db.ReplaceDatabaseFromAsync(tempPath, ct);
                         UpdateStatus($"Downloaded from {provider.ProviderName} at {DateTime.Now:HH:mm}");
-                        // Slice G will restore the screenshots referenced by the downloaded vault here.
+                        // Restore the screenshots the downloaded vault references but this device lacks (slice G).
                         result = true;
+                        restoreScreenshots = true;
                     }
                     else
                     {
@@ -172,6 +177,8 @@ public class CloudSyncManager : IDisposable
 
             if (pushScreenshots)
                 await SyncScreenshotsUpAsync(provider, ct);
+            else if (restoreScreenshots)
+                await RestoreScreenshotsDownAsync(provider, ct);
 
             return result;
         }
@@ -211,6 +218,29 @@ public class CloudSyncManager : IDisposable
         catch (Exception ex)
         {
             UpdateStatus($"{LastSyncStatus} · screenshot sync error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Restore screenshots referenced by the just-downloaded vault that this device is missing (Phase 3
+    /// slice G). No-op for any other provider. Best-effort: a restore failure is surfaced in the status
+    /// but never fails the vault sync (the DB already downloaded successfully).
+    /// </summary>
+    private async Task RestoreScreenshotsDownAsync(ICloudStorageProvider provider, CancellationToken ct)
+    {
+        if (_screenshotSync is null || provider is not R2StorageProvider)
+            return;
+
+        try
+        {
+            var r = await _screenshotSync.RestoreAsync(ct);
+            LastScreenshotRestore = r;
+            if (r.Ran && r.Restored > 0)
+                UpdateStatus($"{LastSyncStatus} · {r.Restored} screenshot(s) restored");
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"{LastSyncStatus} · screenshot restore error: {ex.Message}");
         }
     }
 

@@ -95,14 +95,15 @@ public partial class ContentViewerWindow : Window
             screenshotViewer.IsVisible = true;
             languageText.Text = "[Screenshot]";
 
-            // Load image
-            if (File.Exists(entry.Content))
+            // Load image (resolve-by-filename so a screenshot restored from another device still resolves).
+            var imagePath = entry.ScreenshotPath;
+            if (imagePath != null)
             {
                 try
                 {
-                    _screenshotBitmap = new Bitmap(entry.Content);
+                    _screenshotBitmap = new Bitmap(imagePath);
                     screenshotImage.Source = _screenshotBitmap;
-                    var fileSize = new FileInfo(entry.Content).Length;
+                    var fileSize = new FileInfo(imagePath).Length;
                     var sizeText = fileSize > 1024 * 1024
                         ? $"{fileSize / (1024 * 1024.0):F1} MB"
                         : $"{fileSize / 1024.0:F0} KB";

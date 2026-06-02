@@ -61,6 +61,68 @@ public sealed class ScreenshotSyncService : IScreenshotSyncService
         return await _account.ExecuteAuthedAsync((session, c) => SyncUpCoreAsync(session, quota, c), ct);
     }
 
+    public async Task<ScreenshotRestoreResult> RestoreAsync(CancellationToken ct = default)
+    {
+        if (!_account.IsSignedIn || !_encryption.IsActive)
+            return ScreenshotRestoreResult.NotRun;
+
+        return await _account.ExecuteAuthedAsync(RestoreCoreAsync, ct);
+    }
+
+    private async Task<ScreenshotRestoreResult> RestoreCoreAsync(string session, CancellationToken ct)
+    {
+        var remote = await _api.ListObjectsAsync(session, ct);
+        var remoteScreenshotKeys = remote.Objects
+            .Where(o => o.Key.StartsWith(ScreenshotKeyPrefix, StringComparison.Ordinal))
+            .Select(o => o.Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var now = _utcNow();
+        var wantedFilenames = _db.GetAll()
+            .Where(e => e.IsScreenshot && (e.ExpiresAt == null || e.ExpiresAt > now))
+            .Select(e => Path.GetFileName(e.Content))
+            .Where(f => !string.IsNullOrEmpty(f))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // Restored images land where display looks for them (resolve-by-filename) — the same dir
+        // ScreenshotService captures into. Single source of truth so the two never diverge.
+        var screenshotsDir = CaptureEntry.ScreenshotDirectory;
+        Directory.CreateDirectory(screenshotsDir);
+
+        var restored = 0;
+        var missingRemote = 0;
+        foreach (var filename in wantedFilenames)
+        {
+            var localPath = Path.Combine(screenshotsDir, filename);
+            if (File.Exists(localPath))
+                continue; // already have the image locally
+
+            var key = ScreenshotKey(filename);
+            if (!remoteScreenshotKeys.Contains(key))
+            {
+                missingRemote++; // referenced but never synced (older capture) — not an error
+                continue;
+            }
+
+            try
+            {
+                var get = await _api.GetObjectGetUrlAsync(session, key, ct);
+                var blob = await GetBytesAsync(get.Url, ct);
+                var png = _encryption.DecryptBytes(blob);
+                await File.WriteAllBytesAsync(localPath, png, ct);
+                restored++;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or DecryptionException)
+            {
+                // Couldn't fetch / decrypt / write one — skip it; never fail the whole restore.
+                continue;
+            }
+        }
+
+        return new ScreenshotRestoreResult(true, restored, missingRemote);
+    }
+
     private async Task<ScreenshotSyncResult> SyncUpCoreAsync(string session, long quota, CancellationToken ct)
     {
         var desired = EnumerateDesiredScreenshots(); // oldest-first, deduped by filename
@@ -187,6 +249,15 @@ public sealed class ScreenshotSyncService : IScreenshotSyncService
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException(
                 $"Online Vault screenshot upload failed: {(int)resp.StatusCode} {resp.ReasonPhrase}");
+    }
+
+    private async Task<byte[]> GetBytesAsync(string url, CancellationToken ct)
+    {
+        using var resp = await _r2Http.GetAsync(url, ct);
+        if (!resp.IsSuccessStatusCode)
+            throw new InvalidOperationException(
+                $"Online Vault screenshot download failed: {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        return await resp.Content.ReadAsByteArrayAsync(ct);
     }
 
     /// <summary>The R2 (relative) key for a screenshot filename: <c>screenshots/&lt;filename&gt;.enc</c>.</summary>
