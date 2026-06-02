@@ -42,6 +42,27 @@ public sealed class KaptureOnlineApiClient : IKaptureOnlineApiClient
     public Task<RefreshedSession> RefreshSessionAsync(string refreshToken, CancellationToken ct = default) =>
         SendAsync<RefreshedSession>(HttpMethod.Post, "/auth/refresh", session: null, new { refresh = refreshToken }, ct);
 
+    public async Task RegisterAsync(string email, string password, CancellationToken ct = default)
+    {
+        using var resp = await RawSendAsync(HttpMethod.Post, "/auth/register", session: null, new { email, password }, ct);
+        await ThrowIfFailedAsync(resp, ct);
+    }
+
+    public Task<OnlineSession> VerifyEmailAsync(string token, CancellationToken ct = default) =>
+        SendAsync<OnlineSession>(HttpMethod.Post, "/auth/verify", session: null, new { token }, ct);
+
+    public Task<OnlineSession> LoginAsync(string email, string password, CancellationToken ct = default) =>
+        SendAsync<OnlineSession>(HttpMethod.Post, "/auth/login", session: null, new { email, password }, ct);
+
+    public async Task RequestPasswordResetAsync(string email, CancellationToken ct = default)
+    {
+        using var resp = await RawSendAsync(HttpMethod.Post, "/auth/reset-request", session: null, new { email }, ct);
+        await ThrowIfFailedAsync(resp, ct);
+    }
+
+    public Task<OnlineSession> ResetPasswordAsync(string token, string password, CancellationToken ct = default) =>
+        SendAsync<OnlineSession>(HttpMethod.Post, "/auth/reset", session: null, new { token, password }, ct);
+
     public Task<HandoffCode> CreateHandoffCodeAsync(string session, CancellationToken ct = default) =>
         SendAsync<HandoffCode>(HttpMethod.Post, "/auth/handoff/create", session, body: null, ct);
 

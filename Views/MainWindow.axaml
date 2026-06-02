@@ -123,7 +123,7 @@
                      Sync (left→right) when signed in. Independent of Google Drive backup (Settings).
                      The type filters moved to the entry-list column header (Row 2, Column 2). -->
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Button Content="Login" Command="{Binding Account.SignInCommand}"
+                    <Button Content="Login" Click="Login_Click"
                             IsVisible="{Binding Account.ShowLogin}" Classes="accent"
                             Padding="12,5" FontSize="12" ToolTip.Tip="Sign in to your Online Vault"/>
                     <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding Account.IsSignedIn}">

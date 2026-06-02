@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Kapture.ViewModels"
+        xmlns:conv="using:Avalonia.Data.Converters"
+        x:Class="Kapture.Views.Dialogs.LoginDialog"
+        x:DataType="vm:LoginDialogViewModel"
+        Title="Online Vault"
+        Icon="/Assets/app.ico"
+        Width="400" SizeToContent="Height"
+        CanResize="False" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBgBrush}">
+    <StackPanel Margin="24" Spacing="14" IsEnabled="{Binding !IsBusy}">
+        <TextBlock Text="{Binding Heading}" FontSize="18" FontWeight="SemiBold"/>
+
+        <!-- Email (all modes) -->
+        <StackPanel Spacing="4">
+            <TextBlock Text="Email" FontSize="12" Opacity="0.8"/>
+            <TextBox Text="{Binding Email}" Watermark="you@example.com"/>
+        </StackPanel>
+
+        <!-- Password (sign-in + register) -->
+        <StackPanel Spacing="4" IsVisible="{Binding ShowPassword}">
+            <TextBlock Text="Account password" FontSize="12" Opacity="0.8"/>
+            <TextBox Text="{Binding Password}" PasswordChar="●" Watermark="Account password"/>
+        </StackPanel>
+
+        <!-- Confirm + interlock note (register only) -->
+        <StackPanel Spacing="4" IsVisible="{Binding ShowConfirm}">
+            <TextBlock Text="Confirm password" FontSize="12" Opacity="0.8"/>
+            <TextBox Text="{Binding ConfirmPassword}" PasswordChar="●" Watermark="Re-enter password"/>
+            <Border Background="{DynamicResource AppPanelBrush}" CornerRadius="4" Padding="10,8" Margin="0,4,0,0">
+                <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.85"
+                           Text="This is your account password for signing in — NOT your vault encryption password. They must be different: your account password can be reset by email, but your vault password is the only key to your encrypted data and can never be recovered."/>
+            </Border>
+        </StackPanel>
+
+        <!-- Submit -->
+        <Button Content="{Binding SubmitLabel}" Command="{Binding SubmitCommand}"
+                Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="0,8"/>
+
+        <!-- Status -->
+        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontSize="12"
+                   Foreground="{DynamicResource AppAccentBrush}"
+                   IsVisible="{Binding StatusMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- Mode toggles -->
+        <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
+            <Button Content="Create an account" Command="{Binding ShowRegisterCommand}"
+                    IsVisible="{Binding IsSignIn}" Background="Transparent" Padding="2" FontSize="12"/>
+            <Button Content="Forgot password?" Command="{Binding ShowForgotCommand}"
+                    IsVisible="{Binding IsSignIn}" Background="Transparent" Padding="2" FontSize="12"/>
+            <Button Content="Already have an account? Sign in" Command="{Binding ShowSignInCommand}"
+                    IsVisible="{Binding IsRegister}" Background="Transparent" Padding="2" FontSize="12"/>
+            <Button Content="Back to sign in" Command="{Binding ShowSignInCommand}"
+                    IsVisible="{Binding IsForgot}" Background="Transparent" Padding="2" FontSize="12"/>
+        </StackPanel>
+
+        <!-- Divider + Google -->
+        <Grid ColumnDefinitions="*,Auto,*" Margin="0,2">
+            <Border Grid.Column="0" Height="1" Background="{DynamicResource AppBorderBrush}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="or" Margin="10,0" Opacity="0.6" FontSize="11" VerticalAlignment="Center"/>
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource AppBorderBrush}" VerticalAlignment="Center"/>
+        </Grid>
+        <Button Content="Continue with Google" Command="{Binding ContinueWithGoogleCommand}"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="0,8"/>
+
+        <Button Content="Cancel" Click="Cancel_Click" HorizontalAlignment="Center"
+                Background="Transparent" Padding="2" FontSize="12"/>
+    </StackPanel>
+</Window>

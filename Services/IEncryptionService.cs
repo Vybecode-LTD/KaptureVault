@@ -14,6 +14,14 @@ public interface IEncryptionService
     /// <summary>Unlock encryption with the existing password. Returns false if wrong password.</summary>
     bool Unlock(string password);
 
+    /// <summary>
+    /// Check a candidate against the configured vault password WITHOUT changing state (does not
+    /// unlock or lock). Returns false if no vault password is configured. Used for the Phase 5
+    /// account/vault-password interlock — the Online Vault account password must NOT equal the vault
+    /// encryption password (an account-password reset can never recover the unrecoverable vault key).
+    /// </summary>
+    bool VerifyPassword(string password);
+
     /// <summary>Remove encryption, decrypting all existing entries.</summary>
     void Disable();
 

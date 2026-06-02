@@ -71,10 +71,27 @@ public class EncryptionService : IEncryptionService
 
     public bool Unlock(string password)
     {
-        if (!IsConfigured) return false;
+        var candidateKey = DeriveCandidateKeyIfMatches(password);
+        if (candidateKey == null)
+            return false;
+
+        _key = candidateKey;
+        return true;
+    }
+
+    public bool VerifyPassword(string password) => DeriveCandidateKeyIfMatches(password) != null;
+
+    /// <summary>
+    /// Derive the key from <paramref name="password"/> and the stored salt/iterations and return it
+    /// only if it matches the stored key-hash; otherwise null. No state change — both <see cref="Unlock"/>
+    /// (which then adopts the key) and <see cref="VerifyPassword"/> (which discards it) build on this.
+    /// </summary>
+    private byte[]? DeriveCandidateKeyIfMatches(string password)
+    {
+        if (!IsConfigured) return null;
 
         var meta = LoadMeta();
-        if (meta == null) return false;
+        if (meta == null) return null;
 
         var salt = Convert.FromBase64String(meta.Salt);
         // Legacy vaults (pre-T-11) stored no iteration count → they used 100k.
@@ -82,11 +99,7 @@ public class EncryptionService : IEncryptionService
         var candidateKey = DeriveKey(password, salt, iterations);
         var candidateHash = Convert.ToBase64String(SHA256.HashData(candidateKey));
 
-        if (candidateHash != meta.KeyHash)
-            return false;
-
-        _key = candidateKey;
-        return true;
+        return candidateHash == meta.KeyHash ? candidateKey : null;
     }
 
     public void Disable()

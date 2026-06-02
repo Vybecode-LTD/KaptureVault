@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Kapture.Services;
+using Kapture.Services.CloudSync.Online;
 using Kapture.ViewModels;
 using Kapture.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +49,16 @@ public partial class MainWindow : Window
     private async void About_Click(object? sender, RoutedEventArgs e)
     {
         await new AboutDialog().ShowDialog(this);
+    }
+
+    // The main-window "Login" button (Phase 5). Opens a dialog offering email/password sign-in,
+    // registration, password reset, and Continue-with-Google. The toolbar updates reactively once
+    // OnlineAccountService raises StateChanged on a successful sign-in.
+    private async void Login_Click(object? sender, RoutedEventArgs e)
+    {
+        var account = App.Services.GetRequiredService<IOnlineAccountService>();
+        var encryption = App.Services.GetRequiredService<IEncryptionService>();
+        await new LoginDialog(new LoginDialogViewModel(account, encryption)).ShowDialog(this);
     }
 
     // The Upload button. File hosting is the paid differentiator (Phase 6): a paid account opens the

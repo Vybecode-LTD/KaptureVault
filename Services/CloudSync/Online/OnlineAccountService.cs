@@ -37,6 +37,7 @@ public sealed class OnlineAccountService : IOnlineAccountService
     }
 
     public bool IsSignedIn => _tokens is not null;
+    public bool NeedsVerification { get; private set; }
     public string? Uid => _tokens?.Uid;
     public string? Email { get; private set; }
     public bool IsPaid { get; private set; }
@@ -83,11 +84,95 @@ public sealed class OnlineAccountService : IOnlineAccountService
         }
     }
 
+    public async Task<bool> RegisterAsync(string email, string password, CancellationToken ct = default)
+    {
+        LastError = null;
+        try
+        {
+            await _api.RegisterAsync(email, password, ct);
+            return true;
+        }
+        catch (OnlineApiException ex)
+        {
+            LastError = ex.Message;
+            return false;
+        }
+    }
+
+    public async Task<bool> VerifyEmailAsync(string token, CancellationToken ct = default)
+    {
+        LastError = null;
+        try
+        {
+            var session = await _api.VerifyEmailAsync(token, ct);
+            Store(session.Session, session.Refresh, session.Uid, session.ExpiresIn);
+            RaiseStateChanged();
+            return true;
+        }
+        catch (OnlineApiException ex)
+        {
+            LastError = ex.Message;
+            return false;
+        }
+    }
+
+    public async Task<bool> SignInWithPasswordAsync(string email, string password, CancellationToken ct = default)
+    {
+        LastError = null;
+        NeedsVerification = false;
+        try
+        {
+            var session = await _api.LoginAsync(email, password, ct);
+            Store(session.Session, session.Refresh, session.Uid, session.ExpiresIn);
+            RaiseStateChanged();
+            return true;
+        }
+        catch (OnlineApiException ex)
+        {
+            NeedsVerification = ex.IsForbidden; // 403 => the email isn't verified yet
+            LastError = ex.Message;
+            return false;
+        }
+    }
+
+    public async Task<bool> RequestPasswordResetAsync(string email, CancellationToken ct = default)
+    {
+        LastError = null;
+        try
+        {
+            await _api.RequestPasswordResetAsync(email, ct);
+            return true;
+        }
+        catch (OnlineApiException ex)
+        {
+            LastError = ex.Message;
+            return false;
+        }
+    }
+
+    public async Task<bool> ResetPasswordAsync(string token, string password, CancellationToken ct = default)
+    {
+        LastError = null;
+        try
+        {
+            var session = await _api.ResetPasswordAsync(token, password, ct);
+            Store(session.Session, session.Refresh, session.Uid, session.ExpiresIn);
+            RaiseStateChanged();
+            return true;
+        }
+        catch (OnlineApiException ex)
+        {
+            LastError = ex.Message;
+            return false;
+        }
+    }
+
     public void SignOut()
     {
         _store.Clear();
         _tokens = null;
         IsPaid = false;
+        NeedsVerification = false;
         Email = null;
         SubscriptionStatus = "none";
         CurrentPeriodEndUtc = null;

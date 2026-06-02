@@ -20,6 +20,22 @@ public interface IKaptureOnlineApiClient
     /// </summary>
     Task<OnlineSession> AuthWithCodeAsync(string code, string codeVerifier, string redirectUri, CancellationToken ct = default);
 
+    // ── Email/password auth (Phase 5) ──────────────────────────────────────────
+    /// <summary><c>POST /auth/register</c> — create an unverified account; the backend emails a verification link. 409 if already established.</summary>
+    Task RegisterAsync(string email, string password, CancellationToken ct = default);
+
+    /// <summary><c>POST /auth/verify</c> — consume an emailed verification token; returns a session (auto-login).</summary>
+    Task<OnlineSession> VerifyEmailAsync(string token, CancellationToken ct = default);
+
+    /// <summary><c>POST /auth/login</c> — email/password sign-in. 401 on mismatch; 403 when the email isn't verified.</summary>
+    Task<OnlineSession> LoginAsync(string email, string password, CancellationToken ct = default);
+
+    /// <summary><c>POST /auth/reset-request</c> — request a reset email (always succeeds; no account-existence disclosure).</summary>
+    Task RequestPasswordResetAsync(string email, CancellationToken ct = default);
+
+    /// <summary><c>POST /auth/reset</c> — set a new password from an emailed reset token; returns a session.</summary>
+    Task<OnlineSession> ResetPasswordAsync(string token, string password, CancellationToken ct = default);
+
     /// <summary><c>POST /auth/refresh</c> — rotate a session token using the refresh token.</summary>
     Task<RefreshedSession> RefreshSessionAsync(string refreshToken, CancellationToken ct = default);
 

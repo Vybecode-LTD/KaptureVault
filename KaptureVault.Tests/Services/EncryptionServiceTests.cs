@@ -40,6 +40,38 @@ public class EncryptionServiceTests : IDisposable
         svc.Decrypt(cipher).Should().Be("hello vault");
     }
 
+    // ── VerifyPassword (Phase 5 account/vault-password interlock) ──
+
+    [Fact]
+    public void VerifyPassword_TrueForCorrect_FalseForWrong_NoStateChange()
+    {
+        var svc = new EncryptionService(_tempDir);
+        svc.Configure("vault-secret");
+
+        // A side-effect-free check: it must not flip IsActive in either direction.
+        svc.VerifyPassword("vault-secret").Should().BeTrue();
+        svc.VerifyPassword("something-else").Should().BeFalse();
+        svc.IsActive.Should().BeTrue(); // Configure left it active; VerifyPassword didn't change that
+    }
+
+    [Fact]
+    public void VerifyPassword_DoesNotUnlockALockedVault()
+    {
+        // Configure on one instance (writes encryption.json), then a fresh, LOCKED instance.
+        new EncryptionService(_tempDir).Configure("vault-secret");
+        var locked = new EncryptionService(_tempDir);
+        locked.IsActive.Should().BeFalse();
+
+        locked.VerifyPassword("vault-secret").Should().BeTrue(); // correct...
+        locked.IsActive.Should().BeFalse(); // ...but it must NOT unlock as a side effect
+    }
+
+    [Fact]
+    public void VerifyPassword_FalseWhenNoVaultConfigured()
+    {
+        new EncryptionService(_tempDir).VerifyPassword("anything").Should().BeFalse();
+    }
+
     [Fact]
     public void Decrypt_TamperedCiphertext_ThrowsDecryptionException()
     {

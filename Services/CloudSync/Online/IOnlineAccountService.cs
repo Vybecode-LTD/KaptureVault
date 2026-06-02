@@ -33,6 +33,25 @@ public interface IOnlineAccountService
     /// <summary>Interactive Google sign-in → backend broker → stored session. True on success.</summary>
     Task<bool> SignInAsync(CancellationToken ct = default);
 
+    // ── Email/password auth (Phase 5) ──────────────────────────────────────────
+    /// <summary>Register an email/password account; the backend emails a verification link. True = request accepted (check email). Sets <see cref="LastError"/> on failure (e.g. 409 already-registered).</summary>
+    Task<bool> RegisterAsync(string email, string password, CancellationToken ct = default);
+
+    /// <summary>Consume an emailed verification token → stored session (signs in). True on success.</summary>
+    Task<bool> VerifyEmailAsync(string token, CancellationToken ct = default);
+
+    /// <summary>Email/password sign-in → stored session. True on success; on failure <see cref="LastError"/> is set and <see cref="NeedsVerification"/> reflects a 403 (unverified email).</summary>
+    Task<bool> SignInWithPasswordAsync(string email, string password, CancellationToken ct = default);
+
+    /// <summary>Set after <see cref="SignInWithPasswordAsync"/> when the failure was an unverified email (403).</summary>
+    bool NeedsVerification { get; }
+
+    /// <summary>Request a password-reset email. Always reports true unless the call itself errored (no account-existence disclosure).</summary>
+    Task<bool> RequestPasswordResetAsync(string email, CancellationToken ct = default);
+
+    /// <summary>Complete a password reset with an emailed token → stored session (signs in). True on success.</summary>
+    Task<bool> ResetPasswordAsync(string token, string password, CancellationToken ct = default);
+
     /// <summary>Clear the stored session and reset cached entitlement.</summary>
     void SignOut();
 
