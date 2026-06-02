@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — planned v1.2.0 (File Hosting)
+
+Paid **file hosting** — store files in your KaptureVault account and share them with public links.
+*(Goes live once the file-hosting backend is deployed.)*
+
+### Added
+- **Host files in your account, organized in folders.** A new **Files** window (the Upload button)
+  lets subscribers upload files (up to 250 MB each), put them in folders, download them, and delete
+  them — sharing one storage quota with your Online Vault.
+- **Keep a file private, or share it with a link.** Choose **Private 🔒** to encrypt a file with your
+  vault key so only you can open it (the server only ever holds ciphertext), or **Shareable 🔗** to
+  get a public link anyone can download. Private files can't be shared (no one else has the key), and
+  any share link can be revoked at any time.
+
+### Notes
+- **File hosting is a paid feature.** Free accounts see the upgrade options; the encrypted Online
+  Vault sync remains free.
+
+---
+
 ## [1.1.0] — 2026-06-02 (Online Vault)
 
 The first release of the **Online Vault** — optional, end-to-end-encrypted cloud sync of your

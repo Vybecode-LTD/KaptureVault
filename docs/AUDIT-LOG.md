@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.17.1
+version: 1.18.0
 app-version: 1.1.0
 last-updated: 2026-06-02
 last-audit: 2026-06-02
@@ -9,6 +9,25 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-02 (PM-4) — F-02 Phase 6 (paid file hosting + share links) BUILT + AUDITED; docs → v1.18.0
+
+**Context:** v1.1.0 shipped earlier today (Phases 3+4+P5). This session built **Phase 6** — the paid differentiator — test-first, each slice its own commit, with an independent security audit before sign-off.
+
+### What shipped (LOCAL/unpushed)
+- **Backend** (`kapturevault-backend`, vitest 65→**85**, tsc clean): **6A** (`c990834`) `/files/*` (put-url/commit/list/get-url/delete) behind a paid-entitlement gate, 250 MB/file cap, **unified quota** (`storage_used` = full `users/{uid}/` prefix sum, so vault + screenshots + files share one quota); **6B** (`171c3cd`) share links (`/files/{id}/share`, `/shares/{token}` revoke, public `GET /s/{token}` → 302 presigned GET; expiry + download-count + cascade-on-delete); **6D-1** (`c9c6257`) per-file `encrypted` flag + virtual `folder` (sharing an encrypted file → 409; `migrations/0001` ALTERs the existing empty `files` table).
+- **Client** (suite 182→**207**, Debug+Release 0/0, format clean): **6C** (`34ecbeb`) api client + `FileHostingService`; **6D-2** (`006bcc9`) encrypt-before-upload (`EncryptBytes` — server holds ciphertext only) + download-and-decrypt; **6D-3** (`7956410`) `FileHostingViewModel` (folder grouping/navigation, unit-tested) + `FilesWindow` (Upload Private 🔒 / Shareable 🔗, folders, download/copy-link/delete) + `TextPromptDialog`. Upload routes paid → FilesWindow, free → the upgrade dialog.
+
+### Product decisions (maintainer)
+Per-file **encrypt OR public link** (mutually exclusive — a public recipient has no key to decrypt), and **folders now** (virtual, path-on-file). Files stored **as-is** unless Private. UI smoke-approved ("everything looks good").
+
+### Independent security audit — "SAFE TO DEPLOY"
+All 10 checks PASS: paid gate on every file route incl. the bare `/files`; owner-scoped access + server-generated R2 keys via `assertOwnedKey`; commit-time HEAD enforcement of the per-file cap + unified quota against the real object; a genuine client-side encryption boundary (ciphertext-only on the server, key never transmitted) with encrypt-vs-share exclusion at backend (409) **and** UI; high-entropy capability tokens that 404 on revoke/expire + cascade-delete; `folder` is metadata-only (no R2-path traversal); parameterized D1. **Findings LOW/INFO only** — orphan put-url row/object GC + put-url rate-limit (→ ROADMAP), add `DELETE` to Worker CORS when the web vault gains file delete, confirm the lapsed-subscriber-public-link policy, concurrent-commit TOCTOU (self-corrects), FakeR2 doesn't paginate (test gap). No leak / cross-account / quota-bypass path.
+
+### Go-live (human) for v1.2.0
+`cd C:\dev\kapturevault-backend; npx wrangler d1 execute kapturevault --remote --file=./migrations/0001_files_encrypted_folder.sql` + `npx wrangler deploy` → push client + backend → smoke on a **subscribed** account → `Invoke-Release.ps1 -BumpType major` → extend `kapture.tools` ToS/Privacy for hosted files + share links + a DMCA/takedown path.
+
+**Auditor:** Claude (Opus 4.8) + an independent sub-agent security audit.
 
 ## 2026-06-02 (PM-2) — F-02 "P5" UX redesign (decouple + main-window + true handoff) BUILT + AUDITED; docs → v1.17.0
 
