@@ -24,6 +24,19 @@ public interface IEncryptionService
     string Decrypt(string ciphertext);
 
     /// <summary>
+    /// Encrypt raw bytes (e.g. a re-encoded screenshot) with the vault key. Returns an opaque blob
+    /// (nonce + GCM tag + ciphertext) — no <c>ENC:</c> prefix or base64. Throws if encryption is not
+    /// active (the Online Vault requires a vault password, so callers must ensure it). (Phase 3 slice C.)
+    /// </summary>
+    byte[] EncryptBytes(byte[] plaintext);
+
+    /// <summary>
+    /// Decrypt a blob produced by <see cref="EncryptBytes"/>. Throws <see cref="DecryptionException"/>
+    /// on tamper/corruption/wrong-key, and <see cref="System.InvalidOperationException"/> if not active.
+    /// </summary>
+    byte[] DecryptBytes(byte[] blob);
+
+    /// <summary>
     /// Public, non-secret key-derivation parameters (salt + iteration count + KDF name) read from the
     /// stored encryption metadata, so another device or the web vault can re-derive the AES key from
     /// the user's password. Returns null when no vault password is configured. Does NOT require unlock.

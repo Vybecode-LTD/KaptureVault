@@ -162,6 +162,54 @@ public class EncryptionService : IEncryptionService
         return Encoding.UTF8.GetString(plaintext);
     }
 
+    public byte[] EncryptBytes(byte[] plaintext)
+    {
+        ArgumentNullException.ThrowIfNull(plaintext);
+        if (_key == null)
+            throw new InvalidOperationException("Encryption is not active; cannot encrypt bytes.");
+
+        var nonce = RandomNumberGenerator.GetBytes(NonceSize);
+        var ciphertext = new byte[plaintext.Length];
+        var tag = new byte[TagSize];
+
+        using var aes = new AesGcm(_key, TagSize);
+        aes.Encrypt(nonce, plaintext, ciphertext, tag);
+
+        // Opaque blob: nonce + tag + ciphertext (no ENC: prefix / base64 — this is binary at rest).
+        var combined = new byte[NonceSize + TagSize + ciphertext.Length];
+        nonce.CopyTo(combined, 0);
+        tag.CopyTo(combined, NonceSize);
+        ciphertext.CopyTo(combined, NonceSize + TagSize);
+        return combined;
+    }
+
+    public byte[] DecryptBytes(byte[] blob)
+    {
+        ArgumentNullException.ThrowIfNull(blob);
+        if (_key == null)
+            throw new InvalidOperationException("Encryption is not active; cannot decrypt bytes.");
+        if (blob.Length < NonceSize + TagSize)
+            throw new DecryptionException("Encrypted blob is truncated or corrupted.");
+
+        var nonce = blob[..NonceSize];
+        var tag = blob[NonceSize..(NonceSize + TagSize)];
+        var encrypted = blob[(NonceSize + TagSize)..];
+        var plaintext = new byte[encrypted.Length];
+
+        try
+        {
+            using var aes = new AesGcm(_key, TagSize);
+            aes.Decrypt(nonce, encrypted, tag, plaintext);
+        }
+        catch (CryptographicException ex) // includes AuthenticationTagMismatchException
+        {
+            throw new DecryptionException(
+                "Decryption failed — the data was tampered with, corrupted, or encrypted with a different key.", ex);
+        }
+
+        return plaintext;
+    }
+
     public VaultKdfInfo? GetKdfInfo()
     {
         var meta = LoadMeta();

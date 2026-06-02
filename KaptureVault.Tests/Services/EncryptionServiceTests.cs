@@ -133,6 +133,63 @@ public class EncryptionServiceTests : IDisposable
         svc.Decrypt(legacyCipher).Should().Be("legacy entry");
     }
 
+    // ── Phase 3 slice C: binary EncryptBytes/DecryptBytes (for screenshot blobs) ──
+
+    [Fact]
+    public void EncryptBytesThenDecryptBytes_RoundTripsToOriginal()
+    {
+        var svc = NewConfiguredService();
+        var data = new byte[] { 0, 1, 2, 13, 10, 200, 255, 42 };
+
+        var blob = svc.EncryptBytes(data);
+
+        blob.Should().NotEqual(data, "the blob must be encrypted, not the raw bytes");
+        blob.Length.Should().Be(12 + 16 + data.Length, "nonce(12) + GCM tag(16) + ciphertext");
+        svc.DecryptBytes(blob).Should().Equal(data);
+    }
+
+    [Fact]
+    public void DecryptBytes_Tampered_ThrowsDecryptionException()
+    {
+        var svc = NewConfiguredService();
+        var blob = svc.EncryptBytes(new byte[] { 1, 2, 3, 4, 5 });
+        blob[^1] ^= 0xFF; // corrupt the last ciphertext byte → GCM tag mismatch
+
+        var act = () => svc.DecryptBytes(blob);
+        act.Should().Throw<DecryptionException>();
+    }
+
+    [Fact]
+    public void DecryptBytes_WrongKey_ThrowsDecryptionException()
+    {
+        var encryptor = NewConfiguredService("password-one");
+        var blob = encryptor.EncryptBytes(new byte[] { 9, 8, 7, 6 });
+
+        var otherDir = Path.Combine(Path.GetTempPath(), "kvtest-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var decryptor = new EncryptionService(otherDir);
+            decryptor.Configure("password-two");
+
+            var act = () => decryptor.DecryptBytes(blob);
+            act.Should().Throw<DecryptionException>();
+        }
+        finally
+        {
+            if (Directory.Exists(otherDir)) Directory.Delete(otherDir, true);
+        }
+    }
+
+    [Fact]
+    public void EncryptBytes_WhenNotActive_Throws()
+    {
+        // No vault password configured → no key → must refuse (never silently emit plaintext).
+        var svc = new EncryptionService(_tempDir);
+
+        var act = () => svc.EncryptBytes(new byte[] { 1, 2, 3 });
+        act.Should().Throw<InvalidOperationException>();
+    }
+
     // Builds an ENC: blob in EncryptionService's wire format (nonce[12] + tag[16] + cipher).
     private static string EncryptWithKey(byte[] key, string plaintext)
     {
