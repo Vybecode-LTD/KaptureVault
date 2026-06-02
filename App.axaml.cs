@@ -42,6 +42,14 @@ public partial class App : Application
         {
             DisableAvaloniaDataAnnotationValidation();
 
+            // Use explicit shutdown from the very start. Closing a window hides to tray, and the
+            // encryption-unlock flow below shows then CLOSES a temporary owner window for the password
+            // dialog. With the default OnLastWindowClose, closing that temp window during unlock (no
+            // main window shown yet) shuts the whole app down — observed as the app exiting immediately
+            // after the vault password is entered. Setting the mode here, before any window is shown,
+            // prevents that. (The cancel path still calls desktop.Shutdown() explicitly.)
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             // DI setup
             var services = new ServiceCollection();
             services.AddKaptureServices();
@@ -110,8 +118,7 @@ public partial class App : Application
             _mainWindow = new MainWindow { DataContext = vm };
             desktop.MainWindow = _mainWindow;
 
-            // Set explicit shutdown so closing hides to tray
-            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            // (ShutdownMode is now set at the top of this method, before the unlock flow.)
 
             // Start capture engine
             _capture = _serviceProvider.GetRequiredService<ICaptureService>();

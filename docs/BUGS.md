@@ -20,7 +20,7 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → 71 (P1 batch) → 130 (Phase 3 A–E) → **162 now** (Phase 3 F/G/H: +20 F [object-API, codec, pipeline], +10 G [restore, CaptureEntry fallback]; backend **59** vitest). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression exist. CI (`tests.yml`) green.
 > - **F-02 Phase 2 LIVE (2026-06-01); Phase 3 COMPLETE (2026-06-02, slices A–H).** Phase 2: backend free-vault + quota/size-cap + refresh≠session-token + CORS + `/me` tier; deployed + smoke-verified (Worker `17ba084b`), R2-bucket CORS, secrets rotated. **Phase 3:** A–E (KDF meta, encryption interlock, binary crypto, backend object API, multi-object quota) + **F** (`a00ee25`, client screenshot pipeline) + **G** (`5cc03e6`, restore) + **H** (docs/UX); client **130→162**, backend **59**. **Next:** a live end-to-end smoke → cut v1.0.8, then the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault**; Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
 
-**Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
+**Severity counts:** 🔴 Critical 4 · 🟠 High 14 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2 *(KV-046 added 2026-06-02)*
 
 Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 
@@ -53,6 +53,13 @@ Status legend: `OPEN` · `IN PROGRESS` · `FIXED` · `WONTFIX`
 ---
 
 ## 🟠 High
+
+### KV-046 · App exits immediately after entering the vault password (ShutdownMode set too late)
+- **Area:** Lifecycle/Startup · **Status:** ✅ FIXED (2026-06-02) · `App.axaml.cs`
+- The startup encryption-unlock flow (`OnFrameworkInitializationCompleted`) shows a temporary 0×0 owner window for the password dialog, then **closes it** — but `desktop.ShutdownMode = OnExplicitShutdown` was only set *after* the unlock block. During unlock the default `OnLastWindowClose` was active, so closing the temp window (with no main window shown yet) triggered an automatic app shutdown. Manifested as the app exiting right after the vault password was entered — a latent timing race that began firing reliably.
+- **Diagnosis (DEBUG_PROTOCOL):** a full process dump of an agent-shell launch showed the UI thread wedged purely in Avalonia's compositor (`TopLevel.HandlePaint → CompositingRenderer.Paint → MediaContext.SyncWaitCompositorBatch → Task.Wait`, zero app frames) during the same window-lifecycle transition; the maintainer's normal launch produced a **clean exit with no crash event** → a `Shutdown()` during unlock, not a crash.
+- **Fix:** set `ShutdownMode = OnExplicitShutdown` at the very top of `OnFrameworkInitializationCompleted`, before any window is shown. The unlock-cancel path still calls `desktop.Shutdown()` explicitly. **Verified by the maintainer** (app now opens past unlock). Not headless-unit-testable (needs the real classic-desktop lifetime + a modal dialog) — App-lifecycle code stays manual/E2E-verified, consistent with the rest of `App.axaml.cs`.
+- **Found:** during the F-02 Phase 3 / v1.1.0 smoke test.
 
 ### KV-005 · Self-exclusion broken — app captures its own keystrokes & clipboard
 - **Area:** Correctness · **Status:** ✅ FIXED (2026-05-30) · `Services/CaptureService.cs`, `Services/ClipboardMonitorService.cs`
