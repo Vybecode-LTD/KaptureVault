@@ -1,6 +1,6 @@
 ---
 document: BUGS
-version: 1.15.0
+version: 1.16.0
 app-version: 1.0.7
 last-updated: 2026-06-02
 last-audit: 2026-06-02

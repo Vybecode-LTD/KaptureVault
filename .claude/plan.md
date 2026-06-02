@@ -12,7 +12,7 @@
 4. **`docs/BUGS.md`** · **`docs/TESTING.md`** · **`docs/AUDIT-LOG.md`** — issue register (KV-001…045), test inventory, audit/reconciliation history.
 5. Design refs (non-managed): **`docs/F-02-online-vault-design.md`** (§ Revision 2 = the product/tier model), **`docs/F-02-PHASE-3-DESIGN.md`** (the current work + slice tracker), **`docs/F-02-PROVISIONING.md`** (Cloudflare/Google/Stripe go-live runbook).
 
-All managed docs share one `version` (currently **1.15.0**) with YAML frontmatter.
+All managed docs share one `version` (currently **1.16.0**) with YAML frontmatter.
 
 ## What KaptureVault actually is
 Vault-only fork: captures keystrokes / clipboard / screenshots → a local SQLite vault with search,
@@ -27,7 +27,7 @@ paid **Online Vault backend (F-02)** is a separate **private** repo `kapturevaul
 - **All P0 + P1 audit issues resolved.** Remaining tech debt = the **P2/P3 backlog** in ROADMAP.
 - **Current initiative — F-02 "Online Vault"** (free encrypted cloud sync; paid file hosting + share links):
   - Engine + Phases 0–2 done and **deployed LIVE** (`kapturevault-backend.kapture.workers.dev`); vault sync is **free**, quota-enforced (250 MB free / 10 GB paid); smoke-verified end-to-end.
-  - **Phase 3 (client vault-sync v2) ✅ COMPLETE (2026-06-02, slices A–H)** — screenshots now sync to the Online Vault, end-to-end encrypted + quota-aware: **F** (`a00ee25`) client pipeline, **G** (`5cc03e6`) restore, **H** docs. ⚠️ **F/G/H client commits are LOCAL, not pushed.** **Next: a live end-to-end smoke → cut v1.0.8**, or the P2 backlog (incl. T-35). Tracker: `docs/F-02-PHASE-3-DESIGN.md` § 11.
+  - **Phase 3 (screenshot sync) ✅ DONE + PUSHED; Phase 4 (web vault) 🟢 BUILT (2026-06-02).** Phase 3 (F `a00ee25`, G `5cc03e6`) + the **KV-046 ShutdownMode crash fix** (`cbfbf5e`) are on `origin/main`. **Phase 4** = the `kapture.tools/vault` web viewer now reads the Online Vault (R2) + shows screenshots — built in the **separate `Kapture.Tools-Website` repo** (`b5e2fc7`, **LOCAL/unpushed** — auto-deploys) — plus a desktop "Use the Online Vault for sync" control (`86cfc30`). **Next release is v1.1.0 (Phase 3 + 4).** To ship (human): add `https://kapture.tools` as a JS origin to the sign-in Google client → push the website → smoke the web vault → `Invoke-Release.ps1 -BumpType major`. Trackers: `docs/HANDOFF.md`, `docs/F-02-PHASE-3-DESIGN.md` § 11.
 
 ## Working agreements (full versions in `CLAUDE.md` → STANDING DIRECTIVES)
 Test-first (RED→GREEN; each fix its own commit; run the evidence ledger before declaring "done"); update

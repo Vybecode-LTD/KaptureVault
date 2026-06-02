@@ -1,6 +1,6 @@
 ---
 document: HANDOFF
-version: 1.15.0
+version: 1.16.0
 app-version: 1.0.7
 last-updated: 2026-06-02
 last-audit: 2026-06-02
@@ -17,19 +17,19 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/BUGS.md, docs/TESTING.md, docs/AUDIT
 ```powershell
 cd C:\DEV\Utilities\KaptureVault
 git status --porcelain                                   # expect CLEAN
-git log -1 --oneline                                     # latest = v1.15.0 Phase-3 docs reconcile (LOCAL — F/G/H unpushed)
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 162 passing
+git log -1 --oneline                                     # client main = Phase 3 + KV-046 fix + Phase 4 desktop + v1.16.0 docs (all pushed)
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj # expect 168 passing
 ```
 Backend (separate repo): `cd C:\dev\kapturevault-backend && npm test` → **59 vitest**; HEAD `6e4570c` (pushed; Worker live at version `17ba084b`).
 
-> **✅ F-02 Phase 3 COMPLETE — all slices A–H landed (2026-06-02).** Phase 2 is LIVE + smoke-verified (Worker `17ba084b`, R2 CORS, secrets rotated). **Phase 3:** A (web-unlock meta) · B (encryption interlock) · C (binary crypto) · **backend** D (object API) · E (multi-object quota) · **F (`a00ee25`) client screenshot sync pipeline** · **G (`5cc03e6`) restore** · **H docs reconcile (this)** — all done. Client suite **162**, backend **59**. Each of F/G/H was implemented → full-spectrum tested → independently audited; the G audit caught a real blocker (restore wrote images that the UI didn't display — fixed). **⚠️ Client commits F/G/H are NOT pushed yet** (this docs commit included). **Next: a live end-to-end smoke, then cut v1.0.8** (or pick up the P2 backlog).
+> **✅ F-02 Phase 3 DONE + PUSHED; Phase 4 (web vault) BUILT (2026-06-02). Next release re-scoped to v1.1.0 (Phase 3 + 4 bundled).** Phase 3 (screenshot sync) shipped to `origin/main` along with the **KV-046 ShutdownMode crash fix** (`cbfbf5e`, maintainer-verified). **Phase 4** adds the **web vault** that reads the Online Vault (R2) and shows screenshots — built in the **separate `Kapture.Tools-Website` repo** (`C:\DEV\Kapture.Tools-Website`, commit `b5e2fc7`, **LOCAL — NOT pushed**: that repo auto-deploys, so it waits on the Google JS-origin provisioning + review), plus a desktop **"Use the Online Vault for sync"** control + live provider switch (`86cfc30`, KaptureVault repo). Client suite **168**, backend **59**. **➡️ To go live (human):** (1) add `https://kapture.tools` as an authorized JS origin to the sign-in Google client `…p6c6gmi0…`; (2) `git push` the website repo (auto-deploys); (3) smoke the web vault (desktop: sign in → "Use the Online Vault for sync" → capture a screenshot → Sync Now; browser: kapture.tools/vault → Open Online Vault → unlock → see the screenshot); (4) cut **v1.1.0** via `Invoke-Release.ps1 -BumpType major`.
 > **⚠️ Capture Admin Apps self-elevates the app** — when it's running you can't `Stop-Process` it (it locks the build output); tray-Quit it before rebuilding, or toggle it off (Settings → Advanced) to iterate freely.
 
 ## TL;DR
 
 KaptureVault = vault-only fork (keystroke/clipboard/screenshot → SQLite, AES-256-GCM, Drive sync, Quick Paste, annotation editor). C# 13 / .NET 9 / Avalonia 11.3.12. Repo `C:\DEV\Utilities\KaptureVault` (off OneDrive), public. Latest release **v1.0.7**.
 
-**The current initiative is F-02 "Online Vault"** (paid file hosting + free cloud sync). The engine is live-provisioned and Phases 0–1 (polish + desktop UX) shipped; **Phase 2 is now built** (2026-06-01): free vault sync (the `/vault/*` paywall dropped), per-user quota + server-side vault size cap, refresh≠session token, Worker CORS, `/me` tier model, and the desktop panel shows quota/used. Client suite **130**, backend **59**, Release **0/0**, format clean, **both repos pushed + CI green**, Worker **deployed LIVE + smoke-verified** (version `17ba084b`; R2 CORS applied; secrets rotated). **Phase 3 is COMPLETE (2026-06-02, slices A–H)** — screenshots now sync to the Online Vault, end-to-end encrypted + quota-aware (upload pipeline `a00ee25`, restore `5cc03e6`), with display repointed to resolve restored images by filename. Client suite **162**, backend **59**. **Client F/G/H commits are unpushed; v1.0.8 deferred pending a live smoke.**
+**The current initiative is F-02 "Online Vault"** (paid file hosting + free cloud sync). The engine is live-provisioned and Phases 0–1 (polish + desktop UX) shipped; **Phase 2 is now built** (2026-06-01): free vault sync (the `/vault/*` paywall dropped), per-user quota + server-side vault size cap, refresh≠session token, Worker CORS, `/me` tier model, and the desktop panel shows quota/used. Client suite **130**, backend **59**, Release **0/0**, format clean, **both repos pushed + CI green**, Worker **deployed LIVE + smoke-verified** (version `17ba084b`; R2 CORS applied; secrets rotated). **Phase 3 is COMPLETE + PUSHED and Phase 4 (web vault) is BUILT (2026-06-02)** — screenshots sync to the Online Vault (pipeline `a00ee25`, restore `5cc03e6`) and a new **web vault** at `kapture.tools/vault` reads the Online Vault + shows screenshots (`b5e2fc7` in `Kapture.Tools-Website`, **unpushed**), plus a desktop "Use the Online Vault for sync" control (`86cfc30`) and the **KV-046 ShutdownMode crash fix** (`cbfbf5e`). Client suite **168**, backend **59**. **The next release is re-scoped from v1.0.8 to v1.1.0** (Phase 3 + 4); it goes live after the 4 human steps in the callout (Google JS-origin → push website → smoke → release).
 
 ## Agreed product model (Revision 2)
 
@@ -47,12 +47,12 @@ Paid differentiator = **file hosting + share links**; vault sync is **free** for
 0. ✅ **Phase 2 LIVE + smoke-verified (2026-06-01):** Worker deployed (version `17ba084b`), R2-bucket CORS applied (`kapturevault-backend/r2-cors.json`), secrets rotated, and the **Part F smoke passed end-to-end** (sign-in → sync → quota → checkout). *(The token-audience change means any pre-existing session needs one fresh sign-in.)*
 1. ✅ **F-02 Phase 2 — DONE + LIVE (2026-06-01):** free vault sync, quota + server-side size cap, refresh≠session token, CORS, `/me` tier, desktop storage display. **`/account` deferred to Phase 4/5.** Backend vitest 26→51, client 124.
 2. ✅ **Phase 3 — client vault-sync v2 (COMPLETE 2026-06-02, slices A–H):** screenshots sync to the Online Vault, end-to-end encrypted + quota-aware. A–E (prior); **F** (`a00ee25`) client screenshot pipeline (object-API client + `SkiaScreenshotImageCodec` + `ScreenshotSyncService.SyncUpAsync`: enumerate→re-encode→`EncryptBytes`→upload-only-new oldest-first; orphan cleanup; meta-recommit/413-trim backstop); **G** (`5cc03e6`) restore (`RestoreAsync` + `CaptureEntry.ScreenshotPath` resolve-by-filename, all four screenshot read sites repointed); **H** docs (this) + panel status via `LastSyncStatus`. Two deliberate deviations (see `docs/F-02-PHASE-3-DESIGN.md` § 11): remote-list-as-truth (no `online_sync_state.json`), and resolve-by-filename at display (no DB `Content` mutation → no multi-device churn). Client 162 / backend 59. **➡️ NEXT: a live end-to-end smoke (sign-in → capture a screenshot → sync → restore on a 2nd device), then cut v1.0.8.**
-3. **Phase 4** — web vault (needs the **T-34** repo-consolidation decision) + the deferred **`/account`** page; **Phase 5** — email/password auth; **Phase 6** — file hosting (paid).
-4. **Or** pause F-02 and clear the **P2 backlog** (T-18..T-26, **T-35** = route Drive through the broker to close residual KV-007).
+3. 🟢 **Phase 4 — web vault (BUILT 2026-06-02; pending provisioning + deploy).** `Kapture.Tools-Website/vault/index.html` (`b5e2fc7`, LOCAL) gained an "Open Online Vault" path: Google Identity Services → `/auth/session` → session JWT → `GET /vault/get-url` + `/vault/meta` → derive the key from the meta's salt+iterations (fixes the hardcoded PBKDF2 100k) → decrypt (reuses the Drive viewer's WebCrypto) → and **screenshots**: `GET /vault/objects` + `/vault/object/get-url` → binary AES-GCM decrypt → show the image. Password verified via AES-GCM's own auth tag (no KeyHash oracle on the server). Desktop gained the **"Use the Online Vault for sync"** control + a live `ISyncProviderController` switch (`86cfc30`). **To finish:** the 4 human steps in the callout above (Google JS-origin → push website → smoke → cut **v1.1.0**). **`/account`** page still deferred (Phase 5).
+4. **After v1.1.0:** **Phase 5** — email/password auth + `/account`; **Phase 6** — file hosting (paid). Or clear the **P2 backlog** (T-18..T-26, **T-35** = route Drive through the broker to close residual KV-007). **T-34** (website-repo consolidation) did **not** block Phase 4 — the web vault was built directly in `Kapture.Tools-Website`; consolidation remains an optional cleanup.
 
 ## Recent commit stack (verify with `git log --oneline`)
 
-**Client — ⚠️ the v1.15.0 docs commit + `5cc03e6` + `a00ee25` are LOCAL, NOT pushed:** v1.15.0 Phase-3 handoff reconcile (this) · `5cc03e6` **G** restore · `a00ee25` **F** screenshot pipeline · `8d19fad` v1.14.0 reconcile · `912821a` **C** binary crypto · `c716d20` **B** encryption interlock · `c34a327` v1.13.0 audit · `7275594` de-flake · `3b5c131` **A** KDF meta. **Backend (`kapturevault-backend`, pushed):** `6e4570c` **E** multi-object quota · `0193551` **D** object API; `0103f5b` R2-CORS + `e61a3ad`..`f657b87` Phase 2; atop `8480022` (Phase 1 + engine). Backend was untouched by slices F–H.
+**Client `KaptureVault` (pushed, `origin/main` = `86cfc30`):** `86cfc30` Phase-4 desktop "use Online Vault for sync" + live switch · v1.16.0 docs reconcile (this) · `cbfbf5e` **KV-046** ShutdownMode crash fix · `6b4099b` v1.15.0 Phase-3 reconcile · `5cc03e6` **G** restore · `a00ee25` **F** screenshot pipeline · `8d19fad` v1.14.0. **Website `Kapture.Tools-Website` (⚠️ LOCAL, NOT pushed — auto-deploys):** `b5e2fc7` Phase-4 web vault (Online Vault read + screenshots). **Backend `kapturevault-backend` (pushed, untouched this session):** `6e4570c` **E** · `0193551` **D** + Phase 2 stack atop `8480022`.
 
 ## Live status / human prereqs
 
@@ -71,7 +71,7 @@ Paid differentiator = **file hosting + share links**; vault sync is **free** for
 ```powershell
 dotnet build -c Debug                                      # kill/tray-quit any running instance first
 .\bin\Debug\net9.0-windows\win-x64\KaptureVault.exe
-dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 162 passing
+dotnet test KaptureVault.Tests/KaptureVault.Tests.csproj   # 168 passing
 # Backend (C:\dev\kapturevault-backend)
 npm test                                                   # 59 vitest passing
 ```

@@ -7,20 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [Unreleased] — planned v1.1.0 (Online Vault)
 
-### Added (groundwork — inactive until configured)
-- **Paid "Online Vault" tier (Phase 2 — not yet live).** Optional cloud sync of your
-  encrypted vault to a KaptureVault account, with Google sign-in and subscription
-  management in Settings. Your data stays end-to-end encrypted — the server only ever
-  stores ciphertext. The feature stays hidden ("not available in this build yet") until
-  the backend is configured; the free, offline experience is unchanged.
-- **Your screenshots now sync with the Online Vault.** When the Online Vault is your sync
-  target, screenshots are re-encoded to PNG and end-to-end encrypted, then uploaded
-  alongside your vault and restored automatically on another device — counted against your
-  storage quota (oldest kept first when you run low). The server only ever holds ciphertext,
-  and a vault password is required, since that password is the only key. The free, offline
-  experience and Google Drive sync are unchanged.
+The first release of the **Online Vault** — optional, end-to-end-encrypted cloud sync of your
+vault and screenshots, plus a web viewer to read them in a browser. Free, offline use and Google
+Drive sync are unchanged. *(Goes live once the cloud accounts/origins are configured.)*
+
+### Added
+- **Sync your vault and screenshots to your KaptureVault account.** Sign in with Google in
+  Settings → Online Vault and choose "Use the Online Vault for sync." Your encrypted vault and
+  your screenshots (re-encoded to PNG, end-to-end encrypted) upload to your account and restore
+  automatically on another device — counted against your storage quota (oldest kept first when
+  you run low). The server only ever stores ciphertext, and a vault password is required since
+  that password is the only key.
+- **View your vault — including screenshots — in any browser.** The web vault at
+  `kapture.tools/vault` can now open your Online Vault: sign in, enter your vault password, and
+  browse, search, and view your captured entries and screenshot images. Everything is decrypted
+  locally in your browser; the server only ever holds ciphertext.
+- **A clear "Use the Online Vault for sync" control** in Settings → Online Vault, with a
+  "✓ this is your sync target" indicator, so switching your sync destination takes effect
+  immediately.
+
+### Fixed
+- **The app no longer closes immediately after you enter your vault password.** A startup
+  window-lifecycle bug could shut the app down right after unlocking an encrypted vault; it now
+  opens reliably.
 
 ---
 

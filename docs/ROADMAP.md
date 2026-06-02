@@ -1,6 +1,6 @@
 ---
 document: ROADMAP
-version: 1.15.0
+version: 1.16.0
 app-version: 1.0.7
 last-updated: 2026-06-02
 last-audit: 2026-06-02
@@ -62,7 +62,7 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/TESTING.md, docs/HANDOFF.md, docs/AUDIT
 | 1 | Desktop UX — Online Vault panel (sign-in → Open Vault → Upgrade); relocate Export-DB + Run-on-startup → **Settings → General**; Settings overflow fix; kapture.tools (no www) | **✅ DONE** (`d4e1ff8`,`7c7a7f8`,`8b8e964`,`55f2279`,`97f4ca8`) |
 | 2 | **Backend free-vault + foundations** — dropped the `/vault/*` gate (free sync); per-user **quota + server-pinned object-size cap** (HEAD-on-commit at `PUT /vault/meta`, reject + delete over-quota, `storage_used` maintained; 250 MB free / 10 GB paid, tunable); **refresh ≠ session token** (distinct audiences); Worker **CORS**; `/me` → `{tier,features,quota,used}`. **Client:** Settings panel shows quota/used. Backend vitest 26→51, client 123. Commits `f657b87`..`e61a3ad` (backend) + `09f2fee` (client). | ✅ **DONE + DEPLOYED LIVE** 2026-06-01 — Worker version `17ba084b`; R2-bucket CORS applied (`r2-cors.json`); secrets rotated. **`/account` → Phase 4/5** |
 | 3 | Client vault-sync v2 — multi-object sync (`vault.db` + re-encoded screenshot images), quota-aware; carry salt/KDF in `vault.db.meta` for web unlock | ✅ **COMPLETE 2026-06-02 (A–H)** — A KDF meta · B encryption interlock · C binary crypto · **backend** D object API · E multi-object quota · **F** (`a00ee25`) client screenshot pipeline · **G** (`5cc03e6`) restore · **H** docs/UX. Client **162** / backend **59**. **Unpushed; v1.0.8 pending a live smoke.** See the slice tracker ↓ |
-| 4 | Web vault (`kapture.tools/vault`) — Google + email/password login → read + decrypt → subscribe; fix the viewer's hardcoded PBKDF2 100k (read from meta). **Needs the repo-consolidation decision (T-34).** | ⬜ |
+| 4 | Web vault (`kapture.tools/vault`) — read the Online Vault (R2) + decrypt + **show screenshots**. Google sign-in → `/auth/session`; `vault/get-url` + `vault/meta` (KDF from meta — fixes the hardcoded 100k); WebCrypto decrypt; `vault/objects` + `object/get-url` → binary decrypt → image. Built in `Kapture.Tools-Website/vault/index.html` (`b5e2fc7`). Email/password login → Phase 5. T-34 did **not** block this (built in the website repo directly). | 🟢 **BUILT 2026-06-02** — unpushed; needs the Google JS-origin for `kapture.tools` + a live smoke, then ships v1.1.0. Desktop "Use Online Vault for sync" control (`86cfc30`) + KV-046 ShutdownMode fix (`cbfbf5e`) landed alongside. |
 | 5 | Email/password auth — `/auth/register|verify|login|reset` + transactional email + rate-limiting + the **account-password vs vault-password interlock**; closes the residual KV-007 for the sign-in client | ⬜ |
 | 6 | File hosting (paid) — `/files/*` + shares + 250 MB-per-file cap + desktop **Upload files** UI + public/private + share links | ⬜ |
 

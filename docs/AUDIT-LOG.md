@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.15.0
+version: 1.16.0
 app-version: 1.0.7
 last-updated: 2026-06-02
 last-audit: 2026-06-02
@@ -9,6 +9,26 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-02 (PM) — v1.0.8 smoke → KV-046 fix + F-02 Phase 4 (web vault) BUILT → re-scoped to v1.1.0; docs → v1.16.0
+
+**Trigger:** Maintainer ran the Phase-3 smoke ("run the app so I can smoke test it"); it surfaced real defects, which led into building Phase 4. The release is re-scoped from v1.0.8 to **v1.1.0** (Phase 3 + 4).
+
+### Live smoke debugging (DEBUG_PROTOCOL — proof, not assertion)
+- **Capture "not working" → environment, not code.** A clipboard-image probe with the app running produced a new `.bmp` → capture is fine. The user's screenshots weren't captured due to (a) `captureAdminApps=true` self-elevating the app (every agent-shell launch bounced on UAC → not really running) and (b) the self-exclusion (skips capture while KaptureVault is the foreground window). Resolved by toggling the setting off for testing + explaining the clipboard/foreground mechanics.
+- **App froze / exited right after the vault password → KV-046 (real bug, fixed).** A `dotnet-dump` full dump showed the UI thread wedged purely in Avalonia's compositor (`HandlePaint → SyncWaitCompositorBatch → Task.Wait`, zero app frames); a normal launch produced a **clean exit with no crash event**. Root cause: `App.OnFrameworkInitializationCompleted` showed+closed a temporary owner window for the unlock dialog while `ShutdownMode` was still the default `OnLastWindowClose` (it was set to `OnExplicitShutdown` only *after* the unlock block). Fix: set the mode first. Maintainer-verified the app now opens. Commit `cbfbf5e`; BUGS KV-046 + a CLAUDE Lesson.
+- **"Salt not found in Drive" in the web vault → expected.** `kapture.tools/vault` was the **old Google-Drive** viewer; it doesn't read R2. Confirmed the desktop's active sync provider was still "Google Drive" (so the Phase-3 R2 sync never ran for the user). Both gaps → Phase 4.
+
+### F-02 Phase 4 — web vault (BUILT; pending provisioning + deploy)
+- **Web vault** (`Kapture.Tools-Website/vault/index.html`, `b5e2fc7`, **unpushed** — auto-deploys): an "Open Online Vault" path beside the Drive viewer — Google Identity Services → `POST /auth/session` → session JWT; `POST /vault/get-url` (presigned R2) → sql.js; `GET /vault/meta` → derive the AES key from the meta's **salt + iterations** (fixes the hardcoded PBKDF2 **100k → 600k**, on the Drive path too); WebCrypto AES-GCM decrypt (reused); **screenshots**: `GET /vault/objects` + `POST /vault/object/get-url` → binary AES-GCM `DecryptBytes` → `<img>`. Password verified via AES-GCM's own auth tag (**no KeyHash oracle on the server** — a deliberate improvement over the proposed meta-KeyHash). Syntax verified via `node --check` (exit 0); functional smoke is the maintainer's (needs the Google JS-origin + a synced vault).
+- **Desktop** (`86cfc30`, suite **162 → 168**, full ledger green): the smoke's other gap — once signed in there was no way to make the Online Vault the sync target, and sign-in only wrote settings (the live `CloudSyncManager` kept syncing to Drive). New `ISyncProviderController` seam (CloudSyncManager) + `OnlineAccountViewModel.UseForSyncCommand` / `IsSyncTarget` / `CanUseForSync` + a Settings button; sign-in/out now switch the live provider. Tests +6.
+
+### Verification + state
+Client: `dotnet test` **168**, Debug+Release 0/0, `dotnet format --verify` clean, 0 vulnerable, publish ok. **`KaptureVault` pushed** (`origin/main` = `86cfc30`, incl. Phase 3 + KV-046). **`Kapture.Tools-Website` `b5e2fc7` is LOCAL/unpushed** (auto-deploys → waits on the Google JS-origin + review). Backend untouched. Managed docs → **v1.16.0**; CHANGELOG `[Unreleased]` re-scoped to v1.1.0.
+
+**Auditor:** Claude (Opus 4.8). **Next (human):** add `https://kapture.tools` as a JS origin to the sign-in Google client → push the website repo → smoke the web vault end-to-end → cut **v1.1.0** (`Invoke-Release.ps1 -BumpType major`). Then Phase 5 (email/password + `/account`) / Phase 6 (file hosting) / the P2 backlog.
+
+---
 
 ## 2026-06-02 — F-02 Phase 3 slices F + G + H (screenshot sync COMPLETE) → v1.15.0
 
