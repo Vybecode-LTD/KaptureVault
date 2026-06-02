@@ -79,6 +79,8 @@ public static class ServiceRegistration
         // a wrong/ambiguous constructor (the view model also has a design-time ctor).
         services.AddSingleton<HotkeyService>();
         services.AddSingleton<OnlineAccountViewModel>();
+        // Phase 6D: the Files manager VM — transient so each window open starts fresh.
+        services.AddTransient<FileHostingViewModel>();
         services.AddSingleton<MainWindowViewModel>(sp => new MainWindowViewModel(
             sp.GetRequiredService<IDatabaseService>(),
             sp.GetRequiredService<ICaptureService>(),

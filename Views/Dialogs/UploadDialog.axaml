@@ -38,11 +38,7 @@
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="12,8"/>
         </StackPanel>
 
-        <!-- Paid account: file hosting ships in Phase 6 -->
-        <StackPanel Spacing="12" IsVisible="{Binding IsPaid}">
-            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource AppTextSecondary}"
-                       Text="You're on KaptureVault Pro — thank you! File hosting is coming soon and will light up here in an upcoming update. Your encrypted vault and screenshots are already syncing."/>
-        </StackPanel>
+        <!-- A paid account never reaches this dialog — the Upload button opens the Files manager window. -->
 
         <TextBlock Text="{Binding StatusMessage}" FontSize="11" FontStyle="Italic" TextWrapping="Wrap"
                    Foreground="{DynamicResource AppTextSecondary}"
