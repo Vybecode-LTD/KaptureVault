@@ -78,18 +78,32 @@ public class ShutdownCoordinatorTests
     }
 
     [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(false, false)]
-    public async Task Teardown_SkipsSync_WhenSettingsDisableIt(bool cloudSync, bool syncOnClose)
+    [InlineData(true)]  // legacy CloudSyncEnabled true...
+    [InlineData(false)] // ...or false — neither matters now; SyncOnClose=false always skips.
+    public async Task Teardown_SkipsSync_WhenSyncOnCloseIsOff(bool legacyCloudSync)
     {
         var syncCount = 0;
-        var (coord, _, _, _) = Build(cloudSync, syncOnClose,
+        var (coord, _, _, _) = Build(cloudSync: legacyCloudSync, syncOnClose: false,
             sync: _ => { syncCount++; return Task.CompletedTask; });
 
         await coord.TeardownAsync(runSyncOnClose: true, TimeSpan.FromSeconds(1));
 
         syncCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Teardown_RunsSyncOnClose_EvenWhenLegacyCloudSyncFlagOff()
+    {
+        // P5 decouple: per-feature gating moved into the sync-on-close delegate (App composes it —
+        // Online Vault if signed in, Drive backup if enabled). ShutdownCoordinator now gates only on
+        // SyncOnClose, so the legacy CloudSyncEnabled flag no longer suppresses the delegate.
+        var syncCount = 0;
+        var (coord, _, _, _) = Build(cloudSync: false, syncOnClose: true,
+            sync: _ => { syncCount++; return Task.CompletedTask; });
+
+        await coord.TeardownAsync(runSyncOnClose: true, TimeSpan.FromSeconds(1));
+
+        syncCount.Should().Be(1);
     }
 
     [Fact]

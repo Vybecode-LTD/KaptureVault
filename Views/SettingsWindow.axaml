@@ -163,33 +163,33 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Cloud Sync -->
+                <!-- Google Drive Backup (independent of the Online Vault — P5 decouple) -->
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Cloud Sync" FontSize="15" Classes="section-header"/>
+                    <TextBlock Text="Google Drive Backup" FontSize="15" Classes="section-header"/>
                     <Border Classes="card">
                         <StackPanel Spacing="12">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel>
-                                    <TextBlock Text="Enable Cloud Sync"/>
-                                    <TextBlock Text="Sync database to cloud storage" FontSize="11" Foreground="{DynamicResource AppTextSecondary}"/>
+                                    <TextBlock Text="Back up to Google Drive"/>
+                                    <TextBlock Text="Keep a copy of your whole vault (vault.db) in your own Google Drive. This is separate from the Online Vault below."
+                                               FontSize="11" Foreground="{DynamicResource AppTextSecondary}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding CloudSyncEnabled}" OnContent="" OffContent=""/>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding DriveBackupEnabled}" OnContent="" OffContent=""/>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding CloudSyncEnabled}"/>
-                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CloudSyncEnabled}">
-                                <TextBlock Text="Sync Interval (minutes)" VerticalAlignment="Center"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding DriveBackupEnabled}"/>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding DriveBackupEnabled}">
+                                <TextBlock Text="Backup Interval (minutes)" VerticalAlignment="Center"/>
                                 <NumericUpDown Grid.Column="1" Width="120" Minimum="5" Maximum="120" Increment="5"
                                                Value="{Binding CloudSyncIntervalMinutes}" FormatString="N0"/>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding CloudSyncEnabled}"/>
-                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CloudSyncEnabled}">
-                                <TextBlock Text="Sync on App Close" VerticalAlignment="Center"/>
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding DriveBackupEnabled}"/>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding DriveBackupEnabled}">
+                                <TextBlock Text="Back up on App Close" VerticalAlignment="Center"/>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding SyncOnClose}" OnContent="" OffContent=""/>
                             </Grid>
-                            <!-- Provider connections -->
-                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding CloudSyncEnabled}"/>
-                            <StackPanel Spacing="8" IsVisible="{Binding CloudSyncEnabled}">
-                                <TextBlock Text="Cloud Providers" FontSize="12" FontWeight="SemiBold"/>
+                            <!-- Drive connection -->
+                            <Border Height="1" Background="{DynamicResource AppBorderBrush}" IsVisible="{Binding DriveBackupEnabled}"/>
+                            <StackPanel Spacing="8" IsVisible="{Binding DriveBackupEnabled}">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel>
                                         <TextBlock Text="Google Drive" FontSize="12"/>
@@ -205,7 +205,7 @@
                                 </Grid>
                                 <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
                                 <StackPanel Spacing="6">
-                                    <Button x:Name="SyncNowBtn" Content="Sync Now" Click="SyncNow_Click"
+                                    <Button x:Name="BackUpNowBtn" Content="Back up now" Click="BackUpNow_Click"
                                             Classes="accent" Padding="12,5" FontSize="11" HorizontalAlignment="Left"/>
                                     <TextBlock x:Name="SyncStatusText" Text="" FontSize="11" TextWrapping="Wrap"
                                                Foreground="{DynamicResource AppTextSecondary}"/>
@@ -250,14 +250,11 @@
                                 </Grid>
                                 <!-- Phase 3: the Online Vault is end-to-end encrypted → requires a vault password -->
                                 <TextBlock IsVisible="{Binding VaultPasswordRequired}"
-                                           Text="⚠ Set a vault password in Settings → Encryption to enable the Online Vault. That password is the only key — if you lose it, your online vault cannot be recovered."
+                                           Text="⚠ Set a vault password in Settings → Encryption to start syncing the Online Vault. That password is the only key — if you lose it, your online vault cannot be recovered."
                                            FontSize="11" Foreground="#E08030" TextWrapping="Wrap"/>
-                                <!-- Phase 4: make the Online Vault the active sync target (fixes the can't-switch-once-signed-in gap) -->
-                                <Button Content="Use the Online Vault for sync" Command="{Binding UseForSyncCommand}"
-                                        IsVisible="{Binding CanUseForSync}" Classes="accent"
-                                        HorizontalAlignment="Left" Padding="12,5" FontSize="11"/>
-                                <TextBlock IsVisible="{Binding IsSyncTarget}"
-                                           Text="✓ The Online Vault is your sync target. Your encrypted vault and screenshots sync here."
+                                <!-- P5 decouple: once signed in with a vault password, the Online Vault syncs automatically -->
+                                <TextBlock IsVisible="{Binding IsSyncingAutomatically}"
+                                           Text="✓ Your encrypted vault and screenshots sync to the Online Vault automatically."
                                            FontSize="11" Foreground="#22BB44" TextWrapping="Wrap"/>
                                 <!-- Open the web vault (shown once signed in; free + paid) -->
                                 <Button Content="Open Vault in browser" Command="{Binding OpenVaultCommand}"

@@ -141,21 +141,31 @@ public partial class App : Application
                 _hotkeyService.Start();
             }
 
-            // Start cloud sync if configured
-            if (settingsService.Settings.CloudSyncEnabled)
-            {
-                var syncManager = _serviceProvider.GetRequiredService<CloudSyncManager>();
-                if (!string.IsNullOrEmpty(settingsService.Settings.CloudSyncProvider))
-                    syncManager.SetActiveProvider(settingsService.Settings.CloudSyncProvider);
-                syncManager.StartPeriodicSync(settingsService.Settings.CloudSyncIntervalMinutes);
-            }
+            // Start the two INDEPENDENT cloud features (P5 decouple):
+            //  • Google Drive backup runs on its own timer, only if the user enabled it.
+            //  • The Online Vault syncs on its own timer whenever the user is signed in — the timer
+            //    self-gates on auth + an active vault password, so it's seamless once connected and
+            //    needs no setting or provider selection. (Picks up a mid-session sign-in on the next tick.)
+            var syncManager = _serviceProvider.GetRequiredService<CloudSyncManager>();
+            var syncInterval = settingsService.Settings.CloudSyncIntervalMinutes;
+            if (settingsService.Settings.DriveBackupEnabled)
+                syncManager.StartDriveBackup(syncInterval);
+            syncManager.StartOnlineVaultSync(syncInterval);
 
             // T-08: route every exit through one idempotent teardown. The tray Quit, the
             // encryption-cancel path, SettingsWindow's restart paths, and an OS shutdown all end
             // up calling desktop.Shutdown(), which fires ShutdownRequested -> OnShutdownRequested.
+            // Sync-on-close runs BOTH independent features: the Online Vault always (it self-gates on
+            // sign-in), and the Google Drive backup only if the user enabled it (P5 decouple).
             _shutdown = new ShutdownCoordinator(
                 _capture, _clipboardMonitor, _screenshotService, settingsService,
-                ct => _serviceProvider!.GetRequiredService<CloudSyncManager>().SyncAsync(ct));
+                async ct =>
+                {
+                    var sm = _serviceProvider!.GetRequiredService<CloudSyncManager>();
+                    await sm.SyncOnlineVaultNowAsync(ct);
+                    if (settingsService.Settings.DriveBackupEnabled)
+                        await sm.SyncDriveNowAsync(ct);
+                });
             desktop.ShutdownRequested += OnShutdownRequested;
 
             // Set up tray icon

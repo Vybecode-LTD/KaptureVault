@@ -25,18 +25,30 @@ public class AppSettings
     [JsonPropertyName("quickPasteEnabled")]
     public bool QuickPasteEnabled { get; set; } = true;
 
-    // Cloud Sync
-    [JsonPropertyName("cloudSyncProvider")]
-    public string? CloudSyncProvider { get; set; }
+    // Cloud Sync.
+    // P5 decouple: Google Drive backup and the Online Vault are INDEPENDENT.
+    //  • DriveBackupEnabled governs the optional whole-DB Google Drive backup.
+    //  • The Online Vault has no flag here — it syncs whenever the user is signed in (gated on the
+    //    account + an active vault password), so it's seamless once connected.
+    //  • CloudSyncIntervalMinutes + SyncOnClose are shared by both.
+    [JsonPropertyName("driveBackupEnabled")]
+    public bool DriveBackupEnabled { get; set; } = false;
 
     [JsonPropertyName("cloudSyncIntervalMinutes")]
     public int CloudSyncIntervalMinutes { get; set; } = 15;
 
-    [JsonPropertyName("cloudSyncEnabled")]
-    public bool CloudSyncEnabled { get; set; } = false;
-
     [JsonPropertyName("syncOnClose")]
     public bool SyncOnClose { get; set; } = true;
+
+    // ── Legacy (pre-P5) — read only, for one-time migration in SettingsService.Load. ──
+    // Old single "active provider" model: CloudSyncEnabled was the master switch and CloudSyncProvider
+    // named the one selected provider ("Google Drive" | "Online Vault"). Superseded by DriveBackupEnabled
+    // (Drive) + sign-in (Online Vault). Kept so existing settings.json deserializes and migrates.
+    [JsonPropertyName("cloudSyncProvider")]
+    public string? CloudSyncProvider { get; set; }
+
+    [JsonPropertyName("cloudSyncEnabled")]
+    public bool CloudSyncEnabled { get; set; } = false;
 
     // General
     [JsonPropertyName("maxBufferChars")]

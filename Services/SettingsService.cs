@@ -35,12 +35,29 @@ public class SettingsService : ISettingsService
             {
                 var json = File.ReadAllText(SettingsPath);
                 Settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+                MigrateLegacyCloudSync();
             }
         }
         catch (Exception ex)
         {
             _log?.LogWarning(ex, "Failed to load settings from {Path} — using defaults", SettingsPath);
             Settings = new AppSettings();
+        }
+    }
+
+    /// <summary>
+    /// P5 decouple: carry forward the old single-provider settings. Only a user who had the legacy
+    /// "Google Drive" provider selected (and sync enabled) gets DriveBackupEnabled turned on — a user
+    /// who had "Online Vault" selected does NOT (the Online Vault is now sign-in gated, not a Drive
+    /// backup). Idempotent (only flips false→true) and harmless once DriveBackupEnabled is persisted.
+    /// </summary>
+    private void MigrateLegacyCloudSync()
+    {
+        if (!Settings.DriveBackupEnabled
+            && Settings.CloudSyncEnabled
+            && string.Equals(Settings.CloudSyncProvider, "Google Drive", StringComparison.Ordinal))
+        {
+            Settings.DriveBackupEnabled = true;
         }
     }
 

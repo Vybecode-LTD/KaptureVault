@@ -150,10 +150,11 @@ public partial class SettingsWindow : Window
 
             if (success)
             {
-                _syncManager.SetActiveProvider("Google Drive");
-                var settings = App.Services.GetRequiredService<ISettingsService>();
-                settings.Settings.CloudSyncProvider = "Google Drive";
-                settings.Save();
+                // P5 decouple: start the independent Drive-backup timer now so backups begin this
+                // session. The DriveBackupEnabled toggle (already on — this button only shows then)
+                // is persisted by Save. The Online Vault is unaffected: it syncs on its own.
+                var interval = App.Services.GetRequiredService<ISettingsService>().Settings.CloudSyncIntervalMinutes;
+                _syncManager.StartDriveBackup(interval);
             }
             else
             {
@@ -175,33 +176,19 @@ public partial class SettingsWindow : Window
     private void GoogleDisconnect_Click(object? sender, RoutedEventArgs e)
     {
         _syncManager?.Providers["Google Drive"].SignOut();
-        if (_syncManager?.GetActiveProvider()?.ProviderName == "Google Drive")
-            _syncManager.SetActiveProvider(null);
+        _syncManager?.StopDriveBackup(); // stop the independent Drive-backup timer (the Online Vault is unaffected)
         UpdateCloudStatus();
     }
 
-    private async void SyncNow_Click(object? sender, RoutedEventArgs e)
+    private async void BackUpNow_Click(object? sender, RoutedEventArgs e)
     {
         if (_syncManager == null) return;
 
-        // If no active provider, pick the first connected one
-        if (_syncManager.GetActiveProvider() == null)
-        {
-            foreach (var (name, provider) in _syncManager.Providers)
-            {
-                if (provider.IsAuthenticated)
-                {
-                    _syncManager.SetActiveProvider(name);
-                    break;
-                }
-            }
-        }
-
-        SyncNowBtn.IsEnabled = false;
-        SyncStatusText.Text = "Syncing...";
-        await _syncManager.SyncAsync();
+        BackUpNowBtn.IsEnabled = false;
+        SyncStatusText.Text = "Backing up to Google Drive…";
+        await _syncManager.SyncDriveNowAsync();
         SyncStatusText.Text = _syncManager.LastSyncStatus;
-        SyncNowBtn.IsEnabled = true;
+        BackUpNowBtn.IsEnabled = true;
     }
 
     // ── General (Export DB; Run-on-startup binds to MainWindowViewModel.ToggleStartupCommand) ──

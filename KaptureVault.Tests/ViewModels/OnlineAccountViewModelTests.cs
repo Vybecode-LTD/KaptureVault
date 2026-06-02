@@ -1,7 +1,5 @@
 using FluentAssertions;
-using Kapture.Models;
 using Kapture.Services;
-using Kapture.Services.CloudSync;
 using Kapture.Services.CloudSync.Online;
 using Kapture.ViewModels;
 using NSubstitute;
@@ -10,26 +8,24 @@ using Xunit;
 namespace KaptureVault.Tests.ViewModels;
 
 /// <summary>
-/// OnlineAccountViewModel (F-02 Phase 2): the Settings account panel's logic. Delegates to a mocked
-/// IOnlineAccountService + IUrlOpener and persists the sync-provider choice via a mocked
-/// ISettingsService — so sign-in/subscribe/billing/gating are verified without a browser or backend.
+/// OnlineAccountViewModel (F-02): the Settings account panel's logic. Delegates to a mocked
+/// IOnlineAccountService + IUrlOpener + IEncryptionService — so sign-in/subscribe/billing/gating are
+/// verified without a browser or backend. P5 decouple: the panel is account-state only; it no longer
+/// picks a sync "provider" or writes settings (the Online Vault syncs automatically once signed in
+/// with a vault password — see CloudSyncManagerTests).
 /// </summary>
 public class OnlineAccountViewModelTests
 {
     private readonly IOnlineAccountService _account = Substitute.For<IOnlineAccountService>();
     private readonly IUrlOpener _opener = Substitute.For<IUrlOpener>();
-    private readonly ISettingsService _settings = Substitute.For<ISettingsService>();
     private readonly IEncryptionService _enc = Substitute.For<IEncryptionService>();
-    private readonly ISyncProviderController _sync = Substitute.For<ISyncProviderController>();
-    private readonly AppSettings _appSettings = new();
 
     private OnlineAccountViewModel NewVm(bool configured = true)
     {
-        _settings.Settings.Returns(_appSettings);
         var config = configured
             ? new OnlineVaultConfig { ApiBaseUrl = "https://api.kapture.tools", GoogleClientId = "client-123" }
             : new OnlineVaultConfig { ApiBaseUrl = "REPLACE_WITH_API", GoogleClientId = "REPLACE_WITH_ID" }; // explicit not-configured (defaults are now real)
-        return new OnlineAccountViewModel(_account, _opener, config, _settings, _enc, _sync);
+        return new OnlineAccountViewModel(_account, _opener, config, _enc);
     }
 
     [Fact]
@@ -51,33 +47,35 @@ public class OnlineAccountViewModelTests
     }
 
     [Fact]
-    public async Task SignIn_WhenVaultEncrypted_PersistsOnlineVaultAsSyncProvider()
+    public async Task SignIn_WhenVaultEncrypted_ReportsAutomaticSync()
     {
-        // Vault sync is free (Phase 2) — enabling the Online Vault requires an active vault password
-        // (Phase 3 slice B), NOT a subscription.
+        // Vault sync is free (Phase 2) and the Online Vault is now automatic once signed in with an
+        // active vault password (Phase 3 slice B + P5 decouple) — no subscription, no provider to pick.
         _account.SignInAsync(Arg.Any<CancellationToken>()).Returns(true);
+        _account.IsSignedIn.Returns(true); // a real sign-in flips this
         _enc.IsActive.Returns(true);
         var vm = NewVm();
 
         await vm.SignInCommand.ExecuteAsync(null);
 
-        _appSettings.CloudSyncProvider.Should().Be("Online Vault");
-        _appSettings.CloudSyncEnabled.Should().BeTrue();
-        _settings.Received().Save();
-        _sync.Received(1).SetActiveProvider("Online Vault"); // switches the live sync manager, not just settings
+        await _account.Received(1).RefreshAccountAsync(Arg.Any<CancellationToken>());
+        vm.StatusMessage.Should().Contain("automatically");
+        vm.IsSyncingAutomatically.Should().BeTrue();
     }
 
     [Fact]
-    public async Task SignIn_WhenNoVaultPassword_DoesNotSetProvider_AndPromptsToSetOne()
+    public async Task SignIn_WhenNoVaultPassword_PromptsToSetOne()
     {
         _account.SignInAsync(Arg.Any<CancellationToken>()).Returns(true);
-        _enc.IsActive.Returns(false); // no vault password → must not enable the (E2E-encrypted) Online Vault
+        _account.IsSignedIn.Returns(true); // a real sign-in flips this
+        _enc.IsActive.Returns(false); // no vault password → the (E2E-encrypted) Online Vault can't sync yet
         var vm = NewVm();
 
         await vm.SignInCommand.ExecuteAsync(null);
 
-        _appSettings.CloudSyncProvider.Should().BeNull();
         vm.StatusMessage.Should().Contain("vault password");
+        vm.IsSyncingAutomatically.Should().BeFalse();
+        vm.VaultPasswordRequired.Should().BeTrue();
     }
 
     [Fact]
@@ -128,15 +126,14 @@ public class OnlineAccountViewModelTests
     }
 
     [Fact]
-    public void SignOut_ClearsProvider_WhenItWasOnlineVault()
+    public void SignOut_SignsOut()
     {
-        _appSettings.CloudSyncProvider = "Online Vault";
         var vm = NewVm();
 
         vm.SignOutCommand.Execute(null);
 
         _account.Received(1).SignOut();
-        _appSettings.CloudSyncProvider.Should().BeNull();
+        vm.StatusMessage.Should().Be("Signed out.");
     }
 
     [Fact]
@@ -185,74 +182,26 @@ public class OnlineAccountViewModelTests
     }
 
     [Fact]
+    public void IsSyncingAutomatically_TrueOnlyWhenSignedInWithActiveEncryption()
+    {
+        _account.IsSignedIn.Returns(false);
+        _enc.IsActive.Returns(true);
+        NewVm().IsSyncingAutomatically.Should().BeFalse("not signed in");
+
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(false);
+        NewVm().IsSyncingAutomatically.Should().BeFalse("no vault password");
+
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(true);
+        NewVm().IsSyncingAutomatically.Should().BeTrue("signed in + vault password");
+    }
+
+    [Fact]
     public void OpenVault_OpensTheWebVaultUrl()
     {
         NewVm().OpenVaultCommand.Execute(null);
 
         _opener.Received(1).Open(Arg.Is<string>(u => u.Contains("kapture.tools/vault")));
-    }
-
-    // ── "Use the Online Vault for sync" (Phase 4 — fixes the can't-switch-once-signed-in gap) ──
-
-    [Fact]
-    public void UseForSync_WhenSignedInAndEncrypted_SwitchesLiveAndPersists()
-    {
-        _account.IsSignedIn.Returns(true);
-        _enc.IsActive.Returns(true);
-        var vm = NewVm();
-
-        vm.UseForSyncCommand.Execute(null);
-
-        _appSettings.CloudSyncProvider.Should().Be("Online Vault");
-        _appSettings.CloudSyncEnabled.Should().BeTrue();
-        _settings.Received().Save();
-        _sync.Received(1).SetActiveProvider("Online Vault");
-    }
-
-    [Fact]
-    public void UseForSync_WhenNoVaultPassword_DoesNotSwitch_AndPrompts()
-    {
-        _account.IsSignedIn.Returns(true);
-        _enc.IsActive.Returns(false);
-        var vm = NewVm();
-
-        vm.UseForSyncCommand.Execute(null);
-
-        _appSettings.CloudSyncProvider.Should().BeNull();
-        _sync.DidNotReceiveWithAnyArgs().SetActiveProvider(default);
-        vm.StatusMessage.Should().Contain("vault password");
-    }
-
-    [Fact]
-    public void IsSyncTarget_TrueWhenSignedInAndOnlineVaultActive()
-    {
-        _account.IsSignedIn.Returns(true);
-        _sync.ActiveProviderName.Returns("Online Vault");
-
-        NewVm().IsSyncTarget.Should().BeTrue();
-    }
-
-    [Fact]
-    public void CanUseForSync_TrueWhenSignedInEncryptedButNotYetTarget()
-    {
-        _account.IsSignedIn.Returns(true);
-        _enc.IsActive.Returns(true);
-        _sync.ActiveProviderName.Returns("Google Drive"); // some other provider is active
-
-        var vm = NewVm();
-
-        vm.IsSyncTarget.Should().BeFalse();
-        vm.CanUseForSync.Should().BeTrue();
-    }
-
-    [Fact]
-    public void SignOut_WhenWasSyncTarget_ClearsTheLiveProvider()
-    {
-        _appSettings.CloudSyncProvider = "Online Vault";
-        var vm = NewVm();
-
-        vm.SignOutCommand.Execute(null);
-
-        _sync.Received(1).SetActiveProvider(null);
     }
 }

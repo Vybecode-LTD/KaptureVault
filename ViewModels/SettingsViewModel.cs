@@ -24,8 +24,8 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private int _maxBufferChars = 5000;
     [ObservableProperty] private int _idleFlushSeconds = 20;
 
-    // Cloud Sync
-    [ObservableProperty] private bool _cloudSyncEnabled = false;
+    // Cloud Sync (P5: the toggle is Google Drive backup; the Online Vault is sign-in gated, not here)
+    [ObservableProperty] private bool _driveBackupEnabled = false;
     [ObservableProperty] private int _cloudSyncIntervalMinutes = 15;
     [ObservableProperty] private bool _syncOnClose = true;
 
@@ -58,7 +58,7 @@ public partial class SettingsViewModel : ViewModelBase
         QuickPasteHotkey = s.QuickPasteHotkey;
         MaxBufferChars = s.MaxBufferChars;
         IdleFlushSeconds = s.IdleFlushSeconds;
-        CloudSyncEnabled = s.CloudSyncEnabled;
+        DriveBackupEnabled = s.DriveBackupEnabled;
         CloudSyncIntervalMinutes = s.CloudSyncIntervalMinutes;
         SyncOnClose = s.SyncOnClose;
         CaptureAdminApps = s.CaptureAdminApps;
@@ -74,7 +74,7 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnQuickPasteHotkeyChanged(string value) => HasChanges = true;
     partial void OnMaxBufferCharsChanged(int value) => HasChanges = true;
     partial void OnIdleFlushSecondsChanged(int value) => HasChanges = true;
-    partial void OnCloudSyncEnabledChanged(bool value) => HasChanges = true;
+    partial void OnDriveBackupEnabledChanged(bool value) => HasChanges = true;
     partial void OnCloudSyncIntervalMinutesChanged(int value) => HasChanges = true;
     partial void OnSyncOnCloseChanged(bool value) => HasChanges = true;
     partial void OnCaptureAdminAppsChanged(bool value) => HasChanges = true;
@@ -91,7 +91,7 @@ public partial class SettingsViewModel : ViewModelBase
         s.QuickPasteHotkey = QuickPasteHotkey;
         s.MaxBufferChars = MaxBufferChars;
         s.IdleFlushSeconds = IdleFlushSeconds;
-        s.CloudSyncEnabled = CloudSyncEnabled;
+        s.DriveBackupEnabled = DriveBackupEnabled;
         s.CloudSyncIntervalMinutes = CloudSyncIntervalMinutes;
         s.SyncOnClose = SyncOnClose;
         s.CaptureAdminApps = CaptureAdminApps;
@@ -111,7 +111,7 @@ public partial class SettingsViewModel : ViewModelBase
         QuickPasteHotkey = defaults.QuickPasteHotkey;
         MaxBufferChars = defaults.MaxBufferChars;
         IdleFlushSeconds = defaults.IdleFlushSeconds;
-        CloudSyncEnabled = defaults.CloudSyncEnabled;
+        DriveBackupEnabled = defaults.DriveBackupEnabled;
         CloudSyncIntervalMinutes = defaults.CloudSyncIntervalMinutes;
         SyncOnClose = defaults.SyncOnClose;
         CaptureAdminApps = defaults.CaptureAdminApps;

@@ -3,24 +3,32 @@ using Timer = System.Timers.Timer;
 
 namespace Kapture.Services.CloudSync;
 
-public class CloudSyncManager : IDisposable, ISyncProviderController
+/// <summary>
+/// Coordinates the two INDEPENDENT cloud features (P5 decouple — they used to share one selectable
+/// "active provider", which conflated them):
+///   • <b>Google Drive backup</b> — an optional whole-DB dump to the user's Drive (a convenience).
+///   • <b>Online Vault</b> — the user's KaptureVault account: the encrypted vault + screenshots on
+///     R2, readable in the web vault. Syncs automatically whenever signed in.
+/// Each has its own timer and on-demand trigger; both funnel through the shared last-writer-wins
+/// <see cref="SyncAsync(ICloudStorageProvider, CancellationToken)"/> (serialized by one guard so the
+/// local vault.db is never replaced concurrently). The Online Vault path additionally syncs screenshots.
+/// </summary>
+public class CloudSyncManager : IDisposable
 {
     private const string SyncFileName = "vault.db";
+    public const string DriveProviderName = "Google Drive";
+    public const string OnlineVaultProviderName = "Online Vault";
 
     private static readonly string DbPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "KaptureVault", "vault.db");
 
-    private static readonly string SyncMetaPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "KaptureVault", "sync_meta.json");
-
     private readonly IDatabaseService _db;
     private readonly IScreenshotSyncService? _screenshotSync;
     private readonly Dictionary<string, ICloudStorageProvider> _providers = new();
-    private Timer? _syncTimer;
-    private string? _activeProvider;
-    private int _syncing; // 0 = idle, 1 = syncing (atomic guard)
+    private Timer? _driveTimer;
+    private Timer? _onlineTimer;
+    private int _syncing; // 0 = idle, 1 = syncing (atomic guard; serializes Drive + Online so DB replace can't race)
 
     public event Action<string>? OnSyncStatusChanged;
     public string LastSyncStatus { get; private set; } = "Not synced";
@@ -38,56 +46,76 @@ public class CloudSyncManager : IDisposable, ISyncProviderController
         IScreenshotSyncService? screenshotSync = null)
     {
         _db = db;
-        // Phase 3 (slice F): the Online Vault also syncs screenshot images (DB rows reference plaintext
-        // .bmp files that must be re-encoded + encrypted before upload). Optional so existing
-        // construction/tests are unaffected; only used when the active provider is the Online Vault.
+        // The Online Vault path also syncs screenshot images (re-encoded + encrypted). Optional so
+        // existing construction/tests are unaffected; only used for the R2 (Online Vault) provider.
         _screenshotSync = screenshotSync;
-        // Providers are injected (Google Drive + Online Vault) and keyed by ProviderName so the
-        // active one can be selected from settings. (Was: new GoogleDriveProvider() inline.)
         foreach (var provider in providers)
             _providers[provider.ProviderName] = provider;
     }
 
     public IReadOnlyDictionary<string, ICloudStorageProvider> Providers => _providers;
 
-    public void SetActiveProvider(string? providerName)
+    private ICloudStorageProvider? Provider(string name) =>
+        _providers.TryGetValue(name, out var p) ? p : null;
+
+    // ── Google Drive backup (independent) ───────────────────────────────────────
+    public void StartDriveBackup(int intervalMinutes)
     {
-        _activeProvider = providerName;
+        StopDriveBackup();
+        _driveTimer = new Timer(TimeSpan.FromMinutes(intervalMinutes).TotalMilliseconds);
+        _driveTimer.Elapsed += async (_, _) => await SyncDriveNowAsync();
+        _driveTimer.Start();
     }
 
-    public ICloudStorageProvider? GetActiveProvider()
+    public void StopDriveBackup()
     {
-        if (_activeProvider != null && _providers.TryGetValue(_activeProvider, out var provider))
-            return provider;
-        return null;
+        _driveTimer?.Stop();
+        _driveTimer?.Dispose();
+        _driveTimer = null;
     }
 
-    /// <summary>ISyncProviderController: the active provider's name (or null), for the Settings panel.</summary>
-    public string? ActiveProviderName => GetActiveProvider()?.ProviderName;
-
-    public void StartPeriodicSync(int intervalMinutes)
+    /// <summary>Back up the vault to Google Drive now (no-op if Drive isn't connected).</summary>
+    public Task<bool> SyncDriveNowAsync(CancellationToken ct = default)
     {
-        StopPeriodicSync();
-        _syncTimer = new Timer(TimeSpan.FromMinutes(intervalMinutes).TotalMilliseconds);
-        _syncTimer.Elapsed += async (_, _) => await SyncAsync();
-        _syncTimer.Start();
+        var p = Provider(DriveProviderName);
+        return p is { IsAuthenticated: true } ? SyncAsync(p, ct) : Task.FromResult(false);
     }
 
-    public void StopPeriodicSync()
+    // ── Online Vault sync (independent) ─────────────────────────────────────────
+    public void StartOnlineVaultSync(int intervalMinutes)
     {
-        _syncTimer?.Stop();
-        _syncTimer?.Dispose();
-        _syncTimer = null;
+        StopOnlineVaultSync();
+        _onlineTimer = new Timer(TimeSpan.FromMinutes(intervalMinutes).TotalMilliseconds);
+        _onlineTimer.Elapsed += async (_, _) => await SyncOnlineVaultNowAsync();
+        _onlineTimer.Start();
     }
 
-    public async Task<bool> SyncAsync(CancellationToken ct = default)
+    public void StopOnlineVaultSync()
     {
-        // Atomic reentrancy guard — prevents overlapping timer callbacks
+        _onlineTimer?.Stop();
+        _onlineTimer?.Dispose();
+        _onlineTimer = null;
+    }
+
+    /// <summary>Sync the Online Vault now (no-op unless signed in). The vault + screenshots go to R2.</summary>
+    public Task<bool> SyncOnlineVaultNowAsync(CancellationToken ct = default)
+    {
+        var p = Provider(OnlineVaultProviderName);
+        return p is { IsAuthenticated: true } ? SyncAsync(p, ct) : Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Last-writer-wins sync of vault.db to/from a SPECIFIC provider, plus screenshots for the Online
+    /// Vault. Serialized by <see cref="_syncing"/> so Drive and Online passes never replace the local
+    /// DB concurrently.
+    /// </summary>
+    public async Task<bool> SyncAsync(ICloudStorageProvider provider, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
         if (Interlocked.CompareExchange(ref _syncing, 1, 0) != 0)
             return false;
 
-        var provider = GetActiveProvider();
-        if (provider == null || !provider.IsAuthenticated)
+        if (!provider.IsAuthenticated)
         {
             Interlocked.Exchange(ref _syncing, 0);
             return false;
@@ -97,7 +125,6 @@ public class CloudSyncManager : IDisposable, ISyncProviderController
 
         try
         {
-            // Check if DB file exists locally
             if (!File.Exists(DbPath))
             {
                 UpdateStatus("No local database to sync");
@@ -105,62 +132,45 @@ public class CloudSyncManager : IDisposable, ISyncProviderController
             }
 
             var localModified = File.GetLastWriteTimeUtc(DbPath);
-
-            // Find or upload
             var remoteFileId = await provider.FindFileAsync(SyncFileName, ct);
 
             bool result;
-            // True only after a vault upload or an already-in-sync state — when the local screenshots
-            // are the source of truth and should be pushed up (Phase 3 slice F). A download-wins sync
-            // instead restores screenshots from the server (slice G) via restoreScreenshots.
             var pushScreenshots = false;
             var restoreScreenshots = false;
 
             if (remoteFileId == null)
             {
-                // First sync — upload
                 var uploaded = await UploadSafeCopy(provider, ct);
-                UpdateStatus(uploaded
-                    ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
-                    : "Upload failed");
+                UpdateStatus(uploaded ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}" : "Upload failed");
                 result = uploaded;
                 pushScreenshots = uploaded;
             }
             else
             {
-                // Compare timestamps
                 var remoteModified = await provider.GetRemoteModifiedTimeAsync(remoteFileId, ct);
 
                 if (remoteModified == null)
                 {
-                    // Can't get remote time — upload local
                     var uploaded = await UploadSafeCopy(provider, ct);
-                    UpdateStatus(uploaded
-                        ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
-                        : "Upload failed");
+                    UpdateStatus(uploaded ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}" : "Upload failed");
                     result = uploaded;
                     pushScreenshots = uploaded;
                 }
                 else if (localModified > remoteModified.Value.AddSeconds(5))
                 {
-                    // Local is newer — upload
                     var uploaded = await UploadSafeCopy(provider, ct);
-                    UpdateStatus(uploaded
-                        ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
-                        : "Upload failed");
+                    UpdateStatus(uploaded ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}" : "Upload failed");
                     result = uploaded;
                     pushScreenshots = uploaded;
                 }
                 else if (remoteModified.Value > localModified.AddSeconds(5))
                 {
-                    // Remote is newer — download and safely replace
                     var tempPath = DbPath + ".sync_temp";
                     var success = await provider.DownloadFileAsync(remoteFileId, tempPath, ct);
                     if (success && File.Exists(tempPath))
                     {
                         await _db.ReplaceDatabaseFromAsync(tempPath, ct);
                         UpdateStatus($"Downloaded from {provider.ProviderName} at {DateTime.Now:HH:mm}");
-                        // Restore the screenshots the downloaded vault references but this device lacks (slice G).
                         result = true;
                         restoreScreenshots = true;
                     }
@@ -197,9 +207,8 @@ public class CloudSyncManager : IDisposable, ISyncProviderController
     }
 
     /// <summary>
-    /// Push local screenshots to the Online Vault after the capture DB itself has synced (Phase 3 slice
-    /// F). No-op for any other provider. Best-effort: a screenshot-sync failure is surfaced in the
-    /// status but never fails the vault sync (which already succeeded).
+    /// Push local screenshots to the Online Vault after the capture DB synced (Phase 3 slice F).
+    /// No-op for any other provider. Best-effort: a failure is surfaced but never fails the vault sync.
     /// </summary>
     private async Task SyncScreenshotsUpAsync(ICloudStorageProvider provider, CancellationToken ct)
     {
@@ -225,9 +234,8 @@ public class CloudSyncManager : IDisposable, ISyncProviderController
     }
 
     /// <summary>
-    /// Restore screenshots referenced by the just-downloaded vault that this device is missing (Phase 3
-    /// slice G). No-op for any other provider. Best-effort: a restore failure is surfaced in the status
-    /// but never fails the vault sync (the DB already downloaded successfully).
+    /// Restore screenshots referenced by the just-downloaded vault that this device lacks (Phase 3
+    /// slice G). No-op for any other provider. Best-effort.
     /// </summary>
     private async Task RestoreScreenshotsDownAsync(ICloudStorageProvider provider, CancellationToken ct)
     {
@@ -271,7 +279,8 @@ public class CloudSyncManager : IDisposable, ISyncProviderController
 
     public void Dispose()
     {
-        StopPeriodicSync();
+        StopDriveBackup();
+        StopOnlineVaultSync();
         GC.SuppressFinalize(this);
     }
 }

@@ -41,7 +41,8 @@ public static class ServiceRegistration
         services.AddSingleton<IOnlineAccountService, OnlineAccountService>();
         services.AddSingleton<IUrlOpener, BrowserUrlOpener>();
 
-        // Cloud sync providers, selectable by ProviderName: Google Drive (free) + Online Vault (paid).
+        // The two INDEPENDENT cloud features (P5 decouple), each registered as an ICloudStorageProvider
+        // and looked up by ProviderName inside CloudSyncManager: Google Drive backup + the Online Vault.
         services.AddSingleton<ICloudStorageProvider, GoogleDriveProvider>();
         services.AddSingleton<ICloudStorageProvider>(sp => new R2StorageProvider(
             sp.GetRequiredService<IOnlineAccountService>(),
@@ -61,8 +62,6 @@ public static class ServiceRegistration
             sp.GetRequiredService<IScreenshotImageCodec>(),
             sp.GetRequiredService<IDatabaseService>()));
         services.AddSingleton<CloudSyncManager>();
-        // Same singleton, exposed as the minimal provider-switch seam the Online Vault panel binds to.
-        services.AddSingleton<ISyncProviderController>(sp => sp.GetRequiredService<CloudSyncManager>());
 
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`
         // in App. HotkeyService is parameterless; MainWindowViewModel uses an explicit

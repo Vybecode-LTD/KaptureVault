@@ -36,9 +36,11 @@ public sealed class ShutdownCoordinator
     }
 
     /// <summary>
-    /// Stops capture, then (when <paramref name="runSyncOnClose"/> is true and the user enabled
-    /// cloud sync + sync-on-close) runs the sync with a hard timeout. Safe to call from any of the
-    /// app's exit paths; only the first call does work.
+    /// Stops capture, then (when <paramref name="runSyncOnClose"/> is true and the user left
+    /// sync-on-close enabled) runs the sync-on-close delegate with a hard timeout. The delegate
+    /// itself decides what actually syncs — P5 decouple: the Online Vault if signed in, the Google
+    /// Drive backup if the user enabled it — so this only needs the SyncOnClose preference. Safe to
+    /// call from any of the app's exit paths; only the first call does work.
     /// </summary>
     public async Task TeardownAsync(bool runSyncOnClose, TimeSpan syncTimeout)
     {
@@ -51,7 +53,7 @@ public sealed class ShutdownCoordinator
 
         if (runSyncOnClose
             && _syncOnClose is not null
-            && _settings.Settings is { CloudSyncEnabled: true, SyncOnClose: true })
+            && _settings.Settings.SyncOnClose)
         {
             using var cts = new CancellationTokenSource(syncTimeout);
             try { await _syncOnClose(cts.Token); }
