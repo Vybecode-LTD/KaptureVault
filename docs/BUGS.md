@@ -1,6 +1,6 @@
 ---
 document: BUGS
-version: 1.13.0
+version: 1.14.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -18,7 +18,7 @@ see-also: [CLAUDE.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDOFF.md, docs/AU
 > - **P1 — SHIPPED in v1.0.5 (2026-05-31):** ✅ KV-012, ✅ KV-006, KV-010 (DI).
 > - **P1 — COMPLETED 2026-06-01 (on main, unreleased):** ✅ **KV-013** (Entries diff-update, T-09), ✅ **KV-032** (debounced refresh), ✅ **KV-033** (decrypt off the UI thread), ✅ **KV-011** + ✅ **KV-024** (centralized shutdown teardown, T-08), ✅ KV-010 residual (HotkeyService + provider disposal). **All P1 issues are now fixed.**
 > - **Tests:** 10 → 47 (v1.0.5) → 49 (F-01) → 71 (P1 batch) → 118 (Phase 2 engine) → **120 now** (+ Phase 0/1 email + Open Vault; backend **26** vitest). ✅ **KV-045 closed** — `Avalonia.Headless.XUnit` smoke tests + the MainWindowViewModel filter-selection regression now exist. CI (`tests.yml`) green.
-> - **F-02 Phase 2 LIVE (2026-06-01):** backend free-vault + quota/size-cap + refresh≠session-token + CORS + `/me` tier (vitest 26→51); client shows quota/used; **deployed + smoke-verified** (Worker `17ba084b`), R2-bucket CORS applied, secrets rotated. **F-02 Phase 3 in progress:** design approved + slice A (KDF in `vault.db.meta`) done; client suite 123→124. A CI-only flake in `Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite` (2 s writer-pickup wait) was de-flaked (30 s ceiling, `7275594`) — no product bug. **Next:** Phase 3 slice B (encryption interlock) + the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault**; Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
+> - **F-02 Phase 2 LIVE (2026-06-01):** backend free-vault + quota/size-cap + refresh≠session-token + CORS + `/me` tier (vitest 26→51); client shows quota/used; **deployed + smoke-verified** (Worker `17ba084b`), R2-bucket CORS applied, secrets rotated. **F-02 Phase 3 in progress:** slices A–E done + CI-green (KDF meta, encryption interlock, binary crypto, backend object API, multi-object quota); client suite 124→**130**, backend 51→**59**. (A CI-only flake in `Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite` was de-flaked at v1.13.0 — `7275594` — not a product bug.) **Next:** Phase 3 slice F (client screenshot pipeline) + G/H, then the P2 backlog (T-18..T-26, **T-35**). KV-007: secret-less model **delivered for the Online Vault**; Drive cutover = **T-35**. KV-015 View-locator cleanup folded into T-22.
 
 **Severity counts:** 🔴 Critical 4 · 🟠 High 13 · 🟡 Medium 16 · ⚪ Low 10 · 📄 Doc/Process 2
 

@@ -1,6 +1,6 @@
 ---
 document: TESTING
-version: 1.13.0
+version: 1.14.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -12,13 +12,13 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/HANDOFF.md, ../../TEST
 
 ## Current state
 
-**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **124 tests passing** as of 2026-06-01 (71 + 49 from F-02 Phase 2; +2 from Phase 0/1a — email + OpenVault; +3 from Phase 2 client storage wiring — quota/used; +1 from Phase 3 slice A — KDF in `vault.db.meta`). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
+**Test project: LIVE** (`KaptureVault.Tests`, xUnit + NSubstitute + FluentAssertions + coverlet + `Avalonia.Headless.XUnit`, on `KaptureVault.slnx`). **130 tests passing** as of 2026-06-01 (71 + 49 from F-02 Phase 2; +2 Phase 0/1a — email + OpenVault; +3 Phase 2 client storage wiring — quota/used; +1 Phase 3 A — KDF in `vault.db.meta`; +2 Phase 3 B — encryption interlock; +4 Phase 3 C — binary `EncryptBytes`/`DecryptBytes`). Persistence seams in place: base-dir (`EncryptionService`), connection-string (`DatabaseService`). The app project excludes `KaptureVault.Tests/**` from its compile glob. The headless tier uses `TestAppBuilder` (`[assembly: AvaloniaTestApplication]`) over the real `App`.
 
 Suite inventory:
 | Suite | Covers | Tests |
 |---|---|---|
 | `Services/CaptureServiceTests` | KV-005 self-exclusion regression; KV-012/T-07 non-blocking flush (`Flush_DoesNotBlockTheHookThreadOnTheDatabaseWrite`) + drain-on-stop (`Stop_DrainsBufferedEntriesAndDoesNotLoseData`) | 4 |
-| `Services/EncryptionServiceTests` | KV-002 round-trip / tamper→throw / wrong-key→throw / passthrough; KV-006/T-11 strong-KDF persistence (`Configure_StoresStrongKdfParams_AndDerivesWithThem`) + legacy-vault unlock (`Unlock_LegacyVaultWithoutStoredIterations_StillUnlocksAndDecrypts`) | 6 |
+| `Services/EncryptionServiceTests` | KV-002 round-trip / tamper→throw / wrong-key→throw / passthrough; KV-006/T-11 strong-KDF persistence + legacy-vault unlock; **Phase 3 C binary `EncryptBytes`/`DecryptBytes`** (round-trip, tamper→throw, wrong-key→throw, not-active→throw) | 10 |
 | `Services/DatabaseServiceSearchTests` | KV-004 encrypted-content search | 3 |
 | `Services/DatabaseServiceReplaceTests` | KV-003 pre-sync backup retention | 1 |
 | `Services/DatabaseServiceCrudTests` | KV-009 full-field round-trip, null-expiry, pin/tags, GetAll limit | 4 |
@@ -31,12 +31,12 @@ Suite inventory:
 | `ShutdownCoordinatorTests` | T-08/KV-011 teardown: stops capture, sync-on-close gating, idempotency, swallows sync failures | 8 |
 | `Services/CloudSync/KaptureOnlineApiClientTests` | F-02 P2: Online Vault HTTP contract (auth/session, auth/google, /me, billing, vault put/get-url, meta read+write, 401/402 mapping) via a stub handler | 11 |
 | `Services/CloudSync/OnlineAccountServiceTests` | F-02 P2: secret-less sign-in, DPAPI session + auto-refresh (near-expiry + 401), sign-out, entitlement from /me, **cached quota/used from /me**, checkout/portal URLs | 14 |
-| `Services/CloudSync/R2StorageProviderTests` | F-02 P2: Online Vault as `ICloudStorageProvider` — upload/download over presigned URLs + meta, find/mtime, R2 failure surfaced; **Phase 3 A: KDF params written into meta** | 7 |
-| `ViewModels/OnlineAccountViewModelTests` | F-02 P2: Settings account-panel logic — sign-in gating + persist provider, subscribe/billing open URLs, sign-out clears provider, **storage-summary formatting** | 13 |
+| `Services/CloudSync/R2StorageProviderTests` | F-02 P2: Online Vault as `ICloudStorageProvider` — upload/download over presigned URLs + meta, find/mtime, R2 failure surfaced; **Phase 3 A: KDF params in meta; Phase 3 B: refuse upload when vault not encrypted** | 8 |
+| `ViewModels/OnlineAccountViewModelTests` | F-02 P2: Settings account-panel logic — subscribe/billing open URLs, sign-out clears provider, storage-summary formatting; **Phase 3 B: enabling requires a vault password (persist-when-encrypted / prompt-when-not / `VaultPasswordRequired`)** | 14 |
 
-**Total: 124 tests.** *(F-02 client suites: KaptureOnlineApiClientTests 11, OnlineAccountServiceTests 14, R2StorageProviderTests 7, OnlineAccountViewModelTests 13.)*
+**Total: 130 tests.** *(F-02 client suites: KaptureOnlineApiClientTests 11, OnlineAccountServiceTests 14, R2StorageProviderTests 8, OnlineAccountViewModelTests 14; plus the 4 binary-crypto tests in EncryptionServiceTests.)*
 
-> **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **51 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Phase 2 added `auth-tokens`, `free-vault`, `quota`, `vault-quota`, `cors`, and `me-tier` suites (26 → 51). Those are **not** part of the .NET `KaptureVault.Tests` count above.
+> **F-02 Online Vault backend is a SEPARATE repo** — `kapturevault-backend` (`C:\dev\kapturevault-backend` / `github.com/Vybecode-LTD/kapturevault-backend`) with its **own** test suite: **59 vitest tests + `tsc --noEmit` typecheck + GitHub Actions CI** (`npm ci` → typecheck → test). Phase 2 added `auth-tokens`/`free-vault`/`quota`/`vault-quota`/`cors`/`me-tier` (26 → 51); **Phase 3 added `vault-objects` (object API) + extended `vault-quota` for the multi-object prefix-sum (51 → 59)**. Those are **not** part of the .NET `KaptureVault.Tests` count above.
 
 **CI: LIVE.** `.github/workflows/tests.yml` runs on every push/PR to `main` (windows-latest, .NET 9) and enforces, in order: `dotnet build` → `dotnet format --verify-no-changes` → `dotnet list package --vulnerable --include-transitive` (fails the run on any vulnerable package) → `dotnet test` (TRX + Cobertura coverage). Verified green on GitHub (Actions run 26725669973, all steps passing).
 

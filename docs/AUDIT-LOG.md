@@ -1,6 +1,6 @@
 ---
 document: AUDIT-LOG
-version: 1.13.0
+version: 1.14.0
 app-version: 1.0.7
 last-updated: 2026-06-01
 last-audit: 2026-06-01
@@ -9,6 +9,33 @@ see-also: [CLAUDE.md, docs/BUGS.md, docs/ROADMAP.md, docs/TESTING.md, docs/HANDO
 ---
 
 # AUDIT-LOG.md — KaptureVault
+
+## 2026-06-01 (PM-7) — F-02 Phase 3 slices B–E + handoff reconciliation → v1.14.0
+
+**Trigger:** User — continue Phase 3 ("keep going"), then "reconcile the docs now (capture A–E, bump version, handoff-ready), document everything in detail, update the to-do lists, ensure proper @ directives, make the memory thorough and well organized."
+
+### Slices delivered (test-first, RED→GREEN, each its own commit, every push CI-verified green)
+
+**Client (`KaptureVault`), suite 124 → 130:**
+- **B — encryption interlock** (`c716d20`). The Online Vault is end-to-end encrypted, so a vault password is now REQUIRED to use it (Phase-3 design decision). Two layers: *(backstop)* `R2StorageProvider.UploadFileAsync` throws `InvalidOperationException` when `!_encryption.IsActive` — no path can push a plaintext vault to R2; *(UX gate)* `OnlineAccountViewModel` only sets the Online Vault as the sync target when encryption is active, otherwise prompts "Set a vault password in Settings → Encryption …" + the "that password is the only key — lose it and the online vault can't be recovered" warning (new `VaultPasswordRequired` bindable + a panel `TextBlock`). *Bonus fix:* `SignInAsync` had gated provider-set on `IsPaid` — stale since Phase 2 made vault sync free — now gated on encryption (free sync needs a password, not a subscription); the two stale `IsPaid` VM tests were repurposed. Tests: R2 refuse-when-unencrypted; VM persist-when-encrypted / prompt-when-not / `VaultPasswordRequired`.
+- **C — binary encryption** (`912821a`). `EncryptBytes`/`DecryptBytes` on `IEncryptionService`/`EncryptionService`: AES-256-GCM over raw bytes (nonce[12]+tag[16]+ciphertext, no `ENC:` prefix/base64) — the prerequisite for encrypting screenshots client-side (slice F) and for the web vault to decrypt them (Phase 4, mirrored in WebCrypto). `DecryptBytes` throws `DecryptionException` on tamper/corruption/wrong-key; both throw `InvalidOperationException` if encryption isn't active (never silently emit plaintext). Tests: round-trip, tamper→throw, wrong-key→throw, not-active→throw.
+
+**Backend (`kapturevault-backend`), vitest 51 → 59:**
+- **D — vault object API** (`0193551`). `/vault/object/{put,get,delete}-url` + `GET /vault/objects` under the user's vault namespace, so screenshots sync as separate (encrypted) objects. `vaultObjectKey(uid, relKey)` validates the relative key to `^screenshots/[A-Za-z0-9._-]+$` (rejects traversal/out-of-namespace/nesting) before presign (still flows through `assertOwnedKey`). `/vault/objects` lists relative keys + sizes (restore discovery + quota), cursor-paginated. Free (`requireSession` only). `FakeR2.list` added. Tests: presign scoping, key validation, get, delete, list isolation, session required.
+- **E — multi-object quota** (`6e4570c`). The `PUT /vault/meta` commit enforces the quota against the **sum of all objects** under the user's vault prefix (R2 `list`, cursor-paged), replacing the Phase-2 single-`vault.db` HEAD. Over quota → `413 {used, quota}` *without deleting* (with multiple objects the server can't safely choose what to drop; the client trims oldest-first + retries); `storage_used` is set to the summed total on success. Still ignores any client-reported size. Tests: multi-object sum rejects/accepts; over-quota reject-without-delete.
+
+### Verification (proof, not assertion)
+Per-slice RED then GREEN. Client: `dotnet test` **130**, `dotnet build -c Release` 0/0, `dotnet format --verify` clean. Backend: `npm test` **59**, `tsc --noEmit` clean. **Both repos pushed; CI watched to GREEN on every push.** Client HEAD `912821a`; backend HEAD `6e4570c`.
+
+### Handoff reconciliation → shared `version` 1.14.0
+- **Fixed a real drift:** `CLAUDE.md`'s YAML frontmatter `version` had been stuck at **1.9.0** through the 1.10–1.13 passes (only the body "currently X" line was bumped). All six managed docs are now uniformly **1.14.0** / `last-updated` 2026-06-01. (New Lessons guard added so it doesn't recur — grep `^version:` across the set.)
+- **@ directives:** the STANDING DIRECTIVES section now presents the binding set as proper `@` directives (`@../../DEBUG_PROTOCOL.md`, `…/TESTING_PROCEDURES.md`, `…/DOCUMENTATION_MANAGER.md`, `…/VERSION_CONTROL.md`, `…/SOFTWARE_RELEASE.md`; added the missing `VERSION_CONTROL`; noted `SEO_OPTIMIZATION` is non-binding for this repo — the desktop app isn't web-facing). Large docs/design references stay read-on-demand backtick links (deliberately **not** `@`-imported, to avoid bloating every session's context). Documentation Map lists the three F-02 design references.
+- **Memory:** rewrote `.claude/plan.md`, which was dangerously stale (dated 2026-05-19, describing the pre-fork full "Kapture" — System Tweaks/Services/Dashboard/Profiles/Privacy, v1.0.27, `requireAdministrator` — none of which exist in this vault-only fork), into an accurate current-state pointer to the canonical docs.
+- Refreshed the stale "Known test gaps (T-16)" line in CLAUDE (gaps long closed). Updated ROADMAP (Phase 3 A–E done, F–H remain), TESTING (client 130 / backend 59 + the `vault-objects` suite + new client tests), BUGS (header), HANDOFF (canary). CHANGELOG left unchanged — Phase 3 is internal groundwork; the shipped app stays v1.0.7.
+
+**Auditor:** Claude (Opus 4.8). **Next:** F-02 **slice F** — the client screenshot sync pipeline (enumerate non-expired screenshots → re-encode BMP→PNG via SkiaSharp → `EncryptBytes` → upload via the object API, incremental sync-state, oldest-first trim on a 413, orphan cleanup), then **G** (restore) and **H** (UX + docs/release).
+
+---
 
 ## 2026-06-01 (PM-6) — Audit + quality gate; CI flake found & fixed; Phase 2 go-live verified; Phase 3 design + slice A
 
