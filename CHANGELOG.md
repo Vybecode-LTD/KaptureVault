@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] — planned v1.1.0 (Online Vault)
+## [1.1.0] — 2026-06-02 (Online Vault)
 
 The first release of the **Online Vault** — optional, end-to-end-encrypted cloud sync of your
 vault and screenshots, plus a web viewer to read them in a browser. Free, offline use and Google
-Drive sync are unchanged. *(Goes live once the cloud accounts/origins are configured.)*
+Drive sync are unchanged.
 
 ### Added
 - **Your Online Vault now syncs automatically — there's no provider to pick.** Google Drive backup
