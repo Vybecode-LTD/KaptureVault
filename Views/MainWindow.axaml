@@ -19,6 +19,20 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
+    <Window.Styles>
+        <!-- P5: continuous rotation for the Sync icon while a sync is in progress (Classes.spin is
+             bound to Account.IsBusy on the icon). The element needs RenderTransformOrigin 50%,50%
+             (a bare "0.5,0.5" is parsed as 0.5px from the corner → the glyph orbits instead of spins). -->
+        <Style Selector="TextBlock.spin">
+            <Style.Animations>
+                <Animation Duration="0:0:0.9" IterationCount="Infinite" Easing="LinearEasing">
+                    <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0"/></KeyFrame>
+                    <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360"/></KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="Auto,Auto,*,Auto">
 
         <!-- Row 0: Stats Bar -->
@@ -86,38 +100,9 @@
                             <TextBlock Text="Expired" FontSize="12"/>
                         </StackPanel>
                     </Button>
-                    <!-- Run-on-startup and Export DB moved to Settings → General (frees room for the
-                         paid Upload-files button). -->
-
-                    <!-- Online Vault account (P5): Login when signed out; Sync / Web Vault / Upload when
-                         signed in. The Online Vault is independent of Google Drive backup (Settings). -->
-                    <Button Content="Login" Command="{Binding Account.SignInCommand}"
-                            IsVisible="{Binding Account.ShowLogin}" Classes="accent"
-                            Padding="10,5" FontSize="12" ToolTip.Tip="Sign in to your Online Vault"/>
-                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding Account.IsSignedIn}">
-                        <Button Command="{Binding Account.SyncNowCommand}" IsEnabled="{Binding !Account.IsBusy}"
-                                Padding="10,5" FontSize="12" ToolTip.Tip="{Binding Account.StatusMessage}">
-                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                <TextBlock Text="&#xE895;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
-                                <TextBlock Text="Sync" FontSize="12"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Command="{Binding Account.OpenVaultCommand}" Padding="10,5" FontSize="12"
-                                ToolTip.Tip="Open your vault in the browser">
-                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
-                                <TextBlock Text="Web Vault" FontSize="12"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Click="Upload_Click" Padding="10,5" FontSize="12"
-                                ToolTip.Tip="Upload files to your vault">
-                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                <TextBlock Text="&#xE898;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
-                                <TextBlock Text="Upload" FontSize="12"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-
+                    <!-- Run-on-startup and Export DB moved to Settings → General. The Online Vault
+                         account buttons (Login / Log out / Web Vault / Upload / Sync) live in the
+                         filter bar below, far-left (P5). -->
                     <Button Padding="10,5" FontSize="12" Click="Settings_Click">
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <TextBlock Text="&#xE713;" FontFamily="{StaticResource SymbolFont}" FontSize="12" VerticalAlignment="Center"/>
@@ -134,32 +119,39 @@
         <Border Grid.Row="1" Background="{DynamicResource AppBgSecondary}" Padding="12,6"
                 BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="*,Auto">
-                <!-- Type filter buttons -->
-                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                    <Button Content="All" Command="{Binding SetTypeFilterCommand}" CommandParameter="All"
-                            Padding="8,5" FontSize="11"
-                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=All}"/>
-                    <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Keyboard"
-                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Keyboard}">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <TextBlock Text="&#xE765;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Text="Keyboard" FontSize="11"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Clipboard"
-                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Clipboard}">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <TextBlock Text="&#xE77F;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource ProfilePurpleBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Text="Clipboard" FontSize="11"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Screenshot"
-                            Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Screenshot}">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <TextBlock Text="&#xE722;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Text="Screenshot" FontSize="11"/>
-                        </StackPanel>
-                    </Button>
+                <!-- Online Vault account (P5): Login when signed out; Log out / Web Vault / Upload /
+                     Sync (left→right) when signed in. Independent of Google Drive backup (Settings).
+                     The type filters moved to the entry-list column header (Row 2, Column 2). -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button Content="Login" Command="{Binding Account.SignInCommand}"
+                            IsVisible="{Binding Account.ShowLogin}" Classes="accent"
+                            Padding="12,5" FontSize="12" ToolTip.Tip="Sign in to your Online Vault"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding Account.IsSignedIn}">
+                        <Button Content="Log out" Command="{Binding Account.SignOutCommand}"
+                                Padding="10,5" FontSize="12" ToolTip.Tip="Sign out of your Online Vault"/>
+                        <Button Command="{Binding Account.OpenVaultCommand}" Padding="10,5" FontSize="12"
+                                ToolTip.Tip="Open your vault in the browser">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="Web Vault" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Click="Upload_Click" Padding="10,5" FontSize="12"
+                                ToolTip.Tip="Upload files to your vault">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="&#xE898;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="Upload" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding Account.SyncNowCommand}" IsEnabled="{Binding !Account.IsBusy}"
+                                Padding="10,5" FontSize="12" ToolTip.Tip="{Binding Account.StatusMessage}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <TextBlock Text="&#xE895;" FontFamily="{StaticResource SymbolFont}" FontSize="11" VerticalAlignment="Center"
+                                           RenderTransformOrigin="50%,50%" Classes.spin="{Binding Account.IsBusy}"/>
+                                <TextBlock Text="Sync" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- Search trigger button (opens overlay) -->
@@ -245,9 +237,40 @@
             <!-- Separator -->
             <Border Grid.Column="1" Classes="separator"/>
 
-            <!-- Column 2: Entry List -->
+            <!-- Column 2: Entry List, with the type-filter header on top (moved here from the filter bar) -->
             <Border Grid.Column="2" Background="{DynamicResource AppBgBrush}">
-                <ListBox ItemsSource="{Binding Entries}"
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Type filters: All / Keyboard / Clipboard / Screenshot -->
+                    <Border Grid.Row="0" Background="{DynamicResource AppBgSecondary}" Padding="10,6"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Content="All" Command="{Binding SetTypeFilterCommand}" CommandParameter="All"
+                                    Padding="8,5" FontSize="11"
+                                    Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=All}"/>
+                            <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Keyboard"
+                                    Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Keyboard}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="&#xE765;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Keyboard" FontSize="11"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Clipboard"
+                                    Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Clipboard}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="&#xE77F;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource ProfilePurpleBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Clipboard" FontSize="11"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Padding="8,5" FontSize="11" Command="{Binding SetTypeFilterCommand}" CommandParameter="Screenshot"
+                                    Opacity="{Binding SelectedTypeFilter, Converter={x:Static vm:MainWindowViewModel.TypeFilterActiveConverter}, ConverterParameter=Screenshot}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="&#xE722;" FontFamily="{StaticResource SymbolFont}" FontSize="10" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Screenshot" FontSize="11"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Entries}"
                          SelectedItem="{Binding SelectedEntry}"
                          Margin="0">
                     <ListBox.ItemTemplate>
@@ -295,7 +318,8 @@
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
-                </ListBox>
+                    </ListBox>
+                </Grid>
             </Border>
 
             <!-- Separator -->
