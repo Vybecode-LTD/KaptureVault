@@ -3,7 +3,7 @@ using Timer = System.Timers.Timer;
 
 namespace Kapture.Services.CloudSync;
 
-public class CloudSyncManager : IDisposable
+public class CloudSyncManager : IDisposable, ISyncProviderController
 {
     private const string SyncFileName = "vault.db";
 
@@ -61,6 +61,9 @@ public class CloudSyncManager : IDisposable
             return provider;
         return null;
     }
+
+    /// <summary>ISyncProviderController: the active provider's name (or null), for the Settings panel.</summary>
+    public string? ActiveProviderName => GetActiveProvider()?.ProviderName;
 
     public void StartPeriodicSync(int intervalMinutes)
     {

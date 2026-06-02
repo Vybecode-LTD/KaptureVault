@@ -61,6 +61,8 @@ public static class ServiceRegistration
             sp.GetRequiredService<IScreenshotImageCodec>(),
             sp.GetRequiredService<IDatabaseService>()));
         services.AddSingleton<CloudSyncManager>();
+        // Same singleton, exposed as the minimal provider-switch seam the Online Vault panel binds to.
+        services.AddSingleton<ISyncProviderController>(sp => sp.GetRequiredService<CloudSyncManager>());
 
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`
         // in App. HotkeyService is parameterless; MainWindowViewModel uses an explicit

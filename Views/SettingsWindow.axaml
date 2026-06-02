@@ -252,6 +252,13 @@
                                 <TextBlock IsVisible="{Binding VaultPasswordRequired}"
                                            Text="⚠ Set a vault password in Settings → Encryption to enable the Online Vault. That password is the only key — if you lose it, your online vault cannot be recovered."
                                            FontSize="11" Foreground="#E08030" TextWrapping="Wrap"/>
+                                <!-- Phase 4: make the Online Vault the active sync target (fixes the can't-switch-once-signed-in gap) -->
+                                <Button Content="Use the Online Vault for sync" Command="{Binding UseForSyncCommand}"
+                                        IsVisible="{Binding CanUseForSync}" Classes="accent"
+                                        HorizontalAlignment="Left" Padding="12,5" FontSize="11"/>
+                                <TextBlock IsVisible="{Binding IsSyncTarget}"
+                                           Text="✓ The Online Vault is your sync target. Your encrypted vault and screenshots sync here."
+                                           FontSize="11" Foreground="#22BB44" TextWrapping="Wrap"/>
                                 <!-- Open the web vault (shown once signed in; free + paid) -->
                                 <Button Content="Open Vault in browser" Command="{Binding OpenVaultCommand}"
                                         IsVisible="{Binding IsSignedIn}" HorizontalAlignment="Left" Padding="12,5" FontSize="11"/>

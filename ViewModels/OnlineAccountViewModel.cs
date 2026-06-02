@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kapture.Services;
+using Kapture.Services.CloudSync;
 using Kapture.Services.CloudSync.Online;
 
 namespace Kapture.ViewModels;
@@ -22,19 +23,21 @@ public partial class OnlineAccountViewModel : ObservableObject
     private readonly OnlineVaultConfig _config;
     private readonly ISettingsService _settings;
     private readonly IEncryptionService _encryption;
+    private readonly ISyncProviderController _sync;
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = "";
 
     public OnlineAccountViewModel(
         IOnlineAccountService account, IUrlOpener urlOpener, OnlineVaultConfig config, ISettingsService settings,
-        IEncryptionService encryption)
+        IEncryptionService encryption, ISyncProviderController sync)
     {
         _account = account;
         _urlOpener = urlOpener;
         _config = config;
         _settings = settings;
         _encryption = encryption;
+        _sync = sync;
         _account.StateChanged += OnAccountStateChanged;
     }
 
@@ -62,6 +65,14 @@ public partial class OnlineAccountViewModel : ObservableObject
     public string StorageSummary => HasStorageInfo
         ? $"{FormatBytes(_account.UsedBytes)} of {FormatBytes(_account.QuotaBytes)} used"
         : "";
+
+    /// <summary>True when the Online Vault is the active sync target right now.</summary>
+    public bool IsSyncTarget => _account.IsSignedIn &&
+        string.Equals(_sync.ActiveProviderName, ProviderName, StringComparison.Ordinal);
+
+    /// <summary>Signed in with a vault password set, but the Online Vault is not yet the sync target —
+    /// the panel offers a "Use the Online Vault for sync" action (fixes the can't-switch-once-signed-in gap).</summary>
+    public bool CanUseForSync => _account.IsSignedIn && _encryption.IsActive && !IsSyncTarget;
 
     [RelayCommand]
     private async Task SignInAsync()
@@ -91,9 +102,7 @@ public partial class OnlineAccountViewModel : ObservableObject
                     "Vault — that password is the only key, so if you lose it your online vault can't be recovered.";
                 return;
             }
-            _settings.Settings.CloudSyncProvider = ProviderName;
-            _settings.Settings.CloudSyncEnabled = true;
-            _settings.Save();
+            MakeOnlineVaultSyncTarget();
             StatusMessage = "Signed in. The Online Vault is now your sync target.";
         }
         catch (Exception ex)
@@ -114,8 +123,43 @@ public partial class OnlineAccountViewModel : ObservableObject
         {
             _settings.Settings.CloudSyncProvider = null;
             _settings.Save();
+            _sync.SetActiveProvider(null); // stop syncing to the Online Vault live, not just next launch
         }
         StatusMessage = "Signed out.";
+        NotifySyncTargetChanged();
+    }
+
+    /// <summary>
+    /// Make the Online Vault the active sync target (the panel's button for when you're already signed
+    /// in — sign-in does this too). Requires a vault password since the Online Vault is end-to-end encrypted.
+    /// </summary>
+    [RelayCommand]
+    private void UseForSync()
+    {
+        if (!_account.IsSignedIn) { StatusMessage = "Sign in to the Online Vault first."; return; }
+        if (!_encryption.IsActive)
+        {
+            StatusMessage = "Set a vault password in Settings → Encryption first — the Online Vault is end-to-end encrypted.";
+            return;
+        }
+        MakeOnlineVaultSyncTarget();
+        StatusMessage = "The Online Vault is now your sync target.";
+    }
+
+    /// <summary>Persist the Online Vault as the sync provider AND switch the live sync manager to it now.</summary>
+    private void MakeOnlineVaultSyncTarget()
+    {
+        _settings.Settings.CloudSyncProvider = ProviderName;
+        _settings.Settings.CloudSyncEnabled = true;
+        _settings.Save();
+        _sync.SetActiveProvider(ProviderName);
+        NotifySyncTargetChanged();
+    }
+
+    private void NotifySyncTargetChanged()
+    {
+        OnPropertyChanged(nameof(IsSyncTarget));
+        OnPropertyChanged(nameof(CanUseForSync));
     }
 
     /// <summary>Open the web vault in the browser (shown once signed in).</summary>
@@ -191,6 +235,8 @@ public partial class OnlineAccountViewModel : ObservableObject
         OnPropertyChanged(nameof(HasStorageInfo));
         OnPropertyChanged(nameof(StorageSummary));
         OnPropertyChanged(nameof(VaultPasswordRequired));
+        OnPropertyChanged(nameof(IsSyncTarget));
+        OnPropertyChanged(nameof(CanUseForSync));
     }
 
     /// <summary>Friendly byte size (invariant, so display + tests are culture-stable).</summary>

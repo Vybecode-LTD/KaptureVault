@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Kapture.Models;
 using Kapture.Services;
+using Kapture.Services.CloudSync;
 using Kapture.Services.CloudSync.Online;
 using Kapture.ViewModels;
 using NSubstitute;
@@ -19,6 +20,7 @@ public class OnlineAccountViewModelTests
     private readonly IUrlOpener _opener = Substitute.For<IUrlOpener>();
     private readonly ISettingsService _settings = Substitute.For<ISettingsService>();
     private readonly IEncryptionService _enc = Substitute.For<IEncryptionService>();
+    private readonly ISyncProviderController _sync = Substitute.For<ISyncProviderController>();
     private readonly AppSettings _appSettings = new();
 
     private OnlineAccountViewModel NewVm(bool configured = true)
@@ -27,7 +29,7 @@ public class OnlineAccountViewModelTests
         var config = configured
             ? new OnlineVaultConfig { ApiBaseUrl = "https://api.kapture.tools", GoogleClientId = "client-123" }
             : new OnlineVaultConfig { ApiBaseUrl = "REPLACE_WITH_API", GoogleClientId = "REPLACE_WITH_ID" }; // explicit not-configured (defaults are now real)
-        return new OnlineAccountViewModel(_account, _opener, config, _settings, _enc);
+        return new OnlineAccountViewModel(_account, _opener, config, _settings, _enc, _sync);
     }
 
     [Fact]
@@ -62,6 +64,7 @@ public class OnlineAccountViewModelTests
         _appSettings.CloudSyncProvider.Should().Be("Online Vault");
         _appSettings.CloudSyncEnabled.Should().BeTrue();
         _settings.Received().Save();
+        _sync.Received(1).SetActiveProvider("Online Vault"); // switches the live sync manager, not just settings
     }
 
     [Fact]
@@ -187,5 +190,69 @@ public class OnlineAccountViewModelTests
         NewVm().OpenVaultCommand.Execute(null);
 
         _opener.Received(1).Open(Arg.Is<string>(u => u.Contains("kapture.tools/vault")));
+    }
+
+    // ── "Use the Online Vault for sync" (Phase 4 — fixes the can't-switch-once-signed-in gap) ──
+
+    [Fact]
+    public void UseForSync_WhenSignedInAndEncrypted_SwitchesLiveAndPersists()
+    {
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(true);
+        var vm = NewVm();
+
+        vm.UseForSyncCommand.Execute(null);
+
+        _appSettings.CloudSyncProvider.Should().Be("Online Vault");
+        _appSettings.CloudSyncEnabled.Should().BeTrue();
+        _settings.Received().Save();
+        _sync.Received(1).SetActiveProvider("Online Vault");
+    }
+
+    [Fact]
+    public void UseForSync_WhenNoVaultPassword_DoesNotSwitch_AndPrompts()
+    {
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(false);
+        var vm = NewVm();
+
+        vm.UseForSyncCommand.Execute(null);
+
+        _appSettings.CloudSyncProvider.Should().BeNull();
+        _sync.DidNotReceiveWithAnyArgs().SetActiveProvider(default);
+        vm.StatusMessage.Should().Contain("vault password");
+    }
+
+    [Fact]
+    public void IsSyncTarget_TrueWhenSignedInAndOnlineVaultActive()
+    {
+        _account.IsSignedIn.Returns(true);
+        _sync.ActiveProviderName.Returns("Online Vault");
+
+        NewVm().IsSyncTarget.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanUseForSync_TrueWhenSignedInEncryptedButNotYetTarget()
+    {
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(true);
+        _sync.ActiveProviderName.Returns("Google Drive"); // some other provider is active
+
+        var vm = NewVm();
+
+        vm.IsSyncTarget.Should().BeFalse();
+        vm.CanUseForSync.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SignOut_WhenWasSyncTarget_ClearsTheLiveProvider()
+    {
+        _appSettings.CloudSyncProvider = "Online Vault";
+        var vm = NewVm();
+
+        vm.SignOutCommand.Execute(null);
+
+        _sync.Received(1).SetActiveProvider(null);
     }
 }
