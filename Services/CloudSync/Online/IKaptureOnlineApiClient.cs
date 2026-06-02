@@ -65,4 +65,26 @@ public interface IKaptureOnlineApiClient
 
     /// <summary><c>GET /vault/objects</c> — list every object under the user's vault prefix (relative key + size).</summary>
     Task<VaultObjectList> ListObjectsAsync(string session, CancellationToken ct = default);
+
+    // ── Hosted files (Phase 6 — paid; 402 if the account isn't subscribed) ─────
+    /// <summary><c>POST /files/put-url</c> — register a file + a presigned PUT (enforces 250 MB + quota).</summary>
+    Task<FileUploadTicket> CreateFilePutUrlAsync(string session, string name, long size, string? contentType, CancellationToken ct = default);
+
+    /// <summary><c>POST /files/{id}/commit</c> — finish an upload; the server HEADs the real size + banks usage.</summary>
+    Task<FileCommitResult> CommitFileAsync(string session, string id, string? sha256, CancellationToken ct = default);
+
+    /// <summary><c>GET /files</c> — the caller's hosted files (newest first).</summary>
+    Task<HostedFileList> ListFilesAsync(string session, CancellationToken ct = default);
+
+    /// <summary><c>GET /files/{id}/get-url</c> — a presigned GET URL for the caller's own file.</summary>
+    Task<PresignedUrl> GetFileGetUrlAsync(string session, string id, CancellationToken ct = default);
+
+    /// <summary><c>DELETE /files/{id}</c> — delete the file (R2 object + row + cascade its shares).</summary>
+    Task DeleteFileAsync(string session, string id, CancellationToken ct = default);
+
+    /// <summary><c>POST /files/{id}/share</c> — create a public share link (optional ISO <paramref name="expiresAt"/>).</summary>
+    Task<ShareLink> CreateShareAsync(string session, string id, string? expiresAt, CancellationToken ct = default);
+
+    /// <summary><c>DELETE /shares/{token}</c> — revoke a share link.</summary>
+    Task RevokeShareAsync(string session, string token, CancellationToken ct = default);
 }

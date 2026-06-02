@@ -43,6 +43,7 @@ public class ServiceRegistrationTests
     [InlineData(typeof(IScreenshotImageCodec))]
     [InlineData(typeof(IScreenshotSyncService))]
     [InlineData(typeof(IOnlineVaultSync))]
+    [InlineData(typeof(IFileHostingService))]
     public void AddKaptureServices_RegistersExpectedType(Type serviceType)
     {
         var services = new ServiceCollection().AddKaptureServices();

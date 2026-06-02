@@ -99,6 +99,33 @@ public sealed class KaptureOnlineApiClient : IKaptureOnlineApiClient
     public Task<VaultObjectList> ListObjectsAsync(string session, CancellationToken ct = default) =>
         SendAsync<VaultObjectList>(HttpMethod.Get, "/vault/objects", session, body: null, ct);
 
+    public Task<FileUploadTicket> CreateFilePutUrlAsync(string session, string name, long size, string? contentType, CancellationToken ct = default) =>
+        SendAsync<FileUploadTicket>(HttpMethod.Post, "/files/put-url", session, new { name, size, contentType }, ct);
+
+    public Task<FileCommitResult> CommitFileAsync(string session, string id, string? sha256, CancellationToken ct = default) =>
+        SendAsync<FileCommitResult>(HttpMethod.Post, $"/files/{Uri.EscapeDataString(id)}/commit", session, new { sha256 }, ct);
+
+    public Task<HostedFileList> ListFilesAsync(string session, CancellationToken ct = default) =>
+        SendAsync<HostedFileList>(HttpMethod.Get, "/files", session, body: null, ct);
+
+    public Task<PresignedUrl> GetFileGetUrlAsync(string session, string id, CancellationToken ct = default) =>
+        SendAsync<PresignedUrl>(HttpMethod.Get, $"/files/{Uri.EscapeDataString(id)}/get-url", session, body: null, ct);
+
+    public async Task DeleteFileAsync(string session, string id, CancellationToken ct = default)
+    {
+        using var resp = await RawSendAsync(HttpMethod.Delete, $"/files/{Uri.EscapeDataString(id)}", session, body: null, ct);
+        await ThrowIfFailedAsync(resp, ct);
+    }
+
+    public Task<ShareLink> CreateShareAsync(string session, string id, string? expiresAt, CancellationToken ct = default) =>
+        SendAsync<ShareLink>(HttpMethod.Post, $"/files/{Uri.EscapeDataString(id)}/share", session, new { expiresAt }, ct);
+
+    public async Task RevokeShareAsync(string session, string token, CancellationToken ct = default)
+    {
+        using var resp = await RawSendAsync(HttpMethod.Delete, $"/shares/{Uri.EscapeDataString(token)}", session, body: null, ct);
+        await ThrowIfFailedAsync(resp, ct);
+    }
+
     private async Task<T> SendAsync<T>(HttpMethod method, string path, string? session, object? body, CancellationToken ct)
     {
         using var resp = await RawSendAsync(method, path, session, body, ct);

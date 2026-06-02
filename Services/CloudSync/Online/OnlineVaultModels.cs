@@ -89,3 +89,36 @@ public sealed record VaultObject(
 /// <summary>Response of <c>GET /vault/objects</c> — every object under the caller's vault prefix.</summary>
 public sealed record VaultObjectList(
     [property: JsonPropertyName("objects")] IReadOnlyList<VaultObject> Objects);
+
+// ── Hosted files (Phase 6 — paid file hosting + share links) ──────────────────
+
+/// <summary>Response of <c>POST /files/put-url</c> — the registered file id + a presigned PUT URL.</summary>
+public sealed record FileUploadTicket(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("url")] string Url,
+    [property: JsonPropertyName("expiresIn")] int ExpiresIn);
+
+/// <summary>Response of <c>POST /files/{id}/commit</c> — the server-verified size + quota.</summary>
+public sealed record FileCommitResult(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("size")] long Size,
+    [property: JsonPropertyName("used")] long Used,
+    [property: JsonPropertyName("quota")] long Quota);
+
+/// <summary>One hosted file from <c>GET /files</c>.</summary>
+public sealed record HostedFile(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("size")] long Size,
+    [property: JsonPropertyName("contentType")] string? ContentType,
+    [property: JsonPropertyName("createdAt")] string CreatedAt);
+
+/// <summary>Response of <c>GET /files</c> — the caller's hosted files, newest first.</summary>
+public sealed record HostedFileList(
+    [property: JsonPropertyName("files")] IReadOnlyList<HostedFile> Files);
+
+/// <summary>Response of <c>POST /files/{id}/share</c> — a share token + its public download URL.</summary>
+public sealed record ShareLink(
+    [property: JsonPropertyName("token")] string Token,
+    [property: JsonPropertyName("url")] string Url);

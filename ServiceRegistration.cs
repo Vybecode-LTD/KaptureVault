@@ -65,6 +65,13 @@ public static class ServiceRegistration
         // The on-demand sync trigger the Online Vault UI binds to (same singleton).
         services.AddSingleton<IOnlineVaultSync>(sp => sp.GetRequiredService<CloudSyncManager>());
 
+        // Phase 6: paid file hosting + share links. Its own HttpClient for the R2 transfers (mirrors
+        // R2StorageProvider / ScreenshotSyncService).
+        services.AddSingleton<IFileHostingService>(sp => new FileHostingService(
+            sp.GetRequiredService<IOnlineAccountService>(),
+            sp.GetRequiredService<IKaptureOnlineApiClient>(),
+            new HttpClient()));
+
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`
         // in App. HotkeyService is parameterless; MainWindowViewModel uses an explicit
         // factory that mirrors the original construction exactly, so resolution can't pick

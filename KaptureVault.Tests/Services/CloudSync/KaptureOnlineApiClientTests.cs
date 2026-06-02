@@ -273,6 +273,72 @@ public class KaptureOnlineApiClientTests
         ex.IsPaymentRequired.Should().BeFalse();
     }
 
+    // ── Hosted files (Phase 6) ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateFilePutUrlAsync_PostsNameAndSize_WithBearer_AndParsesTicket()
+    {
+        var (client, handler) = Make((_, _) =>
+            Json(HttpStatusCode.OK, """{"id":"file-1","name":"a.pdf","url":"https://r2/put?X-Amz-Signature=s","expiresIn":300}"""));
+
+        var t = await client.CreateFilePutUrlAsync("sess-1", "a.pdf", 4096, "application/pdf");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/files/put-url");
+        handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-1");
+        handler.LastBody.Should().Contain("a.pdf").And.Contain("4096");
+        t.Id.Should().Be("file-1");
+        t.Url.Should().Contain("X-Amz-Signature=");
+    }
+
+    [Fact]
+    public async Task ListFilesAsync_GetsWithBearer_AndParsesFiles()
+    {
+        var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK,
+            """{"files":[{"id":"f1","name":"a.pdf","size":4096,"contentType":"application/pdf","createdAt":"2026-06-02"}]}"""));
+
+        var list = await client.ListFilesAsync("sess-1");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Get);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/files");
+        list.Files.Should().ContainSingle(f => f.Id == "f1" && f.Size == 4096);
+    }
+
+    [Fact]
+    public async Task CreateShareAsync_PostsToTheFileShareRoute_AndParsesTheLink()
+    {
+        var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK, """{"token":"tok123","url":"https://api/s/tok123"}"""));
+
+        var share = await client.CreateShareAsync("sess-1", "f1", null);
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/files/f1/share");
+        share.Token.Should().Be("tok123");
+        share.Url.Should().Contain("/s/tok123");
+    }
+
+    [Fact]
+    public async Task DeleteFileAsync_SendsDelete_WithBearer()
+    {
+        var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK, """{"ok":true}"""));
+
+        await client.DeleteFileAsync("sess-1", "f1");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Delete);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/files/f1");
+        handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-1");
+    }
+
+    [Fact]
+    public async Task CreateFilePutUrlAsync_WhenNotEntitled_ThrowsPaymentRequired()
+    {
+        var (client, _) = Make((_, _) => Json(HttpStatusCode.PaymentRequired, """{"error":"subscription required"}"""));
+
+        Func<Task> act = () => client.CreateFilePutUrlAsync("sess", "a", 1, null);
+
+        (await act.Should().ThrowAsync<OnlineApiException>()).Which.IsPaymentRequired.Should().BeTrue();
+    }
+
     /// <summary>Records the outbound request (method, URI, headers, body) and returns a canned response.</summary>
     private sealed class StubHandler : HttpMessageHandler
     {
