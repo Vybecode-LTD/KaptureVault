@@ -7,10 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] — planned v1.2.0 (File Hosting)
+## [1.2.0] — 2026-06-02 (File Hosting)
 
 Paid **file hosting** — store files in your KaptureVault account and share them with public links.
-*(Goes live once the file-hosting backend is deployed.)*
 
 ### Added
 - **Host files in your account, organized in folders.** A new **Files** window (the Upload button)
