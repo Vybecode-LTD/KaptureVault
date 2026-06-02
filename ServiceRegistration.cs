@@ -46,7 +46,8 @@ public static class ServiceRegistration
         services.AddSingleton<ICloudStorageProvider>(sp => new R2StorageProvider(
             sp.GetRequiredService<IOnlineAccountService>(),
             sp.GetRequiredService<IKaptureOnlineApiClient>(),
-            new HttpClient()));
+            new HttpClient(),
+            sp.GetRequiredService<IEncryptionService>()));
         services.AddSingleton<CloudSyncManager>();
 
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`

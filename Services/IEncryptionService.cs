@@ -22,4 +22,18 @@ public interface IEncryptionService
 
     /// <summary>Decrypt ciphertext. Returns plaintext. No-op if not active.</summary>
     string Decrypt(string ciphertext);
+
+    /// <summary>
+    /// Public, non-secret key-derivation parameters (salt + iteration count + KDF name) read from the
+    /// stored encryption metadata, so another device or the web vault can re-derive the AES key from
+    /// the user's password. Returns null when no vault password is configured. Does NOT require unlock.
+    /// </summary>
+    VaultKdfInfo? GetKdfInfo();
 }
+
+/// <summary>
+/// Public PBKDF2 parameters carried in <c>vault.db.meta</c> for cross-device / web-vault key
+/// derivation. None of these are secret (the salt and iteration count are public by PBKDF2 design;
+/// the key still requires the user's password).
+/// </summary>
+public sealed record VaultKdfInfo(string Kdf, int Iterations, string SaltBase64);

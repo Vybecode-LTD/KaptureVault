@@ -62,7 +62,12 @@ public sealed record VaultMeta(
     [property: JsonPropertyName("mtime")] string Mtime,
     [property: JsonPropertyName("sha256")] string Sha256,
     [property: JsonPropertyName("size")] long Size,
-    [property: JsonPropertyName("version")] int Version = 1);
+    [property: JsonPropertyName("version")] int Version = 1,
+    // Phase 3 (slice A): public PBKDF2 params so the web vault / a second device can derive the
+    // key from the user's password. Absent (null/0) on a v1 meta or an unencrypted vault.
+    [property: JsonPropertyName("kdf")] string? Kdf = null,
+    [property: JsonPropertyName("iterations")] int Iterations = 0,
+    [property: JsonPropertyName("salt")] string? Salt = null);
 
 /// <summary>Result of <c>GET /vault/meta</c>: either no remote vault exists yet, or its current meta.</summary>
 public sealed record VaultMetaResult(bool Exists, VaultMeta? Meta);

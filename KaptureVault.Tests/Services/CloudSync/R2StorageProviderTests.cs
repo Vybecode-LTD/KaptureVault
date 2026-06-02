@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
+using Kapture.Services;
 using Kapture.Services.CloudSync.Online;
 using NSubstitute;
 using Xunit;
@@ -15,7 +16,7 @@ namespace KaptureVault.Tests.Services.CloudSync;
 /// </summary>
 public class R2StorageProviderTests
 {
-    private static (R2StorageProvider provider, IKaptureOnlineApiClient api, StubR2Handler r2) NewProvider()
+    private static (R2StorageProvider provider, IKaptureOnlineApiClient api, StubR2Handler r2, IEncryptionService enc) NewProvider()
     {
         var api = Substitute.For<IKaptureOnlineApiClient>();
         var store = Substitute.For<IOnlineTokenStore>();
@@ -24,15 +25,16 @@ public class R2StorageProviderTests
         var account = new OnlineAccountService(
             api, Substitute.For<IGoogleSignIn>(), store, () => new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc));
 
+        var enc = Substitute.For<IEncryptionService>();
         var r2 = new StubR2Handler();
-        var provider = new R2StorageProvider(account, api, new HttpClient(r2));
-        return (provider, api, r2);
+        var provider = new R2StorageProvider(account, api, new HttpClient(r2), enc);
+        return (provider, api, r2, enc);
     }
 
     [Fact]
     public void ProviderName_IsOnlineVault_AndAuthReflectsAccount()
     {
-        var (provider, _, _) = NewProvider();
+        var (provider, _, _, _) = NewProvider();
         provider.ProviderName.Should().Be("Online Vault");
         provider.IsAuthenticated.Should().BeTrue();
     }
@@ -40,7 +42,7 @@ public class R2StorageProviderTests
     [Fact]
     public async Task UploadFileAsync_PutsBytesToPresignedUrl_AndWritesMeta()
     {
-        var (provider, api, r2) = NewProvider();
+        var (provider, api, r2, _) = NewProvider();
         api.GetVaultPutUrlAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new PresignedUrl("https://r2.test/put?sig=abc", 300));
         var bytes = Encoding.UTF8.GetBytes("encrypted-vault-bytes");
@@ -63,9 +65,33 @@ public class R2StorageProviderTests
     }
 
     [Fact]
+    public async Task UploadFileAsync_WritesKdfParamsIntoMeta_ForWebUnlock()
+    {
+        var (provider, api, _, enc) = NewProvider();
+        enc.GetKdfInfo().Returns(new VaultKdfInfo("PBKDF2-SHA256", 600_000, "c2FsdHk="));
+        api.GetVaultPutUrlAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new PresignedUrl("https://r2.test/put", 300));
+        var tmp = Path.Combine(Path.GetTempPath(), $"kvr2-kdf-{Guid.NewGuid():N}.db");
+        await File.WriteAllBytesAsync(tmp, [1, 2, 3, 4]);
+
+        try
+        {
+            await provider.UploadFileAsync(tmp, "vault.db");
+
+            // The meta must carry the public KDF params so the web vault / a 2nd device can derive the key.
+            await api.Received(1).PutVaultMetaAsync(
+                Arg.Any<string>(),
+                Arg.Is<VaultMeta>(m =>
+                    m.Kdf == "PBKDF2-SHA256" && m.Iterations == 600_000 && m.Salt == "c2FsdHk=" && m.Version == 2),
+                Arg.Any<CancellationToken>());
+        }
+        finally { File.Delete(tmp); }
+    }
+
+    [Fact]
     public async Task DownloadFileAsync_GetsBytesFromPresignedUrl_AndWritesFile()
     {
-        var (provider, api, r2) = NewProvider();
+        var (provider, api, r2, _) = NewProvider();
         var bytes = Encoding.UTF8.GetBytes("downloaded-vault-bytes");
         r2.GetPayload = bytes;
         api.GetVaultGetUrlAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -85,7 +111,7 @@ public class R2StorageProviderTests
     [Fact]
     public async Task FindFileAsync_ReturnsVaultId_WhenRemoteExists_ElseNull()
     {
-        var (provider, api, _) = NewProvider();
+        var (provider, api, _, _) = NewProvider();
         api.GetVaultMetaAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(
                 new VaultMetaResult(true, new VaultMeta("2026-06-01T12:00:00.000Z", "sha", 10, 1)),
@@ -98,7 +124,7 @@ public class R2StorageProviderTests
     [Fact]
     public async Task GetRemoteModifiedTimeAsync_ReturnsParsedMtime()
     {
-        var (provider, api, _) = NewProvider();
+        var (provider, api, _, _) = NewProvider();
         api.GetVaultMetaAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new VaultMetaResult(true, new VaultMeta("2026-06-01T12:00:00.000Z", "sha", 10, 1)));
 
@@ -111,7 +137,7 @@ public class R2StorageProviderTests
     [Fact]
     public async Task UploadFileAsync_SurfacesR2Failure()
     {
-        var (provider, api, r2) = NewProvider();
+        var (provider, api, r2, _) = NewProvider();
         r2.PutStatus = HttpStatusCode.Forbidden;
         api.GetVaultPutUrlAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new PresignedUrl("https://r2.test/put", 300));

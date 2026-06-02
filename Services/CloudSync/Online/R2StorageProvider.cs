@@ -24,15 +24,18 @@ public sealed class R2StorageProvider : ICloudStorageProvider
     private readonly IOnlineAccountService _account;
     private readonly IKaptureOnlineApiClient _api;
     private readonly HttpClient _r2Http;
+    private readonly IEncryptionService _encryption;
 
-    public R2StorageProvider(IOnlineAccountService account, IKaptureOnlineApiClient api, HttpClient r2Http)
+    public R2StorageProvider(IOnlineAccountService account, IKaptureOnlineApiClient api, HttpClient r2Http, IEncryptionService encryption)
     {
         ArgumentNullException.ThrowIfNull(account);
         ArgumentNullException.ThrowIfNull(api);
         ArgumentNullException.ThrowIfNull(r2Http);
+        ArgumentNullException.ThrowIfNull(encryption);
         _account = account;
         _api = api;
         _r2Http = r2Http;
+        _encryption = encryption;
     }
 
     public string ProviderName => "Online Vault";
@@ -57,7 +60,13 @@ public sealed class R2StorageProvider : ICloudStorageProvider
             await UploadBytesAsync(put.Url, localPath, c);
 
             var (sha, size) = await HashAndSizeAsync(localPath, c);
-            var meta = new VaultMeta(DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture), sha, size);
+            // Carry the public KDF params so the web vault / a second device can derive the key
+            // from the user's password (Phase 3 slice A). Absent when the vault has no password.
+            var kdf = _encryption.GetKdfInfo();
+            var meta = new VaultMeta(
+                DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture), sha, size,
+                Version: kdf is null ? 1 : 2,
+                Kdf: kdf?.Kdf, Iterations: kdf?.Iterations ?? 0, Salt: kdf?.SaltBase64);
             await _api.PutVaultMetaAsync(session, meta, c);
             return true;
         }, ct);

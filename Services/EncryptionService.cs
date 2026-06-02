@@ -162,6 +162,17 @@ public class EncryptionService : IEncryptionService
         return Encoding.UTF8.GetString(plaintext);
     }
 
+    public VaultKdfInfo? GetKdfInfo()
+    {
+        var meta = LoadMeta();
+        if (meta == null || string.IsNullOrEmpty(meta.Salt))
+            return null;
+        // Pre-T-11 files stored no iteration count → they used the legacy 100k.
+        var iterations = meta.Iterations > 0 ? meta.Iterations : LegacyIterations;
+        var kdf = string.IsNullOrEmpty(meta.Kdf) ? "PBKDF2-SHA256" : meta.Kdf;
+        return new VaultKdfInfo(kdf, iterations, meta.Salt);
+    }
+
     private static byte[] DeriveKey(string password, byte[] salt, int iterations)
     {
         using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
