@@ -99,7 +99,10 @@ public class CaptureServiceTests
 
         sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2),
             "filling the buffer must enqueue to the writer task, never block on the SQLite write");
-        insertStarted.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue(
+        // Generous ceiling on purpose: this asserts the write happens OFF the hook thread, not how
+        // fast the writer is scheduled. A tight (2 s) wait flaked on loaded/parallel CI runners where
+        // the background writer task can be starved briefly; in the green path this returns in ms.
+        insertStarted.Wait(TimeSpan.FromSeconds(30)).Should().BeTrue(
             "the writer task should pick up the queued entry and begin the (gated) write off the hook thread");
 
         release.Set();   // let the writer finish
