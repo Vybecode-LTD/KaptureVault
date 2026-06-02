@@ -26,6 +26,7 @@ public class R2StorageProviderTests
             api, Substitute.For<IGoogleSignIn>(), store, () => new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc));
 
         var enc = Substitute.For<IEncryptionService>();
+        enc.IsActive.Returns(true); // default: vault encrypted/unlocked, so uploads are allowed
         var r2 = new StubR2Handler();
         var provider = new R2StorageProvider(account, api, new HttpClient(r2), enc);
         return (provider, api, r2, enc);
@@ -60,6 +61,28 @@ public class R2StorageProviderTests
                 Arg.Any<string>(),
                 Arg.Is<VaultMeta>(m => m.Size == bytes.Length && m.Sha256.Length == 64),
                 Arg.Any<CancellationToken>());
+        }
+        finally { File.Delete(tmp); }
+    }
+
+    [Fact]
+    public async Task UploadFileAsync_RefusesWhenVaultNotEncrypted()
+    {
+        // Phase 3 slice B: the Online Vault is end-to-end encrypted — never upload a plaintext vault.
+        // This is the authoritative backstop (the UI gates earlier). With no active vault password the
+        // upload must throw and touch neither the presign API nor R2.
+        var (provider, api, r2, enc) = NewProvider();
+        enc.IsActive.Returns(false);
+        var tmp = Path.Combine(Path.GetTempPath(), $"kvr2-noenc-{Guid.NewGuid():N}.db");
+        await File.WriteAllBytesAsync(tmp, [1, 2, 3]);
+
+        try
+        {
+            Func<Task> act = () => provider.UploadFileAsync(tmp, "vault.db");
+            await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*vault password*");
+            r2.PutUri.Should().BeNull();
+            await api.DidNotReceiveWithAnyArgs().GetVaultPutUrlAsync(default!, default);
+            await api.DidNotReceiveWithAnyArgs().PutVaultMetaAsync(default!, default!, default);
         }
         finally { File.Delete(tmp); }
     }

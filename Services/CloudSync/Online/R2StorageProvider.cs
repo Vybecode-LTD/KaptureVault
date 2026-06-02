@@ -54,6 +54,13 @@ public sealed class R2StorageProvider : ICloudStorageProvider
 
     public async Task<string?> UploadFileAsync(string localPath, string remoteFileName, CancellationToken ct = default)
     {
+        // Phase 3 slice B: the Online Vault is end-to-end encrypted — never upload a plaintext vault.
+        // A vault password (active encryption) is required. The UI gates this earlier; this is the
+        // authoritative backstop so no code path can push plaintext to R2.
+        if (!_encryption.IsActive)
+            throw new InvalidOperationException(
+                "The Online Vault requires an active vault password (Settings → Encryption) before syncing.");
+
         await _account.ExecuteAuthedAsync(async (session, c) =>
         {
             var put = await _api.GetVaultPutUrlAsync(session, c);

@@ -21,17 +21,20 @@ public partial class OnlineAccountViewModel : ObservableObject
     private readonly IUrlOpener _urlOpener;
     private readonly OnlineVaultConfig _config;
     private readonly ISettingsService _settings;
+    private readonly IEncryptionService _encryption;
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = "";
 
     public OnlineAccountViewModel(
-        IOnlineAccountService account, IUrlOpener urlOpener, OnlineVaultConfig config, ISettingsService settings)
+        IOnlineAccountService account, IUrlOpener urlOpener, OnlineVaultConfig config, ISettingsService settings,
+        IEncryptionService encryption)
     {
         _account = account;
         _urlOpener = urlOpener;
         _config = config;
         _settings = settings;
+        _encryption = encryption;
         _account.StateChanged += OnAccountStateChanged;
     }
 
@@ -47,6 +50,10 @@ public partial class OnlineAccountViewModel : ObservableObject
     // Panel visibility helpers.
     public bool CanSubscribe => _account.IsSignedIn && !_account.IsPaid;
     public bool CanManageBilling => _account.IsSignedIn && _account.IsPaid;
+
+    /// <summary>Signed in but no active vault password — the Online Vault is end-to-end encrypted and
+    /// cannot be enabled until one is set. The panel shows the "set a password / sole key" guidance.</summary>
+    public bool VaultPasswordRequired => _account.IsSignedIn && !_encryption.IsActive;
 
     /// <summary>True once a signed-in account has a known storage quota (from <c>/me</c>).</summary>
     public bool HasStorageInfo => _account.IsSignedIn && _account.QuotaBytes > 0;
@@ -76,17 +83,18 @@ public partial class OnlineAccountViewModel : ObservableObject
             }
 
             await _account.RefreshAccountAsync();
-            if (_account.IsPaid)
+            // Vault sync is FREE (Phase 2) — no subscription needed — but the Online Vault is end-to-end
+            // encrypted, so a vault password is REQUIRED before we make it the sync target (Phase 3 slice B).
+            if (!_encryption.IsActive)
             {
-                _settings.Settings.CloudSyncProvider = ProviderName;
-                _settings.Settings.CloudSyncEnabled = true;
-                _settings.Save();
-                StatusMessage = "Signed in. The Online Vault is now your sync target.";
+                StatusMessage = "Signed in. Set a vault password in Settings → Encryption to enable the Online " +
+                    "Vault — that password is the only key, so if you lose it your online vault can't be recovered.";
+                return;
             }
-            else
-            {
-                StatusMessage = "Signed in. Subscribe to enable the Online Vault.";
-            }
+            _settings.Settings.CloudSyncProvider = ProviderName;
+            _settings.Settings.CloudSyncEnabled = true;
+            _settings.Save();
+            StatusMessage = "Signed in. The Online Vault is now your sync target.";
         }
         catch (Exception ex)
         {
@@ -182,6 +190,7 @@ public partial class OnlineAccountViewModel : ObservableObject
         OnPropertyChanged(nameof(CanManageBilling));
         OnPropertyChanged(nameof(HasStorageInfo));
         OnPropertyChanged(nameof(StorageSummary));
+        OnPropertyChanged(nameof(VaultPasswordRequired));
     }
 
     /// <summary>Friendly byte size (invariant, so display + tests are culture-stable).</summary>

@@ -18,6 +18,7 @@ public class OnlineAccountViewModelTests
     private readonly IOnlineAccountService _account = Substitute.For<IOnlineAccountService>();
     private readonly IUrlOpener _opener = Substitute.For<IUrlOpener>();
     private readonly ISettingsService _settings = Substitute.For<ISettingsService>();
+    private readonly IEncryptionService _enc = Substitute.For<IEncryptionService>();
     private readonly AppSettings _appSettings = new();
 
     private OnlineAccountViewModel NewVm(bool configured = true)
@@ -26,7 +27,7 @@ public class OnlineAccountViewModelTests
         var config = configured
             ? new OnlineVaultConfig { ApiBaseUrl = "https://api.kapture.tools", GoogleClientId = "client-123" }
             : new OnlineVaultConfig { ApiBaseUrl = "REPLACE_WITH_API", GoogleClientId = "REPLACE_WITH_ID" }; // explicit not-configured (defaults are now real)
-        return new OnlineAccountViewModel(_account, _opener, config, _settings);
+        return new OnlineAccountViewModel(_account, _opener, config, _settings, _enc);
     }
 
     [Fact]
@@ -48,10 +49,12 @@ public class OnlineAccountViewModelTests
     }
 
     [Fact]
-    public async Task SignIn_WhenSucceedsAndPaid_PersistsOnlineVaultAsSyncProvider()
+    public async Task SignIn_WhenVaultEncrypted_PersistsOnlineVaultAsSyncProvider()
     {
+        // Vault sync is free (Phase 2) — enabling the Online Vault requires an active vault password
+        // (Phase 3 slice B), NOT a subscription.
         _account.SignInAsync(Arg.Any<CancellationToken>()).Returns(true);
-        _account.IsPaid.Returns(true);
+        _enc.IsActive.Returns(true);
         var vm = NewVm();
 
         await vm.SignInCommand.ExecuteAsync(null);
@@ -62,16 +65,16 @@ public class OnlineAccountViewModelTests
     }
 
     [Fact]
-    public async Task SignIn_WhenSucceedsButNotPaid_DoesNotSetProvider_AndPromptsToSubscribe()
+    public async Task SignIn_WhenNoVaultPassword_DoesNotSetProvider_AndPromptsToSetOne()
     {
         _account.SignInAsync(Arg.Any<CancellationToken>()).Returns(true);
-        _account.IsPaid.Returns(false);
+        _enc.IsActive.Returns(false); // no vault password → must not enable the (E2E-encrypted) Online Vault
         var vm = NewVm();
 
         await vm.SignInCommand.ExecuteAsync(null);
 
         _appSettings.CloudSyncProvider.Should().BeNull();
-        vm.StatusMessage.Should().Contain("Subscribe");
+        vm.StatusMessage.Should().Contain("vault password");
     }
 
     [Fact]
@@ -165,6 +168,17 @@ public class OnlineAccountViewModelTests
 
         vm.HasStorageInfo.Should().BeFalse();
         vm.StorageSummary.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void VaultPasswordRequired_TrueOnlyWhenSignedInWithoutActiveEncryption()
+    {
+        _account.IsSignedIn.Returns(true);
+        _enc.IsActive.Returns(false);
+        NewVm().VaultPasswordRequired.Should().BeTrue();
+
+        _enc.IsActive.Returns(true);
+        NewVm().VaultPasswordRequired.Should().BeFalse();
     }
 
     [Fact]
