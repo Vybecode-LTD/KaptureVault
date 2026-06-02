@@ -99,8 +99,8 @@ public sealed class KaptureOnlineApiClient : IKaptureOnlineApiClient
     public Task<VaultObjectList> ListObjectsAsync(string session, CancellationToken ct = default) =>
         SendAsync<VaultObjectList>(HttpMethod.Get, "/vault/objects", session, body: null, ct);
 
-    public Task<FileUploadTicket> CreateFilePutUrlAsync(string session, string name, long size, string? contentType, CancellationToken ct = default) =>
-        SendAsync<FileUploadTicket>(HttpMethod.Post, "/files/put-url", session, new { name, size, contentType }, ct);
+    public Task<FileUploadTicket> CreateFilePutUrlAsync(string session, string name, long size, string? contentType, bool encrypted, string? folder, CancellationToken ct = default) =>
+        SendAsync<FileUploadTicket>(HttpMethod.Post, "/files/put-url", session, new { name, size, contentType, encrypted, folder }, ct);
 
     public Task<FileCommitResult> CommitFileAsync(string session, string id, string? sha256, CancellationToken ct = default) =>
         SendAsync<FileCommitResult>(HttpMethod.Post, $"/files/{Uri.EscapeDataString(id)}/commit", session, new { sha256 }, ct);

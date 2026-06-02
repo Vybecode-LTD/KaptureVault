@@ -70,6 +70,7 @@ public static class ServiceRegistration
         services.AddSingleton<IFileHostingService>(sp => new FileHostingService(
             sp.GetRequiredService<IOnlineAccountService>(),
             sp.GetRequiredService<IKaptureOnlineApiClient>(),
+            sp.GetRequiredService<IEncryptionService>(),
             new HttpClient()));
 
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`

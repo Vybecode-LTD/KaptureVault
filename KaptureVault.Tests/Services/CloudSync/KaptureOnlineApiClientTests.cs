@@ -281,12 +281,12 @@ public class KaptureOnlineApiClientTests
         var (client, handler) = Make((_, _) =>
             Json(HttpStatusCode.OK, """{"id":"file-1","name":"a.pdf","url":"https://r2/put?X-Amz-Signature=s","expiresIn":300}"""));
 
-        var t = await client.CreateFilePutUrlAsync("sess-1", "a.pdf", 4096, "application/pdf");
+        var t = await client.CreateFilePutUrlAsync("sess-1", "a.pdf", 4096, "application/pdf", encrypted: true, folder: "Docs");
 
         handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
         handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/files/put-url");
         handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-1");
-        handler.LastBody.Should().Contain("a.pdf").And.Contain("4096");
+        handler.LastBody.Should().Contain("a.pdf").And.Contain("4096").And.Contain("encrypted").And.Contain("Docs");
         t.Id.Should().Be("file-1");
         t.Url.Should().Contain("X-Amz-Signature=");
     }
@@ -334,7 +334,7 @@ public class KaptureOnlineApiClientTests
     {
         var (client, _) = Make((_, _) => Json(HttpStatusCode.PaymentRequired, """{"error":"subscription required"}"""));
 
-        Func<Task> act = () => client.CreateFilePutUrlAsync("sess", "a", 1, null);
+        Func<Task> act = () => client.CreateFilePutUrlAsync("sess", "a", 1, null, encrypted: false, folder: null);
 
         (await act.Should().ThrowAsync<OnlineApiException>()).Which.IsPaymentRequired.Should().BeTrue();
     }

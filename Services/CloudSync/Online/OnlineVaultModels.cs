@@ -112,7 +112,10 @@ public sealed record HostedFile(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("size")] long Size,
     [property: JsonPropertyName("contentType")] string? ContentType,
-    [property: JsonPropertyName("createdAt")] string CreatedAt);
+    // Phase 6D: client-encrypted (private — no public link) and the virtual folder it lives in.
+    [property: JsonPropertyName("encrypted")] bool Encrypted = false,
+    [property: JsonPropertyName("folder")] string? Folder = null,
+    [property: JsonPropertyName("createdAt")] string CreatedAt = "");
 
 /// <summary>Response of <c>GET /files</c> — the caller's hosted files, newest first.</summary>
 public sealed record HostedFileList(

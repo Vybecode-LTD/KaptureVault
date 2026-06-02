@@ -67,8 +67,8 @@ public interface IKaptureOnlineApiClient
     Task<VaultObjectList> ListObjectsAsync(string session, CancellationToken ct = default);
 
     // ── Hosted files (Phase 6 — paid; 402 if the account isn't subscribed) ─────
-    /// <summary><c>POST /files/put-url</c> — register a file + a presigned PUT (enforces 250 MB + quota).</summary>
-    Task<FileUploadTicket> CreateFilePutUrlAsync(string session, string name, long size, string? contentType, CancellationToken ct = default);
+    /// <summary><c>POST /files/put-url</c> — register a file (+ encrypted flag + virtual folder) and a presigned PUT (enforces 250 MB + quota).</summary>
+    Task<FileUploadTicket> CreateFilePutUrlAsync(string session, string name, long size, string? contentType, bool encrypted, string? folder, CancellationToken ct = default);
 
     /// <summary><c>POST /files/{id}/commit</c> — finish an upload; the server HEADs the real size + banks usage.</summary>
     Task<FileCommitResult> CommitFileAsync(string session, string id, string? sha256, CancellationToken ct = default);
