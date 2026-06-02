@@ -48,6 +48,18 @@ public static class ServiceRegistration
             sp.GetRequiredService<IKaptureOnlineApiClient>(),
             new HttpClient(),
             sp.GetRequiredService<IEncryptionService>()));
+
+        // Phase 3 (slice F): the Online Vault screenshot pipeline — re-encode (BMP→PNG), encrypt, and
+        // upload the screenshots the capture DB references, alongside vault.db. CloudSyncManager invokes
+        // it after an Online-Vault upload. Its own HttpClient for the R2 object transfers (mirrors R2StorageProvider).
+        services.AddSingleton<IScreenshotImageCodec, SkiaScreenshotImageCodec>();
+        services.AddSingleton<IScreenshotSyncService>(sp => new ScreenshotSyncService(
+            sp.GetRequiredService<IOnlineAccountService>(),
+            sp.GetRequiredService<IKaptureOnlineApiClient>(),
+            new HttpClient(),
+            sp.GetRequiredService<IEncryptionService>(),
+            sp.GetRequiredService<IScreenshotImageCodec>(),
+            sp.GetRequiredService<IDatabaseService>()));
         services.AddSingleton<CloudSyncManager>();
 
         // KV-010 / T-10: previously `new HotkeyService()` / `new MainWindowViewModel(...)`

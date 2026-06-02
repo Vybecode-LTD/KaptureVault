@@ -17,6 +17,9 @@ public sealed class OnlineApiException : Exception
     /// <summary>402 — authenticated but without an active subscription (paid feature gated).</summary>
     public bool IsPaymentRequired => (int)StatusCode == 402;
 
+    /// <summary>413 — the vault would exceed the storage quota (Phase 3: client trims oldest-first + retries).</summary>
+    public bool IsPayloadTooLarge => (int)StatusCode == 413;
+
     public OnlineApiException(HttpStatusCode statusCode, string message) : base(message)
         => StatusCode = statusCode;
 }

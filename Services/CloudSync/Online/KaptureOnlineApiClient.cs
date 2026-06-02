@@ -81,6 +81,21 @@ public sealed class KaptureOnlineApiClient : IKaptureOnlineApiClient
         await ThrowIfFailedAsync(resp, ct);
     }
 
+    public Task<PresignedUrl> GetObjectPutUrlAsync(string session, string key, CancellationToken ct = default) =>
+        SendAsync<PresignedUrl>(HttpMethod.Post, "/vault/object/put-url", session, new { key }, ct);
+
+    public Task<PresignedUrl> GetObjectGetUrlAsync(string session, string key, CancellationToken ct = default) =>
+        SendAsync<PresignedUrl>(HttpMethod.Post, "/vault/object/get-url", session, new { key }, ct);
+
+    public async Task DeleteObjectAsync(string session, string key, CancellationToken ct = default)
+    {
+        using var resp = await RawSendAsync(HttpMethod.Post, "/vault/object/delete", session, new { key }, ct);
+        await ThrowIfFailedAsync(resp, ct);
+    }
+
+    public Task<VaultObjectList> ListObjectsAsync(string session, CancellationToken ct = default) =>
+        SendAsync<VaultObjectList>(HttpMethod.Get, "/vault/objects", session, body: null, ct);
+
     private async Task<T> SendAsync<T>(HttpMethod method, string path, string? session, object? body, CancellationToken ct)
     {
         using var resp = await RawSendAsync(method, path, session, body, ct);

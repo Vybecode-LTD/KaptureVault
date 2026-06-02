@@ -40,6 +40,8 @@ public class ServiceRegistrationTests
     [InlineData(typeof(IOnlineAccountService))]
     [InlineData(typeof(IUrlOpener))]
     [InlineData(typeof(OnlineAccountViewModel))]
+    [InlineData(typeof(IScreenshotImageCodec))]
+    [InlineData(typeof(IScreenshotSyncService))]
     public void AddKaptureServices_RegistersExpectedType(Type serviceType)
     {
         var services = new ServiceCollection().AddKaptureServices();

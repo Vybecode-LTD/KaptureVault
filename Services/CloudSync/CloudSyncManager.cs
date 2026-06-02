@@ -1,3 +1,4 @@
+using Kapture.Services.CloudSync.Online;
 using Timer = System.Timers.Timer;
 
 namespace Kapture.Services.CloudSync;
@@ -15,6 +16,7 @@ public class CloudSyncManager : IDisposable
         "KaptureVault", "sync_meta.json");
 
     private readonly IDatabaseService _db;
+    private readonly IScreenshotSyncService? _screenshotSync;
     private readonly Dictionary<string, ICloudStorageProvider> _providers = new();
     private Timer? _syncTimer;
     private string? _activeProvider;
@@ -24,9 +26,19 @@ public class CloudSyncManager : IDisposable
     public string LastSyncStatus { get; private set; } = "Not synced";
     public bool IsSyncing => _syncing != 0;
 
-    public CloudSyncManager(IDatabaseService db, IEnumerable<ICloudStorageProvider> providers)
+    /// <summary>Outcome of the most recent screenshot sync pass (Online Vault only), for the UI. Null until one runs.</summary>
+    public ScreenshotSyncResult? LastScreenshotSync { get; private set; }
+
+    public CloudSyncManager(
+        IDatabaseService db,
+        IEnumerable<ICloudStorageProvider> providers,
+        IScreenshotSyncService? screenshotSync = null)
     {
         _db = db;
+        // Phase 3 (slice F): the Online Vault also syncs screenshot images (DB rows reference plaintext
+        // .bmp files that must be re-encoded + encrypted before upload). Optional so existing
+        // construction/tests are unaffected; only used when the active provider is the Online Vault.
+        _screenshotSync = screenshotSync;
         // Providers are injected (Google Drive + Online Vault) and keyed by ProviderName so the
         // active one can be selected from settings. (Was: new GoogleDriveProvider() inline.)
         foreach (var provider in providers)
@@ -91,6 +103,12 @@ public class CloudSyncManager : IDisposable
             // Find or upload
             var remoteFileId = await provider.FindFileAsync(SyncFileName, ct);
 
+            bool result;
+            // True only after a vault upload or an already-in-sync state — when the local screenshots
+            // are the source of truth and should be pushed up (Phase 3 slice F). A download-wins sync
+            // instead restores screenshots (slice G), not handled here.
+            var pushScreenshots = false;
+
             if (remoteFileId == null)
             {
                 // First sync — upload
@@ -98,50 +116,64 @@ public class CloudSyncManager : IDisposable
                 UpdateStatus(uploaded
                     ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
                     : "Upload failed");
-                return uploaded;
-            }
-
-            // Compare timestamps
-            var remoteModified = await provider.GetRemoteModifiedTimeAsync(remoteFileId, ct);
-
-            if (remoteModified == null)
-            {
-                // Can't get remote time — upload local
-                var uploaded = await UploadSafeCopy(provider, ct);
-                UpdateStatus(uploaded
-                    ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
-                    : "Upload failed");
-                return uploaded;
-            }
-
-            if (localModified > remoteModified.Value.AddSeconds(5))
-            {
-                // Local is newer — upload
-                var uploaded = await UploadSafeCopy(provider, ct);
-                UpdateStatus(uploaded
-                    ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
-                    : "Upload failed");
-                return uploaded;
-            }
-            else if (remoteModified.Value > localModified.AddSeconds(5))
-            {
-                // Remote is newer — download and safely replace
-                var tempPath = DbPath + ".sync_temp";
-                var success = await provider.DownloadFileAsync(remoteFileId, tempPath, ct);
-                if (success && File.Exists(tempPath))
-                {
-                    await _db.ReplaceDatabaseFromAsync(tempPath, ct);
-                    UpdateStatus($"Downloaded from {provider.ProviderName} at {DateTime.Now:HH:mm}");
-                    return true;
-                }
-                UpdateStatus("Download failed");
-                return false;
+                result = uploaded;
+                pushScreenshots = uploaded;
             }
             else
             {
-                UpdateStatus($"In sync with {provider.ProviderName}");
-                return true;
+                // Compare timestamps
+                var remoteModified = await provider.GetRemoteModifiedTimeAsync(remoteFileId, ct);
+
+                if (remoteModified == null)
+                {
+                    // Can't get remote time — upload local
+                    var uploaded = await UploadSafeCopy(provider, ct);
+                    UpdateStatus(uploaded
+                        ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
+                        : "Upload failed");
+                    result = uploaded;
+                    pushScreenshots = uploaded;
+                }
+                else if (localModified > remoteModified.Value.AddSeconds(5))
+                {
+                    // Local is newer — upload
+                    var uploaded = await UploadSafeCopy(provider, ct);
+                    UpdateStatus(uploaded
+                        ? $"Uploaded to {provider.ProviderName} at {DateTime.Now:HH:mm}"
+                        : "Upload failed");
+                    result = uploaded;
+                    pushScreenshots = uploaded;
+                }
+                else if (remoteModified.Value > localModified.AddSeconds(5))
+                {
+                    // Remote is newer — download and safely replace
+                    var tempPath = DbPath + ".sync_temp";
+                    var success = await provider.DownloadFileAsync(remoteFileId, tempPath, ct);
+                    if (success && File.Exists(tempPath))
+                    {
+                        await _db.ReplaceDatabaseFromAsync(tempPath, ct);
+                        UpdateStatus($"Downloaded from {provider.ProviderName} at {DateTime.Now:HH:mm}");
+                        // Slice G will restore the screenshots referenced by the downloaded vault here.
+                        result = true;
+                    }
+                    else
+                    {
+                        UpdateStatus("Download failed");
+                        result = false;
+                    }
+                }
+                else
+                {
+                    UpdateStatus($"In sync with {provider.ProviderName}");
+                    result = true;
+                    pushScreenshots = true;
+                }
             }
+
+            if (pushScreenshots)
+                await SyncScreenshotsUpAsync(provider, ct);
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -151,6 +183,34 @@ public class CloudSyncManager : IDisposable
         finally
         {
             Interlocked.Exchange(ref _syncing, 0);
+        }
+    }
+
+    /// <summary>
+    /// Push local screenshots to the Online Vault after the capture DB itself has synced (Phase 3 slice
+    /// F). No-op for any other provider. Best-effort: a screenshot-sync failure is surfaced in the
+    /// status but never fails the vault sync (which already succeeded).
+    /// </summary>
+    private async Task SyncScreenshotsUpAsync(ICloudStorageProvider provider, CancellationToken ct)
+    {
+        if (_screenshotSync is null || provider is not R2StorageProvider)
+            return;
+
+        try
+        {
+            var r = await _screenshotSync.SyncUpAsync(ct);
+            LastScreenshotSync = r;
+            if (r.Ran && (r.Uploaded > 0 || r.OrphansDeleted > 0 || r.NotSyncedOverQuota > 0))
+            {
+                var overQuota = r.NotSyncedOverQuota > 0
+                    ? $" ({r.NotSyncedOverQuota} not synced — over quota)"
+                    : string.Empty;
+                UpdateStatus($"{LastSyncStatus} · {r.Uploaded} screenshot(s){overQuota}");
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"{LastSyncStatus} · screenshot sync error: {ex.Message}");
         }
     }
 

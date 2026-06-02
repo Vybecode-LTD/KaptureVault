@@ -71,3 +71,16 @@ public sealed record VaultMeta(
 
 /// <summary>Result of <c>GET /vault/meta</c>: either no remote vault exists yet, or its current meta.</summary>
 public sealed record VaultMetaResult(bool Exists, VaultMeta? Meta);
+
+/// <summary>
+/// One object under the user's vault prefix, as returned by <c>GET /vault/objects</c> (Phase 3): a
+/// RELATIVE key (e.g. <c>vault.db</c>, <c>vault.db.meta</c>, or <c>screenshots/&lt;name&gt;.enc</c>) and its
+/// byte size. The Worker returns key + size only — there is no separate "uploaded" flag.
+/// </summary>
+public sealed record VaultObject(
+    [property: JsonPropertyName("key")] string Key,
+    [property: JsonPropertyName("size")] long Size);
+
+/// <summary>Response of <c>GET /vault/objects</c> — every object under the caller's vault prefix.</summary>
+public sealed record VaultObjectList(
+    [property: JsonPropertyName("objects")] IReadOnlyList<VaultObject> Objects);

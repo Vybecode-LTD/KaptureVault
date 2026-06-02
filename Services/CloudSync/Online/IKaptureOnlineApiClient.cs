@@ -43,4 +43,20 @@ public interface IKaptureOnlineApiClient
 
     /// <summary><c>PUT /vault/meta</c> — write the vault meta (mtime/sha/size) after an upload.</summary>
     Task PutVaultMetaAsync(string session, VaultMeta meta, CancellationToken ct = default);
+
+    // ── Vault sub-objects (screenshots) — Phase 3 ──────────────────────────────
+    // Each is uploaded/downloaded directly to/from R2 via a presigned URL; the client encrypts the
+    // bytes first, so R2 only ever holds ciphertext. The Worker validates keys to `screenshots/<name>`.
+
+    /// <summary><c>POST /vault/object/put-url</c> — presigned PUT URL for a vault sub-object (e.g. <c>screenshots/&lt;name&gt;.enc</c>).</summary>
+    Task<PresignedUrl> GetObjectPutUrlAsync(string session, string key, CancellationToken ct = default);
+
+    /// <summary><c>POST /vault/object/get-url</c> — presigned GET URL for a vault sub-object.</summary>
+    Task<PresignedUrl> GetObjectGetUrlAsync(string session, string key, CancellationToken ct = default);
+
+    /// <summary><c>POST /vault/object/delete</c> — delete a vault sub-object (orphan cleanup / quota trim).</summary>
+    Task DeleteObjectAsync(string session, string key, CancellationToken ct = default);
+
+    /// <summary><c>GET /vault/objects</c> — list every object under the user's vault prefix (relative key + size).</summary>
+    Task<VaultObjectList> ListObjectsAsync(string session, CancellationToken ct = default);
 }

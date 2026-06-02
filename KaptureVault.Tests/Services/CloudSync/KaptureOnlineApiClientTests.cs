@@ -182,6 +182,82 @@ public class KaptureOnlineApiClientTests
         ex.IsPaymentRequired.Should().BeFalse();
     }
 
+    // ── Vault object API (Phase 3 slice F client side) ─────────────────────────
+
+    [Fact]
+    public async Task GetObjectPutUrlAsync_PostsKeyWithBearer_AndParsesPresignedUrl()
+    {
+        var (client, handler) = Make((_, _) =>
+            Json(HttpStatusCode.OK, """{"url":"https://r2.test/put?X-Amz-Signature=abc","expiresIn":300}"""));
+
+        var presigned = await client.GetObjectPutUrlAsync("sess-123", "screenshots/sc_1.bmp.enc");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/vault/object/put-url");
+        handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-123");
+        handler.LastBody.Should().Contain("key").And.Contain("screenshots/sc_1.bmp.enc");
+        presigned.Url.Should().Contain("X-Amz-Signature=");
+        presigned.ExpiresIn.Should().Be(300);
+    }
+
+    [Fact]
+    public async Task GetObjectGetUrlAsync_PostsKeyWithBearer_AndParsesPresignedUrl()
+    {
+        var (client, handler) = Make((_, _) =>
+            Json(HttpStatusCode.OK, """{"url":"https://r2.test/get?X-Amz-Signature=xyz","expiresIn":300}"""));
+
+        var presigned = await client.GetObjectGetUrlAsync("sess-123", "screenshots/sc_2.bmp.enc");
+
+        handler.LastRequest!.RequestUri!.AbsoluteUri.Should().Be($"{Base}/vault/object/get-url");
+        handler.LastBody.Should().Contain("screenshots/sc_2.bmp.enc");
+        presigned.Url.Should().Contain("X-Amz-Signature=");
+    }
+
+    [Fact]
+    public async Task DeleteObjectAsync_PostsKeyWithBearer()
+    {
+        var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK, """{"ok":true}"""));
+
+        await client.DeleteObjectAsync("sess-123", "screenshots/sc_3.bmp.enc");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/vault/object/delete");
+        handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-123");
+        handler.LastBody.Should().Contain("screenshots/sc_3.bmp.enc");
+    }
+
+    [Fact]
+    public async Task ListObjectsAsync_GetsWithBearer_AndParsesObjects()
+    {
+        var (client, handler) = Make((_, _) => Json(HttpStatusCode.OK,
+            """{"objects":[{"key":"vault.db","size":4096},{"key":"screenshots/sc_1.bmp.enc","size":2048}]}"""));
+
+        var result = await client.ListObjectsAsync("sess-123");
+
+        handler.LastRequest!.Method.Should().Be(HttpMethod.Get);
+        handler.LastRequest.RequestUri!.AbsoluteUri.Should().Be($"{Base}/vault/objects");
+        handler.LastRequest.Headers.Authorization!.Parameter.Should().Be("sess-123");
+        result.Objects.Should().HaveCount(2);
+        result.Objects[0].Key.Should().Be("vault.db");
+        result.Objects[0].Size.Should().Be(4096);
+        result.Objects[1].Key.Should().Be("screenshots/sc_1.bmp.enc");
+        result.Objects[1].Size.Should().Be(2048);
+    }
+
+    [Fact]
+    public async Task PutVaultMetaAsync_WhenOverQuota_ThrowsPayloadTooLarge()
+    {
+        // Phase 3 slice E backstop: the meta commit sums all vault objects and 413s when over quota.
+        var (client, _) = Make((_, _) =>
+            Json(HttpStatusCode.RequestEntityTooLarge, """{"error":"vault exceeds your storage quota","used":99,"quota":50}"""));
+
+        Func<Task> act = () => client.PutVaultMetaAsync("sess", new VaultMeta("t", "s", 1, 1));
+
+        var ex = (await act.Should().ThrowAsync<OnlineApiException>()).Which;
+        ex.IsPayloadTooLarge.Should().BeTrue();
+        ex.IsPaymentRequired.Should().BeFalse();
+    }
+
     /// <summary>Records the outbound request (method, URI, headers, body) and returns a canned response.</summary>
     private sealed class StubHandler : HttpMessageHandler
     {
