@@ -16,7 +16,7 @@ Local-first and private by default, with an optional end-to-end-encrypted cloud 
 [![Latest downloads](https://img.shields.io/github/downloads/Vybecode-LTD/KaptureVault/latest/total?label=latest%20release&color=4f6ef6)](https://github.com/Vybecode-LTD/KaptureVault/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)](#-download)
 [![.NET 9](https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet&logoColor=white)](#-built-with)
-[![Code-signed](https://img.shields.io/badge/installer-code--signed-22bb44?logo=windows&logoColor=white)](#-privacy--security)
+[![Signed with Azure Trusted Signing](https://img.shields.io/badge/signed%20with-Azure%20Trusted%20Signing-0078D4?logo=microsoftazure&logoColor=white)](#-privacy--security)
 
 <br/>
 
@@ -79,7 +79,7 @@ The full capture app is **free forever** with no account. The Online Vault is fr
 - **You hold the key.** Encryption uses AES-256-GCM with a key derived from your password (PBKDF2-SHA256, 600k iterations); it's never escrowed.
 - **The Online Vault is end-to-end encrypted.** Your vault and screenshots are encrypted on your device before upload — the server only ever stores ciphertext, and your vault password is the only key. (Your *account* password is deliberately separate and can never recover your vault.)
 - **Runs as a standard user** (`asInvoker`) — no admin rights required.
-- **Signed & scanned.** Releases are Authenticode-signed and VirusTotal-scanned.
+- **Signed & scanned.** Every release is Authenticode-signed with **Azure Trusted Signing** and VirusTotal-scanned.
 
 ## 🌐 Your vault, anywhere
 
