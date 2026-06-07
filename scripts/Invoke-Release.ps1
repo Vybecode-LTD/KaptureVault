@@ -135,21 +135,32 @@ Write-Host "    Copied to releases/latest/$InstallerName" -ForegroundColor Green
 Write-Host "[5/5] Committing, tagging, and pushing..." -ForegroundColor Yellow
 
 Push-Location $Root
+# git writes notices like "LF will be replaced by CRLF" to stderr; under ErrorActionPreference=Stop a
+# captured stderr line becomes a terminating NativeCommandError (aborting the release mid-git). Run the
+# git commands with Continue + explicit $LASTEXITCODE checks so only a real non-zero exit fails.
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 try {
     $changelog = Join-Path $Root "CHANGELOG.md"
     if (Test-Path $changelog) { git add "CHANGELOG.md" }
     git add "KaptureVault.csproj" "installer/KaptureVaultSetup.iss" "releases/latest/"
+    if ($LASTEXITCODE -ne 0) { throw "git add failed (exit $LASTEXITCODE)" }
     git commit -m "release: v$NewVersion"
+    if ($LASTEXITCODE -ne 0) { throw "git commit failed (exit $LASTEXITCODE)" }
     git tag "v$NewVersion"
+    if ($LASTEXITCODE -ne 0) { throw "git tag failed (exit $LASTEXITCODE)" }
 
     if (-not $SkipPush) {
         git push
+        if ($LASTEXITCODE -ne 0) { throw "git push failed (exit $LASTEXITCODE)" }
         git push --tags
+        if ($LASTEXITCODE -ne 0) { throw "git push --tags failed (exit $LASTEXITCODE)" }
         Write-Host "    Pushed to origin." -ForegroundColor Green
     } else {
         Write-Host "    Committed and tagged locally (push skipped)." -ForegroundColor Yellow
     }
 } finally {
+    $ErrorActionPreference = $prevEAP
     Pop-Location
 }
 
