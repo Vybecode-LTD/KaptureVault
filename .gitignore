@@ -18,6 +18,10 @@ installer/output/
 ## Logs
 *.log
 Serilog*.txt
+
+## Code signing — Trusted Signing account/profile identifiers (kept out of the public repo).
+## Copy scripts/trusted-signing.example.json -> scripts/trusted-signing.json and fill it in.
+scripts/trusted-signing.json
 logs/
 
 ## Secrets & tokens

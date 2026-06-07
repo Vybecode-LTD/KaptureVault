@@ -23,6 +23,30 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = $PSScriptRoot | Split-Path -Parent
 
+# ── Code signing (Azure Trusted Signing via signtool + the Microsoft.Trusted.Signing.Client dlib) ──
+# Account/profile live in scripts\trusted-signing.json (gitignored — copy from .example.json). Auth is
+# DefaultAzureCredential: `az login` (or AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET) with the account's
+# "Trusted Signing Certificate Profile Signer" role. Signs + verifies; throws on any failure.
+$SignMeta = Join-Path $Root "scripts\trusted-signing.json"
+
+function Invoke-Sign($Path) {
+    if (-not (Test-Path $SignMeta)) {
+        throw "Signing metadata not found: $SignMeta`n  Copy scripts\trusted-signing.example.json -> scripts\trusted-signing.json and fill in your Trusted Signing endpoint/account/profile."
+    }
+    $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+    if (-not $signtool) { throw "signtool.exe not found - install the Windows 10/11 SDK." }
+    $dlib = Get-ChildItem "$env:USERPROFILE\.nuget\packages\microsoft.trusted.signing.client" -Recurse -Filter Azure.CodeSigning.Dlib.dll -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+    if (-not $dlib) { throw "Trusted Signing dlib not found - install the Microsoft.Trusted.Signing.Client NuGet package." }
+
+    Write-Host "    Signing $(Split-Path $Path -Leaf)..." -ForegroundColor DarkGray
+    & $signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib $dlib /dmdf $SignMeta $Path
+    if ($LASTEXITCODE -ne 0) { throw "Signing failed for $Path (exit $LASTEXITCODE)" }
+    & $signtool verify /pa $Path
+    if ($LASTEXITCODE -ne 0) { throw "Signature verification failed for $Path (exit $LASTEXITCODE)" }
+}
+
 # 1. Read current version
 $CsprojPath = Join-Path $Root "KaptureVault.csproj"
 $IssPath    = Join-Path $Root "installer\KaptureVaultSetup.iss"
@@ -73,6 +97,10 @@ try {
 }
 Write-Host "    Publish complete." -ForegroundColor Green
 
+# Sign the published single-file exe BEFORE Inno Setup packages it (so the installed app is signed too).
+Invoke-Sign (Join-Path $Root "publish\win-x64\KaptureVault.exe")
+Write-Host "    Published exe signed." -ForegroundColor Green
+
 # 5. Inno Setup
 Write-Host "[3/5] Building installer..." -ForegroundColor Yellow
 
@@ -86,6 +114,10 @@ $InstallerName = "KaptureVaultSetup-$NewVersion-x64.exe"
 $InstallerSrc  = Join-Path $Root "installer\output\$InstallerName"
 if (-not (Test-Path $InstallerSrc)) { throw "Installer not found: $InstallerSrc" }
 Write-Host "    Installer built: $InstallerName" -ForegroundColor Green
+
+# Sign the installer itself (this is the file users download — Authenticode + SmartScreen reputation).
+Invoke-Sign $InstallerSrc
+Write-Host "    Installer signed." -ForegroundColor Green
 
 # 6. Copy to releases/latest/
 Write-Host "[4/5] Copying to releases/latest/..." -ForegroundColor Yellow

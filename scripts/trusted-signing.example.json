@@ -1,0 +1,6 @@
+{
+  "_comment": "Azure Trusted Signing metadata. Copy this file to scripts/trusted-signing.json (gitignored) and fill in your values. Auth is via DefaultAzureCredential — run `az login` (or set AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET) with the 'Trusted Signing Certificate Profile Signer' role on the account. Invoke-Release.ps1 signs the published exe + installer with signtool + the Microsoft.Trusted.Signing.Client dlib.",
+  "Endpoint": "https://<region>.codesigning.azure.net/",
+  "CodeSigningAccountName": "<your-trusted-signing-account>",
+  "CertificateProfileName": "<your-certificate-profile>"
+}
