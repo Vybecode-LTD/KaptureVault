@@ -1,0 +1,48 @@
+name: Update download badges
+
+# Recomputes the README's version + download-count badges using THIS repo's GITHUB_TOKEN, so they
+# never depend on shields.io's shared (rate-limited) GitHub token pool — the README badges read the
+# committed JSON via shields' /endpoint, which is reliable. Runs twice daily, on every release, and
+# on demand. The commit carries [skip ci] so it doesn't re-trigger the test/release workflows.
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  badges:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute counts and write badge endpoints
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p .github/badges
+          total=$(gh api "repos/$REPO/releases" --paginate --jq '[.[].assets[].download_count] | add // 0')
+          latest=$(gh api "repos/$REPO/releases/latest" --jq '[.assets[].download_count] | add // 0')
+          ver=$(gh api "repos/$REPO/releases/latest" --jq '.tag_name')
+          printf '{ "schemaVersion": 1, "label": "version", "message": "%s", "color": "ff7a00" }\n' "$ver"    > .github/badges/version.json
+          printf '{ "schemaVersion": 1, "label": "downloads", "message": "%s", "color": "8b5cf6" }\n' "$total" > .github/badges/downloads.json
+          printf '{ "schemaVersion": 1, "label": "latest release", "message": "%s", "color": "4f6ef6" }\n' "$latest" > .github/badges/latest-downloads.json
+          cat .github/badges/*.json
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/*.json
+          if git diff --staged --quiet; then
+            echo "No badge changes."
+          else
+            git commit -m "chore: refresh download badges [skip ci]"
+            git push
+          fi

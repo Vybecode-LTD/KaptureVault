@@ -11,9 +11,9 @@ Local-first and private by default, with an optional end-to-end-encrypted cloud 
 
 <br/>
 
-[![Latest version](https://img.shields.io/github/v/release/Vybecode-LTD/KaptureVault?label=version&color=ff7a00&sort=semver)](https://github.com/Vybecode-LTD/KaptureVault/releases/latest)
-[![Total downloads](https://img.shields.io/github/downloads/Vybecode-LTD/KaptureVault/total?label=downloads&color=8b5cf6)](https://github.com/Vybecode-LTD/KaptureVault/releases)
-[![Latest downloads](https://img.shields.io/github/downloads/Vybecode-LTD/KaptureVault/latest/total?label=latest%20release&color=4f6ef6)](https://github.com/Vybecode-LTD/KaptureVault/releases/latest)
+[![Latest version](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FVybecode-LTD%2FKaptureVault%2Fmain%2F.github%2Fbadges%2Fversion.json)](https://github.com/Vybecode-LTD/KaptureVault/releases/latest)
+[![Total downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FVybecode-LTD%2FKaptureVault%2Fmain%2F.github%2Fbadges%2Fdownloads.json)](https://github.com/Vybecode-LTD/KaptureVault/releases)
+[![Latest-release downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FVybecode-LTD%2FKaptureVault%2Fmain%2F.github%2Fbadges%2Flatest-downloads.json)](https://github.com/Vybecode-LTD/KaptureVault/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)](#-download)
 [![.NET 9](https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet&logoColor=white)](#-built-with)
 [![Signed with Azure Trusted Signing](https://img.shields.io/badge/signed%20with-Azure%20Trusted%20Signing-0078D4?logo=microsoftazure&logoColor=white)](#-privacy--security)
