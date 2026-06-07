@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] — 2026-06-07 (Email/Password Sign-In)
+
+Sign in to your KaptureVault account with an email and password — no Google account required — plus a
+code-signed installer with a verified publisher.
+
+### Added
+- **Sign in with an email and password — a Google account is no longer required.** The **Login**
+  button now lets you create a KaptureVault account, sign in, or request a password reset with just an
+  email and password, right alongside Continue-with-Google.
+- **Your account password is kept separate from your vault password.** KaptureVault won't let you set
+  an account password equal to your vault encryption password — the account password can be reset by
+  email, but your vault password is the only key to your encrypted data and can never be recovered.
+
+### Changed
+- **The app and installer are now digitally signed.** KaptureVault is code-signed with Azure Trusted
+  Signing, so Windows shows a verified publisher when you download and install it instead of an
+  "unknown publisher" warning.
+
+---
+
 ## [1.2.0] — 2026-06-02 (File Hosting)
 
 Paid **file hosting** — store files in your KaptureVault account and share them with public links.
